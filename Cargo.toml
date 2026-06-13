@@ -1,0 +1,47 @@
+[workspace]
+members = ["dootdoot-core", "dootdoot", "xtask"]
+resolver = "3"
+
+[workspace.package]
+authors = ["skeswa"]
+categories = ["command-line-utilities", "multimedia::audio"]
+description = "Deterministically turns text into BB-8-style droid sound."
+edition = "2024"
+keywords = ["audio", "cli", "droid", "synthesis", "text"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/skeswa/dootdoot"
+rust-version = "1.92"
+version = "0.1.0"
+
+[workspace.lints.rust]
+missing_debug_implementations = "deny"
+missing_docs = "deny"
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+cast_lossless = "deny"
+cast_possible_truncation = "deny"
+cast_possible_wrap = "deny"
+cast_precision_loss = "deny"
+cast_sign_loss = "deny"
+dbg_macro = "deny"
+missing_errors_doc = "deny"
+missing_panics_doc = "deny"
+missing_safety_doc = "deny"
+module_name_repetitions = "allow"
+multiple_crate_versions = "allow"
+must_use_candidate = "allow"
+too_many_lines = "deny"
+todo = "deny"
+unimplemented = "deny"
+unwrap_used = "deny"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+panic = "abort"
+strip = "symbols"

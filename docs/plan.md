@@ -29,7 +29,7 @@
 
 ## Phase 0 — Workspace & scaffolding
 
-- [ ] **T-01 — Initialize Cargo workspace.** Create the workspace `Cargo.toml` with members
+- [x] **T-01 — Initialize Cargo workspace.** Create the workspace `Cargo.toml` with members
       `dootdoot-core`, `dootdoot`, `xtask`. Set edition, shared lints, release profile
       (no fast-math, no FMA-contraction flags).
       Deps: — · Reqs: NFR-9 · Est: 1h

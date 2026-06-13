@@ -1,0 +1,15 @@
+[advisories]
+ignore = []
+unmaintained = "deny"
+vulnerability = "deny"
+
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+
+[licenses]
+allow = ["Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "MIT", "Unicode-3.0", "Zlib"]
+
+[sources]
+unknown-git = "deny"
+unknown-registry = "deny"

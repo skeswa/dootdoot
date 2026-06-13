@@ -2,13 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project state: pre-implementation
-
-There is **no Rust code yet** — only design docs in `docs/`. Build it task-by-task from
-`docs/plan.md`, starting at **T-01** (workspace scaffolding). The commands below are the
-agreed tooling and won't run until the workspace exists.
-_(Delete this section once the workspace is scaffolded.)_
-
 ## Source-of-truth documents (read before acting; don't re-derive settled decisions)
 
 - **`docs/design.md`** — full rationale + the end-to-end pipeline (§2) and runtime/build split (§9).
