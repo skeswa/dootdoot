@@ -3,7 +3,8 @@
 use dootdoot_core::{
     BASE_SYLLABLE_SAMPLES, KnobSet, LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES,
     ProsodicPunctuation, SequenceEvent, SequencedUtterance, SquashedVector,
-    TRAILING_SILENCE_SAMPLES, WORD_PAUSE_SAMPLES, assemble_knobs, sequence_utterance,
+    TRAILING_SILENCE_SAMPLES, WORD_PAUSE_SAMPLES, assemble_knobs, render_empty_chirp,
+    sequence_utterance,
 };
 
 #[test]
@@ -12,8 +13,40 @@ fn sequencer_routes_zero_voiced_events_to_empty_chirp() {
         SequenceEvent::punctuation(ProsodicPunctuation::Question),
         SequenceEvent::punctuation(ProsodicPunctuation::Exclamation),
     ]);
+    let samples = rendered_samples(&output);
+    let leading = usize::try_from(LEADING_SILENCE_SAMPLES).expect("leading silence fits usize");
+    let syllable = usize::try_from(BASE_SYLLABLE_SAMPLES).expect("syllable fits usize");
+    let trailing = usize::try_from(TRAILING_SILENCE_SAMPLES).expect("trailing silence fits usize");
 
     assert!(output.is_empty_chirp());
+    assert_eq!(samples.len(), leading + syllable + trailing);
+    assert!(
+        samples[leading..leading + syllable]
+            .iter()
+            .any(|sample| sample.abs() > 0.000_001)
+    );
+}
+
+#[test]
+fn empty_chirp_renderer_is_bit_exact_and_used_by_empty_sequence() {
+    let direct = render_empty_chirp();
+    let repeated = render_empty_chirp();
+    let sequenced = sequence_utterance(&[]);
+    let direct_bits = direct
+        .iter()
+        .map(|sample| sample.to_bits())
+        .collect::<Vec<_>>();
+    let repeated_bits = repeated
+        .iter()
+        .map(|sample| sample.to_bits())
+        .collect::<Vec<_>>();
+    let sequenced_bits = rendered_samples(&sequenced)
+        .iter()
+        .map(|sample| sample.to_bits())
+        .collect::<Vec<_>>();
+
+    assert_eq!(direct_bits, repeated_bits);
+    assert_eq!(direct_bits, sequenced_bits);
 }
 
 #[test]
@@ -209,7 +242,5 @@ fn shifted_knobs() -> KnobSet {
 }
 
 fn rendered_samples(output: &SequencedUtterance) -> &[f64] {
-    output
-        .samples()
-        .expect("utterance contains rendered samples")
+    output.samples()
 }

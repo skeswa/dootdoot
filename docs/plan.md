@@ -169,7 +169,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       first of consecutive markers shapes the prior glide; input with zero voiced syllables
       after filtering routes to the "?" chirp (design.md §6.4).
       Deps: T-32, T-24 · Reqs: FR-21, FR-22, FR-23, FR-24 · Est: 2.5h
-- [ ] **T-34 — Fixed "?" chirp gesture.** Hardcoded inquisitive rising-glide for empty
+- [x] **T-34 — Fixed "?" chirp gesture.** Hardcoded inquisitive rising-glide for empty
       input.
       Deps: T-32 · Reqs: FR-4 · Est: 1h
 

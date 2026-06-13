@@ -196,6 +196,18 @@ impl KnobBounds {
 }
 
 impl KnobSet {
+    /// Builds a knob row from already-bounded axes.
+    pub(crate) fn from_axes(axes: [f64; FORMAT_AXIS_COUNT]) -> Self {
+        let mut bounded_axes = [0.0_f64; FORMAT_AXIS_COUNT];
+
+        for (index, axis) in bounded_axes.iter_mut().enumerate() {
+            let bounds = KNOB_BOUNDS[index];
+            *axis = axes[index].clamp(bounds.lower(), bounds.upper());
+        }
+
+        Self { axes: bounded_axes }
+    }
+
     /// Returns semantic knobs in pitch/vowel/contour/warble order.
     pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
         self.axes

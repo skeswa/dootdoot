@@ -7,6 +7,21 @@ use crate::{
     synth::{SyllableFinalGlide, render_syllable_with_final_glide},
 };
 
+/// Gives the fixed empty-chirp start pitch-center knob.
+pub const EMPTY_CHIRP_START_PITCH_CENTER: f64 = -0.35;
+
+/// Gives the fixed empty-chirp target pitch-center knob.
+pub const EMPTY_CHIRP_PITCH_CENTER: f64 = 0.45;
+
+/// Gives the fixed empty-chirp vowel-position knob.
+pub const EMPTY_CHIRP_VOWEL_POSITION: f64 = 0.15;
+
+/// Gives the fixed empty-chirp contour knob.
+pub const EMPTY_CHIRP_CONTOUR: f64 = 1.0;
+
+/// Gives the fixed empty-chirp warble-depth knob.
+pub const EMPTY_CHIRP_WARBLE_DEPTH: f64 = 0.85;
+
 /// Gives one input event consumed by the utterance sequencer.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SequenceEvent {
@@ -45,8 +60,8 @@ pub enum ProsodicPunctuation {
 pub enum SequencedUtterance {
     /// Rendered audio samples.
     Samples(Vec<f64>),
-    /// Empty input should use the fixed chirp gesture.
-    EmptyChirp,
+    /// Rendered fixed chirp gesture for empty input.
+    EmptyChirp(Vec<f64>),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -123,16 +138,36 @@ impl ProsodicPunctuation {
 impl SequencedUtterance {
     /// Returns true when this utterance should route to the empty chirp.
     pub fn is_empty_chirp(&self) -> bool {
-        matches!(self, Self::EmptyChirp)
+        matches!(self, Self::EmptyChirp(_))
     }
 
-    /// Returns rendered samples when this utterance contains voiced audio.
-    pub fn samples(&self) -> Option<&[f64]> {
+    /// Returns rendered samples for this utterance.
+    pub fn samples(&self) -> &[f64] {
         match self {
-            Self::Samples(samples) => Some(samples),
-            Self::EmptyChirp => None,
+            Self::Samples(samples) | Self::EmptyChirp(samples) => samples,
         }
     }
+}
+
+/// Renders the fixed empty-input inquisitive chirp gesture.
+pub fn render_empty_chirp() -> Vec<f64> {
+    let knobs = KnobSet::from_axes([
+        EMPTY_CHIRP_PITCH_CENTER,
+        EMPTY_CHIRP_VOWEL_POSITION,
+        EMPTY_CHIRP_CONTOUR,
+        EMPTY_CHIRP_WARBLE_DEPTH,
+    ]);
+    let mut samples = Vec::new();
+
+    append_silence(&mut samples, LEADING_SILENCE_SAMPLES);
+    samples.extend(render_syllable_with_final_glide(
+        knobs,
+        pitch_center_hz(EMPTY_CHIRP_START_PITCH_CENTER),
+        SyllableFinalGlide::Rising,
+    ));
+    append_silence(&mut samples, TRAILING_SILENCE_SAMPLES);
+
+    samples
 }
 
 /// Lays out voiced syllables and control punctuation into an utterance.
@@ -151,7 +186,7 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
     }
 
     if plans.is_empty() {
-        return SequencedUtterance::EmptyChirp;
+        return SequencedUtterance::EmptyChirp(render_empty_chirp());
     }
 
     let mut samples = Vec::new();
