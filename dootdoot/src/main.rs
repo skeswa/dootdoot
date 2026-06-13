@@ -1,9 +1,8 @@
 //! Command-line shell for dootdoot.
 
-fn main() {
-    let _format = active_format();
-}
+use clap::Parser;
+use dootdoot::Cli;
 
-fn active_format() -> &'static str {
-    dootdoot_core::FORMAT_V1
+fn main() {
+    let _cli = Cli::parse();
 }

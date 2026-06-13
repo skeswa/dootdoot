@@ -190,7 +190,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ## Phase 6 — CLI binary (`dootdoot`)
 
-- [ ] **T-38 — `clap` argument model.** Positional `TEXT`, `-o/--output`, `--play`,
+- [x] **T-38 — `clap` argument model.** Positional `TEXT`, `-o/--output`, `--play`,
       `--explain`, `--version` (shows `FORMAT_V1`), `--help`.
       Deps: T-03 · Reqs: FR-1, FR-31, FR-33, FR-34 · Est: 1.5h
 - [ ] **T-39 — Input resolution.** Arg vs piped stdin vs interactive TTY; empty/whitespace

@@ -12,6 +12,7 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
+clap = { version = "4.5.0", features = ["derive"] }
 dootdoot-core = { path = "../dootdoot-core" }
 
 [lints]
