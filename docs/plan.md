@@ -146,7 +146,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       locus, glide time, warble rate, ring-mod freq/mix, envelope, register bias,
       durations, pauses. (Refined in Phase 7.)
       Deps: T-02 · Reqs: FR-17, FR-20, FR-22, FR-24 · Est: 1.5h
-- [ ] **T-27 — Harmonically-rich source oscillator.** Band-limited saw/pulse via `mathx`.
+- [x] **T-27 — Harmonically-rich source oscillator.** Band-limited saw/pulse via `mathx`.
       Deps: T-07, T-26 · Reqs: FR-16 · Est: 2h
 - [ ] **T-28 — Formant filter bank.** 2–3 resonant bandpasses; vowel position parameter
       steers center frequencies.

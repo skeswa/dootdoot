@@ -1,5 +1,9 @@
 //! Formant synthesis voice engine for droid syllables.
 
+use core::f64::consts::PI;
+
+use crate::{cos, sin};
+
 /// Gives the synthesis sample rate in hertz.
 pub const SYNTH_SAMPLE_RATE_HZ: u32 = 44_100;
 
@@ -81,6 +85,73 @@ pub const SOURCE_PULSE_MIX: f64 = 0.35;
 /// Gives the fixed pulse width in the source oscillator.
 pub const SOURCE_PULSE_WIDTH: f64 = 0.42;
 
+/// Gives the maximum additive harmonics used by the source oscillator.
+pub const SOURCE_MAX_HARMONICS: u32 = 48;
+
 /// Marks the synthesis module in the public facade.
 #[derive(Debug)]
 pub struct Synth;
+
+/// Counts active source harmonics below Nyquist for a frequency.
+pub fn source_harmonic_count(frequency_hz: f64) -> u32 {
+    if !frequency_hz.is_finite() || frequency_hz <= 0.0 {
+        return 0;
+    }
+
+    let nyquist_hz = f64::from(SYNTH_SAMPLE_RATE_HZ) / 2.0;
+    let mut count = 0;
+
+    for harmonic in 1..=SOURCE_MAX_HARMONICS {
+        if f64::from(harmonic) * frequency_hz < nyquist_hz {
+            count = harmonic;
+        } else {
+            break;
+        }
+    }
+
+    count
+}
+
+/// Evaluates the fixed harmonically-rich source oscillator.
+pub fn source_oscillator_sample(phase: f64, frequency_hz: f64) -> f64 {
+    let harmonic_count = source_harmonic_count(frequency_hz);
+
+    if harmonic_count == 0 {
+        return 0.0;
+    }
+
+    let phase = wrap_phase(phase);
+    let mut saw = 0.0;
+    let mut pulse = (2.0 * SOURCE_PULSE_WIDTH) - 1.0;
+    let two_pi = 2.0 * PI;
+
+    for harmonic in 1..=harmonic_count {
+        let harmonic_f64 = f64::from(harmonic);
+        let angle = two_pi * harmonic_f64 * phase;
+        let sign = if harmonic % 2 == 0 { -1.0 } else { 1.0 };
+        saw += sign * sin(angle) / harmonic_f64;
+
+        let duty_angle = two_pi * harmonic_f64 * SOURCE_PULSE_WIDTH;
+        let cosine_coefficient = 2.0 * sin(duty_angle) / (PI * harmonic_f64);
+        let sine_coefficient = 2.0 * (1.0 - cos(duty_angle)) / (PI * harmonic_f64);
+        pulse += (cosine_coefficient * cos(angle)) + (sine_coefficient * sin(angle));
+    }
+
+    let saw = (2.0 / PI) * saw;
+
+    (SOURCE_SAW_MIX * saw) + (SOURCE_PULSE_MIX * pulse)
+}
+
+fn wrap_phase(phase: f64) -> f64 {
+    if !phase.is_finite() {
+        return 0.0;
+    }
+
+    let wrapped = phase % 1.0;
+
+    if wrapped < 0.0 {
+        wrapped + 1.0
+    } else {
+        wrapped
+    }
+}
