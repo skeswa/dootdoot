@@ -55,9 +55,10 @@
 
 - **FR-15** The tool SHALL synthesize each token as a single continuous formant-glide
   syllable (not a cluster of discrete beeps).
-- **FR-16** The voice chain SHALL be: harmonically-rich source → formant filter bank
-  (2–3 resonant bandpasses) → portamento → warble LFO → faint ring-mod → amplitude
-  envelope.
+- **FR-16** The voice SHALL be a signal graph in which a control layer (pitch center +
+  portamento glide + warble LFO) computes the instantaneous pitch that drives the audio
+  path: harmonically-rich source/oscillator → formant filter bank (2–3 resonant
+  bandpasses) → faint ring-mod → amplitude envelope.
 - **FR-17** The following parameters SHALL be fixed (identical for all inputs):
   formant character/structure, portamento glide time, warble rate, ring-mod frequency
   and mix, envelope shape, high-register pitch bias, source waveform.
@@ -112,20 +113,27 @@
 
 ### 1.8 Input limits
 
-- **FR-36** The tool SHALL print a warning to stderr when input exceeds ≈2,000 tokens.
-- **FR-37** The tool SHALL error (non-zero exit) when input exceeds a fixed hard cap
-  (≈100,000 tokens) without producing audio.
+- **FR-36** The tool SHALL print a warning to stderr when the input would render to more
+  than ≈8 minutes of audio (≈2,000 tokens, ≈40 MB).
+- **FR-37** The tool SHALL error (non-zero exit) without producing audio when the input
+  would exceed the fixed output ceiling of **≈30 minutes / ≈160 MB** (≈8,000 tokens at
+  44.1 kHz·16-bit·mono). The byte/duration ceiling is normative; the token count is a
+  derived pre-synthesis check. (These are operational limits, not sample-affecting, so
+  they are NOT part of `FORMAT_V1`.)
 
 ### 1.9 Format contract & versioning
 
 - **FR-38** `FORMAT_V1` SHALL bundle **every** parameter or rule that can affect an
   output sample, including: the model hash; the tokenizer configuration (the
   `tokenizer.json` hash **and** the runtime tokenization flags — `add_special_tokens`,
-  normalization/lowercasing, the `##` continuation convention); the PCA projection matrix
-  (by hash); the int16 quantization scales and dequantization rule for the 4 axes and the
-  pooling weight; the sequence pooling rule (the weight-scaled mean with denominator =
-  token count, and the deliberate omission of L2 normalization); the per-axis squash
-  statistics and squash function;
+  normalization/lowercasing, the `##` continuation convention); the control-token drop
+  filter set (`[PAD]`/`[CLS]`/`[SEP]`/`[MASK]`, excluding `[UNK]`); the PCA projection
+  matrix (by hash); the int16 quantization scales and rule for the 4 axes and the pooling
+  weight (symmetric signed, zero-point-free, `s = max|·|/32767`, round-half-to-even,
+  code −32768 unused); the sequence pooling rule (the weight-scaled mean with denominator =
+  token count, and the deliberate omission of L2 normalization); the knob-assembly rule
+  (per-axis modulation depths `α_k`, per-axis bounds `[lo_k, hi_k]`, and the final clamp);
+  the per-axis squash statistics and squash function;
   all fixed synthesis constants; the timing constants (syllable duration, pauses,
   padding); the prosodic-punctuation rules; the empty-input "?" chirp constants; the
   float→i16 rounding rule; the WAV serialization choices (sample rate, bit depth,

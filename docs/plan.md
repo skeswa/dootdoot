@@ -68,9 +68,9 @@
 
 ## Phase 2 — Build-time asset generation (`xtask`)
 
-- [ ] **T-11 — Acquire `potion-base-2M` (int8).** Decide vendored-blob vs scripted
+- [ ] **T-11 — Acquire `potion-base-2M` (upstream F32).** Decide vendored-blob vs scripted
   download; place model + `tokenizer.json` under `assets/` (or a build cache).
-  Document the choice.
+  Document the choice. (dtype is build-time only; xtask emits its own int16 artifact.)
   Deps: T-04 · Reqs: FR-5, FR-42, NFR-8 · Est: 1.5h
 - [ ] **T-12 — Load model & extract all token embeddings.** Use `model2vec-rs` to read the
   ~30k × ~64 embedding matrix and per-token weights.
@@ -93,8 +93,10 @@
   projected values, so it does NOT contain the PCA matrix. Document the layout.
   Deps: T-15 · Reqs: FR-10, FR-38 · Est: 1.5h
 - [ ] **T-17 — Serialize per-token 4-vectors + weights to `format_v1.bin`.** Project each
-  token, quantize components and weight to int16 with the header scales, write the file;
-  compute and embed model/tokenizer/PCA hashes.
+  token; quantize components and weight to int16 with the **symmetric signed, zero-point-
+  free** rule (`s = max|·|/32767`, round-half-to-even, clamp to ±32767, code −32768
+  unused; design.md §4.2); write the file; compute and embed model/tokenizer/PCA hashes.
+  Unit-test the quantize↔dequantize round-trip and tie-rounding determinism.
   Deps: T-16 · Reqs: FR-9, FR-10, FR-40, FR-42 · Est: 2h
 - [ ] **T-18 — Commit `assets/format_v1.bin` + `tokenizer.json`.** Verify size (~300 KB)
   and add a regeneration README note.
@@ -108,7 +110,10 @@
   parse header; expose PCA stats, squash stats, hashes, `FORMAT_V1` id.
   Deps: T-02, T-18 · Reqs: FR-9, FR-33, FR-38 · Est: 2h
 - [ ] **T-20 — `tokenizer` wrapper.** Wrap HF `tokenizers` with embedded `tokenizer.json`;
-  `add_special_tokens=false`; expose token IDs + `##` continuation flags.
+  `add_special_tokens=false`; expose token IDs + `##` continuation flags. Apply the
+  control-token drop filter (`[PAD]`/`[CLS]`/`[SEP]`/`[MASK]` by ID, **keeping** `[UNK]`)
+  so literal `"[MASK]"` etc. are dropped; test literal `"[CLS]"`/`"[MASK]"` and that
+  filtered-to-empty routes to the chirp (design.md §3.3).
   Deps: T-02, T-18 · Reqs: FR-5, FR-6, FR-8 · Est: 2h
 - [ ] **T-21 — Token → 4-vector lookup.** Map IDs to baked vectors + weights; handle
   `[UNK]` via its own entry.
@@ -120,8 +125,10 @@
 - [ ] **T-23 — Axis squash.** Implement chosen squash using frozen stats + `mathx`; apply
   per-token and to baseline.
   Deps: T-22, T-08 · Reqs: FR-12 · Est: 1.5h
-- [ ] **T-24 — Knob assembly.** Combine baseline (center) + per-token (offset) into final
-  per-syllable knob set {pitch, vowel, contour, warble} in fixed axis order.
+- [ ] **T-24 — Knob assembly.** Per axis `k`: `knob = clamp(B_k + α_k·(T_{k}−B_k),
+  lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α_k` is the
+  frozen modulation depth (design.md §5.4). Produce the per-syllable knob set {pitch, vowel,
+  contour, warble} in fixed axis order; test single-token (`knob==B_k`) and clamp at bounds.
   Deps: T-23 · Reqs: FR-13, FR-14, FR-18 · Est: 1.5h
 - [ ] **T-25 — Semantic-sanity tests.** Assert `cat↔dog` < `cat↔airplane` (token) and
   analogous sequence-level ordering.
@@ -148,11 +155,15 @@
 - [ ] **T-31 — Ring-mod + amplitude envelope.** Faint fixed ring-mod; snappy fixed AD
   envelope per syllable.
   Deps: T-27, T-07 · Reqs: FR-16, FR-17 · Est: 1.5h
-- [ ] **T-32 — Single-syllable renderer.** Compose source→formant→pitch/warble→ring-mod→
-  envelope into one syllable buffer (`f64`).
+- [ ] **T-32 — Single-syllable renderer.** Compose the signal graph into one syllable
+  buffer (`f64`): pitch model (center+portamento+warble) drives the oscillator/source →
+  formant bank → ring-mod → amplitude envelope (design.md §6.2).
   Deps: T-28, T-29, T-30, T-31 · Reqs: FR-15, FR-16 · Est: 2h
 - [ ] **T-33 — Utterance sequencer.** Lay out syllables with intra-word glides, inter-word
-  pauses, punctuation intonation, leading/trailing padding.
+  pauses, punctuation intonation, leading/trailing padding. Punctuation attaches
+  **backward only**: leading/standalone markers are dropped (no forward attach); only the
+  first of consecutive markers shapes the prior glide; input with zero voiced syllables
+  after filtering routes to the "?" chirp (design.md §6.4).
   Deps: T-32, T-24 · Reqs: FR-21, FR-22, FR-23, FR-24 · Est: 2.5h
 - [ ] **T-34 — Fixed "?" chirp gesture.** Hardcoded inquisitive rising-glide for empty
   input.
@@ -188,7 +199,9 @@
 - [ ] **T-42 — `--explain` table.** Per-token `token │ pitch │ vowel │ contour │ warble`
   to stderr, with prosodic punctuation shown as distinct control rows.
   Deps: T-24, T-38 · Reqs: FR-31, FR-32, FR-23a · Est: 1.5h
-- [ ] **T-43 — Input limits.** Warn >~2,000 tokens; hard error >~100,000 tokens (no audio).
+- [ ] **T-43 — Input limits.** Warn past ≈8 min/≈40 MB (≈2,000 tokens); hard error before
+  synthesis past the ≈30 min/≈160 MB ceiling (≈8,000 tokens), no audio. Byte/duration is
+  the normative bound; token count is a derived pre-check (design.md §10).
   Deps: T-39, T-20 · Reqs: FR-36, FR-37 · Est: 1h
 - [ ] **T-44 — Exit codes & error messages.** Friendly stderr errors; correct exit codes.
   Deps: T-39, T-40 · Reqs: FR-35 · Est: 1h

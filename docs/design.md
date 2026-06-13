@@ -107,18 +107,29 @@ semantics therefore also fixes the tokenizer choice.
 
 ### 3.3 Tokenizer configuration
 
-- **Special tokens disabled** (`add_special_tokens = false`): BERT-family `[CLS]`/
-  `[SEP]` carry no meaning for us and would inject phantom syllables.
-- **Unknown handling:** WordPiece falls back to `[UNK]` for unrepresentable input.
-  `[UNK]` has its own embedding, so it produces a consistent "unknown" warble. We
-  keep it — it is deterministic and on-theme ("the droid doesn't know that word").
+- **Injected special tokens disabled** (`add_special_tokens = false`): BERT-family
+  `[CLS]`/`[SEP]` carry no meaning for us and would inject phantom syllables.
+- **Control-token filter (covers literal input too).** `add_special_tokens = false` only
+  stops *injected* markers; a user can still type the literal text `[CLS]`, `[MASK]`, etc.,
+  which WordPiece resolves to a single registered special-token ID. We therefore apply an
+  explicit **drop filter** after tokenization, by token ID, against a fixed set:
+  **`[PAD]`, `[CLS]`, `[SEP]`, `[MASK]`** (resolved from the embedded `tokenizer.json`'s
+  registered specials). Filtered tokens are removed entirely — not voiced, not counted as
+  syllables — exactly like prosodic punctuation (§6.4). The set is frozen in `FORMAT_V1`
+  (§8.2).
+- **`[UNK]` is the deliberate exception** — it is **not** in the filter. WordPiece falls
+  back to `[UNK]` for unrepresentable input; it has its own embedding, so it produces a
+  consistent "unknown" warble. We keep it: deterministic and on-theme ("the droid doesn't
+  know that word").
+- **Empty after filtering** → treated as empty input: the inquisitive "?" chirp (§7.4).
+  (E.g. input that is only `[PAD]`.)
 - The tokenizer is driven by the model's `tokenizer.json`, **embedded in the binary**.
 
 ---
 
 ## 4. Tokens → semantics (the meaning layer)
 
-### 4.1 Decision: source semantics from model2vec (`potion-base-2M`, int8)
+### 4.1 Decision: source semantics from model2vec (`potion-base-2M`)
 
 `model2vec` distills a sentence-transformer into a **static embedding lookup table**:
 every token maps to a fixed semantic vector, and `model2vec.encode()` embeds a whole
@@ -131,13 +142,19 @@ sequence by mean-pooling the token vectors and then **L2-normalizing** the resul
   from the same per-token vectors via its **own** pooling rule (§4.2), which intentionally
   drops the L2 step; the goal is *audible relative similarity*, not byte-equivalence to
   `model2vec.encode()`.
-- **Offline / embeddable** — a small `safetensors` file; int8-quantizable to a few MB.
+- **Offline / embeddable** — a small `safetensors` file, read only at build time.
 - **Rust-native** — `model2vec-rs` exists and is maintained.
 
-**Model choice:** `potion-base-2M`, **int8**. Selected for size (the smallest potion
-model) per the constraint that the tool runs comfortably on Mac hardware. `2M` gives
-coarser semantics than `8M`/`32M`, but it is sufficient because we further reduce to
-4 axes (§5) and only need broad semantic contrasts to be audible. Vectors are ~64-dim.
+**Model choice:** `potion-base-2M`. Selected as the **smallest** potion model: with
+~2M parameters and ~64-dim vectors it is the cheapest to process at build time, and `2M`
+gives coarser semantics than `8M`/`32M` but is sufficient because we further reduce to
+4 axes (§5) and only need broad semantic contrasts to be audible.
+
+**Source dtype.** Upstream `minishlab/potion-base-2M` currently publishes **F32**
+`safetensors`. dtype is irrelevant to the shipped binary — the model is a build-time
+input only (§4.2) and is never embedded. `xtask` reads whatever the upstream weights are,
+projects to 4 axes, and produces its **own int16-quantized** `format_v1.bin` (§4.2);
+nothing relies on the source being pre-quantized.
 
 **Rejected alternatives:** GloVe/word2vec (word-level only, large), fastText (heavier,
 older), and running a full transformer at runtime via `candle` (unnecessary weight —
@@ -188,14 +205,30 @@ PCA-space pool. It preserves coarse semantic continuity for the "mood" baseline 
 sequence half; verified by NFR-15) while keeping the runtime artifact tiny and tensor-free.
 The exact rule (denominator, the skipped L2 step) is part of `FORMAT_V1` (§8.2).
 
-**Quantization scheme (deterministic, lossy by a bounded amount).** Each of the 4 axes
-has a fixed dequantization scale `s_k` chosen at build time so the vocab's projected
-values span the int16 range; a stored value `q` dequantizes to `q · s_k` (f64). The
-per-axis max error is `s_k / 2`. Pooling weights are quantized the same way with their
-own scale `s_w`. All five scales live in the file header. The nonlinear "squash" (§5.3)
-is **never baked**; it is applied at runtime after pooling (for the baseline) and after
-per-token lookup (for gestures), so it operates on the dequantized values and the
-linearity argument holds up to int16 rounding.
+**Quantization scheme (deterministic, lossy by a bounded amount).** The scheme is
+**symmetric, signed, zero-point-free** — no min/max offset — so that the linear pooling of
+§4.2 carries over to the integer domain unchanged (a zero-point would make the dequantized
+mean depend on token count). Per axis `k`:
+
+- *Scale selection (build time).* `s_k = max_t |p_{k,t}| / 32767`, where `p_{k,t}` is the
+  projected value of token `t` on axis `k` over the whole vocab. Dividing by **32767**
+  (not 32768) keeps the usable code range **symmetric** at `[−32767, 32767]`; the code
+  **−32768 is never emitted** (reserved/unused), so negation and the symmetric range are
+  exact.
+- *Quantize.* `q = clamp(round_half_to_even(p / s_k), −32767, 32767)`, stored as `int16`.
+  Rounding ties go to **even** (banker's rounding), the one rule used everywhere (it is the
+  same tie rule as the float→i16 audio step, §8.2). The `clamp` only ever engages on the
+  exact per-axis maximum, which maps to ±32767 by construction.
+- *Dequantize (runtime).* `p̂ = q · s_k` in f64. Max per-axis error is `s_k / 2`.
+
+Pooling weights use the **same** symmetric rule with their own scale `s_w`. Weights are
+non-negative, so in practice only `[0, 32767]` is populated; the rule is identical (no
+special unsigned encoding) to keep one code path. `s_w = max_t w_t / 32767`.
+
+All five scales (`s_1..s_4`, `s_w`) live in the file header as f32 and are part of
+`FORMAT_V1` (§8.2). The nonlinear "squash" (§5.3) is **never baked**; it is applied at
+runtime after pooling (for the baseline) and after per-token lookup (for gestures), so it
+operates on the dequantized values and the linearity argument holds up to int16 rounding.
 
 **Baked file (`format_v1.bin`) layout and size.** Little-endian throughout.
 - *Header* (a few hundred bytes): magic + format version; vocab size; axis count (4);
@@ -203,7 +236,7 @@ linearity argument holds up to int16 rounding.
   statistics (§5.3); and the model-, tokenizer- and PCA-matrix hashes (§8.2).
 - *Per-token record* (10 bytes): 4 × int16 (quantized PCA components) + 1 × int16
   (quantized pooling weight).
-- *Total* ≈ 30k × 10 bytes + header ≈ **~300 KB** (int8-quantized model embeddings are a
+- *Total* ≈ 30k × 10 bytes + header ≈ **~300 KB** (the upstream F32 model embeddings are a
   build-time input only and are not shipped).
 
 Note the runtime file stores the **projected** values, so it does **not** carry the
@@ -222,8 +255,10 @@ See §9 for the resulting runtime/build-time split.
 perceptually meaningful** set.
 
 **Mechanism: pinned PCA.** Offline, we run the entire vocab through PCA, keep the top
-**K = 4** principal components, and **bake the fixed projection matrix** into the
-format artifact. At runtime each token/sequence vector projects onto these 4 axes.
+**K = 4** principal components, apply the fixed projection matrix to every token vector,
+and **bake the already-projected 4-axis values** into the format artifact. At runtime the
+engine only *looks up and dequantizes* these projected values (§4.2) — it never applies
+the PCA matrix, which is not shipped (recorded in the contract by hash only).
 
 **Why PCA over alternatives:**
 - *Random projection* is deterministic but produces arbitrary axis mixtures with no
@@ -284,6 +319,30 @@ Squash is applied in two places, consistently, on the dequantized values:
 - Each **token's vector** modulates *around* that baseline — the local gesture. This is
   what makes *semantically similar tokens* sound similar (goal 2, token half).
 
+**Exact assembly formula.** All four knobs are combined in *squashed knob space*, where
+every term is already inside the bounded per-axis range `[lo_k, hi_k]` produced by the
+squash (§5.3). For axis `k`, token `i`:
+
+```
+B_k       = squash_k(baseline_pre_k)            // baseline knob (center), in [lo_k, hi_k]
+T_{i,k}   = squash_k(v_{i,k})                    // per-token knob,        in [lo_k, hi_k]
+knob_{i,k} = clamp( B_k + α_k · (T_{i,k} − B_k), lo_k, hi_k )
+```
+
+- `baseline_pre` and `v_i` are the **dequantized PCA-space** vectors (§4.2); squash is
+  applied to each *before* combining, so both `B_k` and `T_{i,k}` are bounded.
+- The per-token knob is treated as an **absolute** value; its contribution is the
+  **delta** `(T_{i,k} − B_k)`, scaled by a fixed per-axis **modulation depth** `α_k`.
+  `α_k = 0` yields a flat baseline-only reading; `α_k = 1` yields the pure per-token knob.
+- `α_k` is a frozen `FORMAT_V1` constant (one per axis). For `α_k ∈ [0, 1]` the result is
+  a convex combination of two in-range values and the `clamp` is a no-op; the `clamp` is
+  retained so that any `α_k > 1` (gesture exaggeration) still cannot escape `[lo_k, hi_k]`,
+  preserving the bounded droid parameter space (NFR-16) unconditionally.
+- A single-token utterance has `B_k = T_{0,k}`, so `knob = B_k` regardless of `α_k`.
+
+The `α_k` vector, the per-axis `[lo_k, hi_k]` bounds, and the final clamp are all part of
+`FORMAT_V1` (§8.2).
+
 ---
 
 ## 6. Perceptual axes → sound (the droid voice)
@@ -318,18 +377,30 @@ must be **formant synthesis**; ring-mod survives only as a faint seasoning.
 
 ### 6.2 Decision: synthesis method = formant-core with portamento
 
-The fixed voice chain per token gesture (the **droid DNA**):
+The fixed voice per token gesture (the **droid DNA**) is a **signal graph**, not a single
+serial chain: a *control layer* computes the instantaneous pitch, which drives the
+*audio path*. Implementation order follows the data flow:
 
-1. **Harmonically-rich source** — band-limited sawtooth/pulse (formants need harmonics
-   to sculpt).
+**Control layer (modulators → instantaneous pitch).** Combined first, evaluated per
+sample, they yield the oscillator frequency:
+- **Pitch center** — base frequency, set by PCA-1, biased into a high register.
+- **Portamento** — the center **glides** smoothly between consecutive token gestures
+  rather than jumping (the BB-8 swoop). Glide time is fixed; contour shape steered by
+  PCA-3.
+- **Warble LFO** — a fixed-*rate* vibrato added to the pitch; *depth* steered by PCA-4.
+
+**Audio path (source → filter → modulation → amplitude).** Driven by the pitch above:
+1. **Harmonically-rich source** — band-limited sawtooth/pulse whose oscillator phase is
+   advanced by the control-layer pitch (formants need harmonics to sculpt).
 2. **Formant filter bank** — 2–3 resonant bandpass filters at vowel frequencies. This
    *is* the talkbox/Bebot identity. Vowel position is steered by PCA-2.
-3. **Portamento** — pitch **glides** smoothly between consecutive token gestures rather
-   than jumping (the BB-8 swoop). Glide time is fixed.
-4. **Warble LFO** on pitch — fixed *rate*; *depth* steered by PCA-4.
-5. **Faint ring-mod** at a fixed frequency, low mix — the electronic edge.
-6. **Amplitude envelope** — fixed snappy attack/decay per syllable; pitch register
-   biased high.
+3. **Faint ring-mod** at a fixed frequency, low mix — the electronic edge.
+4. **Amplitude envelope** — fixed snappy attack/decay per syllable.
+
+So the actual graph is: `(pitch center + portamento + warble) → oscillator/source →
+formant bank → ring-mod → amplitude envelope`. The earlier "portamento/warble as later
+stages" framing was about *which axis controls what*, not signal order; pitch modulation
+necessarily happens at the oscillator, upstream of the formants.
 
 ### 6.3 Decision: the fixed/variable split (guarantees droid identity)
 
@@ -363,6 +434,20 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
   this prosodic set is voiced as a normal token (it has its own embedding and gesture).
   In `--explain`, prosodic punctuation appears as a distinct control row (e.g.
   `. → falling glide + pause`), separate from the per-token knob rows.
+- **Punctuation with no preceding syllable.** A prosodic marker attaches **backward
+  only** — it never attaches forward, so it cannot create a syllable that wasn't already
+  there. Concrete rules, all deterministic:
+  - **No voiced syllable yet** (leading punctuation: `? hello`, or input that is *only*
+    punctuation: `?`, `!!!`): the marker has nothing to shape, so it is a **no-op for
+    glide** — it is simply dropped. Its pause is also dropped (leading silence is already
+    handled by the fixed padding).
+  - **Input that contains no voiced syllables at all** (e.g. `?`, `!!!`, `. , ;`): after
+    dropping every control marker, **zero** syllables remain, which is the empty case →
+    the fixed inquisitive **"?" chirp**, exit 0 (§7.4). This is why the golden corpus's
+    bare `"?"` (plan T-49 corpus) maps to the chirp, *not* to a voiced glyph.
+  - **Consecutive markers** after a syllable (`hi?!`, `wow...`): only the **first** marker
+    shapes that syllable's final glide; the rest contribute only to the (single, not
+    additive) trailing pause. This keeps `!!!` from compounding into an unbounded pause.
 - **Utterance bounds** — short leading/trailing silence padding so files top-and-tail
   cleanly.
 
@@ -456,7 +541,8 @@ bit-reproducible across platforms (Rust does not auto-contract to FMA), but libm
 - We **own all transcendental math** in the audio path — pinned polynomial/table
   implementations of `sin`/`exp`/`tanh` (and any other needed), never libm.
 - All synthesis is done in **`f64`**.
-- A single fixed **float→i16 rounding rule**; no dithering.
+- A single fixed **float→i16 rounding rule** — **round-half-to-even** (the same tie rule
+  as table quantization, §4.2), then clamp to `[−32768, 32767]`; no dithering.
 - No fast-math / FMA contraction in the audio path.
 
 This makes one set of **golden WAV fixtures** authoritative across the verified OSes and
@@ -475,12 +561,17 @@ requires a version bump (below). **`FORMAT_V1` includes:**
 - the full tokenizer configuration, by hash of the embedded `tokenizer.json` **plus** the
   runtime flags that affect tokenization (`add_special_tokens = false`, lowercasing /
   normalization, the `##` continuation convention) — not just the vocab;
+- the **control-token drop filter** set (`[PAD]`/`[CLS]`/`[SEP]`/`[MASK]`, `[UNK]`
+  excluded) applied after tokenization (§3.3);
 - the pinned 64→4 PCA projection matrix (by hash);
-- the int16 **quantization scales** for the 4 axes and the pooling weight, and the
-  dequantization rule (§4.2);
+- the int16 **quantization scales and rule** for the 4 axes and the pooling weight —
+  symmetric signed, zero-point-free, `s = max|·|/32767`, round-half-to-even, code −32768
+  unused (§4.2);
 - the per-axis **squash statistics and the squash function** (§5.3);
 - the **sequence pooling rule** (§4.2): the token-weight-scaled mean with denominator =
-  token count, and the deliberate omission of model2vec's L2 normalization.
+  token count, and the deliberate omission of model2vec's L2 normalization;
+- the **knob-assembly rule** (§5.4): the per-axis modulation depths `α_k`, the per-axis
+  bounds `[lo_k, hi_k]`, and the final clamp.
 
 *Synthesis*
 - all fixed synthesis constants (formant frequencies/vowel locus, axis→knob ranges,
@@ -561,13 +652,13 @@ Two distinct build paths, with different network stories:
 | Case | Behavior |
 |------|----------|
 | Empty / whitespace-only | Always emit the fixed **"?" chirp**, exit 0 (§7.4). |
-| Special tokens (`[CLS]`/`[SEP]`) | **Disabled** (`add_special_tokens = false`). |
-| Unknown tokens (`[UNK]`) | **Kept and voiced** — a consistent "unknown" warble. |
+| Special/control tokens (`[PAD]`/`[CLS]`/`[SEP]`/`[MASK]`) | **Dropped** — injection disabled (`add_special_tokens = false`) *and* filtered by ID even when typed literally (§3.3). Input that filters to empty → "?" chirp. |
+| Unknown tokens (`[UNK]`) | **Kept and voiced** — a consistent "unknown" warble (the one special token not filtered). |
 | Case | Whatever the (uncased) tokenizer does — `Hello` == `hello`. Documented. |
 | Numbers | Natural WordPiece subwording; voiced as normal tokens. |
 | Punctuation | Prosodic punctuation (`.!?,;:`) is **control-only** — shapes the prior syllable's glide + pause, not voiced, not counted as a syllable (§6.4). Other symbols are voiced normally. |
 | Non-Latin scripts / emoji | Largely `[UNK]`/per-char with an English vocab → repetitive. **Acceptable for v1; documented as English-oriented.** |
-| Very long input | **Warn** on stderr past ~2,000 tokens (≈8 min audio); **hard error** at a generous cap (~100k tokens) to prevent runaway files. Both bounds fixed and documented. |
+| Very long input | Limits are defined by **rendered output size**, not token count alone (one canonical full buffer is held in memory, §7.1). **Warn** on stderr past ≈8 min of audio (≈2,000 tokens, ≈40 MB); **hard error** before synthesis past the fixed ceiling of **≈30 min / ≈160 MB** (≈8,000 tokens at 44.1 kHz·16-bit·mono). The token figure is a fast pre-check derived from the byte ceiling (≈0.23 s/token incl. pauses); the byte/duration ceiling is the normative bound. All three fixed and documented. |
 
 The throughline: lean on the tokenizer's natural behavior, keep everything
 deterministic, and only error on genuinely empty (handled as a chirp) or absurd input.
