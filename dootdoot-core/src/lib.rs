@@ -30,8 +30,9 @@ pub use synth::{
     PITCH_SEMITONE_SPAN, PORTAMENTO_SECONDS, RING_MOD_FREQUENCY_HZ, RING_MOD_MIX,
     SOURCE_MAX_HARMONICS, SOURCE_PULSE_MIX, SOURCE_PULSE_WIDTH, SOURCE_SAW_MIX,
     SYNTH_SAMPLE_RATE_HZ, Synth, TRAILING_SILENCE_SECONDS, VOWEL_LOCUS_COUNT, WARBLE_DEPTH_CENTS,
-    WARBLE_RATE_HZ, WORD_PAUSE_SECONDS, formant_frequencies, pitch_center_hz, portamento_pitch_hz,
-    portamento_progress, source_harmonic_count, source_oscillator_sample,
+    WARBLE_RATE_HZ, WORD_PAUSE_SECONDS, apply_warble_hz, formant_frequencies, pitch_center_hz,
+    portamento_pitch_hz, portamento_progress, source_harmonic_count, source_oscillator_sample,
+    warble_depth_cents, warble_offset_cents,
 };
 pub use tokenizer::{
     TokenizedInput, TokenizedToken, Tokenizer, TokenizerError, embedded_tokenizer,

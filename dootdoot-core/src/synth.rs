@@ -218,6 +218,29 @@ pub fn portamento_pitch_hz(
     start_hz + ((target_hz - start_hz) * progress)
 }
 
+/// Maps a warble-depth knob to a nonnegative vibrato depth in cents.
+pub fn warble_depth_cents(warble_depth: f64) -> f64 {
+    ((warble_depth.clamp(-1.0, 1.0) + 1.0) * 0.5) * WARBLE_DEPTH_CENTS
+}
+
+/// Computes the fixed-rate warble pitch offset in cents.
+pub fn warble_offset_cents(warble_depth: f64, elapsed_seconds: f64) -> f64 {
+    if !elapsed_seconds.is_finite() {
+        return 0.0;
+    }
+
+    let phase = 2.0 * PI * WARBLE_RATE_HZ * elapsed_seconds;
+
+    warble_depth_cents(warble_depth) * sin(phase)
+}
+
+/// Applies fixed-rate warble to a pitch in hertz.
+pub fn apply_warble_hz(pitch_hz: f64, warble_depth: f64, elapsed_seconds: f64) -> f64 {
+    let cents = warble_offset_cents(warble_depth, elapsed_seconds);
+
+    pitch_hz * exp(LN_2 * (cents / 1_200.0))
+}
+
 /// Returns steered formant centers for a vowel-position knob.
 pub fn formant_frequencies(vowel_position: f64) -> [f64; FORMANT_COUNT] {
     let position = vowel_position.clamp(-1.0, 1.0);
