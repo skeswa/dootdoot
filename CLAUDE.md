@@ -83,6 +83,13 @@ cargo run -p dootdoot -- "hi" -o hi.wav --play
 cargo test
 cargo test -p dootdoot-core <test_name>        # one crate / a single test by name
 
+# Format / lint the WHOLE repo (Rust + Markdown/TOML/YAML/JSON/…). Prefer these:
+scripts/fmt                 # cargo +nightly fmt  +  oxfmt (writes in place)
+scripts/lint                # clippy + fmt --check + oxfmt --check (CI-safe, no writes)
+# Both skip the Rust steps until a Cargo workspace exists, and resolve oxfmt from
+# PATH or via npx. oxfmt (non-Rust files) is configured by .oxfmtrc.json.
+
+# The underlying tools, if you need them directly:
 # Format — NIGHTLY rustfmt required (rustfmt.toml uses nightly-only options);
 # build/test stay on pinned stable.
 cargo +nightly fmt          # --check in CI
