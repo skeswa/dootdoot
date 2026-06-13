@@ -207,7 +207,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       synthesis past the ≈30 min/≈160 MB ceiling (≈8,000 tokens), no audio. Byte/duration is
       the normative bound; token count is a derived pre-check (design.md §10).
       Deps: T-39, T-20 · Reqs: FR-36, FR-37 · Est: 1h
-- [ ] **T-44 — Exit codes & error messages.** Friendly stderr errors; correct exit codes.
+- [x] **T-44 — Exit codes & error messages.** Friendly stderr errors; correct exit codes.
       Deps: T-39, T-40 · Reqs: FR-35 · Est: 1h
 
 ---
