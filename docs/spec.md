@@ -1,0 +1,195 @@
+# dootdoot — Requirements Specification
+
+> Derived from [`design.md`](./design.md). Each requirement is concise, testable, and
+> uniquely identified. **FR** = functional, **NFR** = non-functional. IDs are stable;
+> append new ones rather than renumbering.
+
+---
+
+## 1. Functional requirements
+
+### 1.1 Input
+
+- **FR-1** The tool SHALL accept input text as a positional command-line argument:
+  `dootdoot "TEXT"`.
+- **FR-2** When no positional text is given and stdin is piped (non-interactive), the
+  tool SHALL read the input text from stdin.
+- **FR-3** When no positional text is given and stdin is an interactive TTY, the tool
+  SHALL print help and exit non-zero.
+- **FR-4** The tool SHALL treat empty or whitespace-only input by emitting a fixed
+  inquisitive "?" chirp gesture and exiting 0 (it SHALL NOT error or emit a silent
+  file).
+
+### 1.2 Tokenization
+
+- **FR-5** The tool SHALL tokenize input using the `potion-base-2M` WordPiece
+  tokenizer loaded from an embedded `tokenizer.json`.
+- **FR-6** The tool SHALL disable special tokens during tokenization
+  (`add_special_tokens = false`); `[CLS]`/`[SEP]` SHALL NOT produce sound.
+- **FR-7** The tool SHALL voice unknown (`[UNK]`) tokens using their own mapping
+  (no special-casing, no skipping).
+- **FR-8** The tool SHALL detect WordPiece subword-continuation marking (`##`) to
+  identify word boundaries.
+
+### 1.3 Semantic mapping
+
+- **FR-9** The tool SHALL map each token to a 4-dimensional pre-squash vector by
+  lookup in an embedded baked table keyed by token ID.
+- **FR-10** The baked table SHALL store, per token, a 4-dimensional int16 PCA vector
+  and a scalar pooling weight.
+- **FR-11** The tool SHALL compute a sequence baseline vector as the
+  pooling-weighted mean of the per-token 4-dimensional vectors.
+- **FR-12** The tool SHALL squash each axis to a bounded perceptual range using
+  frozen per-axis statistics, applied (a) per token for local gestures and (b) on the
+  pooled sequence vector for the baseline.
+- **FR-13** The 4 axes SHALL map to knobs in fixed order: PCA-1 → pitch center;
+  PCA-2 → vowel/formant position; PCA-3 → contour/glide shape; PCA-4 → warble depth.
+- **FR-14** Each token's gesture SHALL modulate around the sequence baseline (baseline
+  = center, per-token vector = offset).
+
+### 1.4 Synthesis (voice)
+
+- **FR-15** The tool SHALL synthesize each token as a single continuous formant-glide
+  syllable (not a cluster of discrete beeps).
+- **FR-16** The voice chain SHALL be: harmonically-rich source → formant filter bank
+  (2–3 resonant bandpasses) → portamento → warble LFO → faint ring-mod → amplitude
+  envelope.
+- **FR-17** The following parameters SHALL be fixed (identical for all inputs):
+  formant character/structure, portamento glide time, warble rate, ring-mod frequency
+  and mix, envelope shape, high-register pitch bias, source waveform.
+- **FR-18** The following parameters SHALL vary only with the 4 semantic axes: pitch
+  center, vowel position, contour/glide shape, warble depth.
+- **FR-19** Pitch SHALL glide (portamento) between consecutive syllables rather than
+  stepping discretely.
+
+### 1.5 Timing
+
+- **FR-20** Each token SHALL occupy a fixed base syllable duration (≈150 ms);
+  duration SHALL NOT vary with semantics.
+- **FR-21** Consecutive subword tokens within the same word SHALL be connected by
+  portamento with no intervening silence.
+- **FR-22** A short fixed pause (≈80 ms) SHALL separate distinct words.
+- **FR-23** Punctuation SHALL shape intonation/phrasing: `?` → rising final glide +
+  longer pause; `.`/`!` → falling final glide + longer pause; `,` → medium pause.
+- **FR-24** The utterance SHALL include short fixed leading and trailing silence
+  padding.
+
+### 1.6 Output
+
+- **FR-25** The engine SHALL produce a single canonical in-memory audio buffer
+  (`Vec<i16>`, 44,100 Hz, mono) that is the sole source of truth for both file output
+  and playback.
+- **FR-26** When `-o/--output <FILE>` is given without `--play`, the tool SHALL write
+  the buffer as a WAV file and SHALL NOT play audio.
+- **FR-27** When no `-o/--output` is given, the tool SHALL play the buffer live and
+  SHALL NOT write a file.
+- **FR-28** When both `-o/--output` and `--play` are given, the tool SHALL write the
+  WAV file and play the buffer.
+- **FR-29** Output WAV files SHALL be 44,100 Hz, 16-bit signed PCM, mono.
+- **FR-30** Playback and file output SHALL derive from the identical buffer such that
+  played audio equals saved audio sample-for-sample.
+
+### 1.7 CLI & UX
+
+- **FR-31** The tool SHALL provide `--explain`, printing a per-token table
+  (`token │ pitch │ vowel │ contour │ warble`) to stderr.
+- **FR-32** `--explain` output SHALL go to stderr only and SHALL NOT appear in any
+  piped audio or file output.
+- **FR-33** The tool SHALL provide `--version`, which SHALL surface the active format
+  identifier (`FORMAT_V1`).
+- **FR-34** The tool SHALL provide `--help`.
+- **FR-35** The tool SHALL return exit code 0 on success and a non-zero code on error.
+
+### 1.8 Input limits
+
+- **FR-36** The tool SHALL print a warning to stderr when input exceeds ≈2,000 tokens.
+- **FR-37** The tool SHALL error (non-zero exit) when input exceeds a fixed hard cap
+  (≈100,000 tokens) without producing audio.
+
+### 1.9 Format contract & versioning
+
+- **FR-38** `FORMAT_V1` SHALL bundle all output-affecting parameters: model hash,
+  tokenizer/vocab hash, PCA projection matrix, per-axis squash statistics and squash
+  function, all synthesis constants, and the owned-math implementation version.
+- **FR-39** Any change that alters one or more output samples SHALL require bumping the
+  format identifier (e.g. `FORMAT_V1` → `FORMAT_V2`).
+
+### 1.10 Build-time generation (xtask)
+
+- **FR-40** An `xtask` tool SHALL generate `assets/format_v1.bin` from `potion-base-2M`
+  by extracting all token embeddings, computing the top-4 PCA projection, canonicalizing
+  component signs deterministically, computing squash statistics, and serializing the
+  per-token vectors and weights.
+- **FR-41** PCA component signs SHALL be canonicalized by a deterministic rule (e.g.
+  force each component's largest-magnitude loading positive) so generation is
+  reproducible.
+- **FR-42** `assets/format_v1.bin` and `assets/tokenizer.json` SHALL be committed to
+  the repository and embedded into the shipped binary.
+
+---
+
+## 2. Non-functional requirements
+
+### 2.1 Determinism
+
+- **NFR-1** For a fixed format version, identical input text SHALL produce
+  byte-identical audio output across repeated runs on the same machine.
+- **NFR-2** For a fixed format version, identical input text SHALL produce
+  byte-identical audio output across macOS, Linux, and Windows (bit-exact
+  cross-platform).
+- **NFR-3** All transcendental math in the audio path (`sin`, `exp`, `tanh`, and any
+  others) SHALL use owned, pinned implementations; libm transcendentals SHALL NOT be
+  used in the audio path.
+- **NFR-4** Synthesis SHALL be computed in `f64` and converted to `i16` by a single
+  fixed rounding rule with no dithering.
+- **NFR-5** The audio path SHALL NOT use fast-math or FMA contraction that could
+  change results across platforms.
+
+### 2.2 Architecture & footprint
+
+- **NFR-6** The shipped binary SHALL NOT depend on `model2vec-rs`, `candle`, or any
+  tensor framework at runtime.
+- **NFR-7** The embedded baked mapping table SHALL be on the order of ~240 KB.
+- **NFR-8** The tool SHALL require no network access at build time or runtime (all
+  assets vendored/committed).
+- **NFR-9** The codebase SHALL be a Cargo workspace of three crates: `dootdoot-core`
+  (pure engine library), `dootdoot` (CLI binary), and `xtask` (build-time generator,
+  not shipped).
+- **NFR-10** `dootdoot-core` SHALL contain no I/O or audio-device access and SHALL be
+  unit-testable in isolation.
+
+### 2.3 Platform & performance
+
+- **NFR-11** The tool SHALL build and run on macOS (Apple Silicon) as the primary
+  target.
+- **NFR-12** Live playback SHALL use `rodio`/`cpal` (CoreAudio on macOS).
+- **NFR-13** For typical short inputs, end-to-end latency from invocation to first
+  sound SHALL be perceptibly immediate (sub-second), aided by the no-tensor-runtime
+  design.
+
+### 2.4 Quality goals (verifiable)
+
+- **NFR-14** Semantically similar tokens SHALL be closer in 4-axis space than
+  dissimilar ones (e.g. distance `cat↔dog` < `cat↔airplane`), verified by test.
+- **NFR-15** Semantically similar short sequences SHALL be closer in baseline-axis
+  space than dissimilar ones, verified by test.
+- **NFR-16** Every output, regardless of input, SHALL remain within the fixed droid
+  parameter space (only the 4 bounded axes vary), preserving a consistent BB-8-family
+  identity.
+
+### 2.5 Testing
+
+- **NFR-17** A golden-WAV test suite SHALL assert SHA-256 hashes of outputs for a fixed
+  input corpus, serving as the cross-platform determinism contract, and SHALL run in CI
+  on macOS and Linux.
+- **NFR-18** A determinism test SHALL run each corpus input twice and assert
+  byte-identical buffers.
+- **NFR-19** Owned-math functions SHALL be tested for correctness within tolerance
+  against references and SHALL have pinned exact outputs at sample points.
+- **NFR-20** The `--explain` table SHALL have a golden snapshot test.
+
+### 2.6 Documentation
+
+- **NFR-21** Documented behaviors SHALL include: uncased tokenization
+  (`Hello`==`hello`), English-oriented handling of non-Latin/emoji input, the empty-
+  input "?" chirp, and the input warning/cap thresholds.
