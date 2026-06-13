@@ -605,8 +605,10 @@ bit-reproducible across platforms (Rust does not auto-contract to FMA), but libm
 - We **own all transcendental math** in the audio path — pinned polynomial/table
   implementations of `sin`/`exp`/`tanh` (and any other needed), never libm.
 - All synthesis is done in **`f64`**.
-- A single fixed **float→i16 rounding rule** — **round-half-to-even** (the same tie rule
-  as table quantization, §4.2), then clamp to `[−32768, 32767]`; no dithering.
+- A single fixed **float→i16 rounding rule** — normalized samples are scaled by
+  `32768.0`, rounded **round-half-to-even** (the same tie rule as table quantization,
+  §4.2), then clamped to `[−32768, 32767]`; no dithering. NaN maps to 0; infinities
+  clamp to the nearest endpoint.
 - No fast-math / FMA contraction in the audio path.
 
 This makes one set of **golden WAV fixtures** authoritative across the verified OSes and

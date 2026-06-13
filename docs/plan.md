@@ -177,7 +177,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ## Phase 5 — Output buffer & WAV (`wav`)
 
-- [ ] **T-35 — Float→i16 quantization.** Single fixed rounding rule (no dither); clamp.
+- [x] **T-35 — Float→i16 quantization.** Single fixed rounding rule (no dither); clamp.
       Deps: T-02 · Reqs: FR-25, FR-29, NFR-4 · Est: 1h
 - [ ] **T-36 — Canonical buffer assembly.** Produce one `Vec<i16>` @ 44.1k mono as the
       sole source of truth.
