@@ -34,15 +34,19 @@ is in `docs/design.md` §2; the workspace has three crates:
 ### Load-bearing invariants (violating these breaks the core promises)
 
 - **model2vec / `candle` are BUILD-TIME ONLY.** The shipped binary has no tensor runtime:
-  the token→4-axis mapping is precomputed into `assets/format_v1.bin` (~240 KB) and
+  the token→4-axis mapping is precomputed into `assets/format_v1.bin` (~300 KB) and
   `tokenizer.json`, both committed and `include_bytes!`-embedded. (Sound because PCA
-  projection is linear: pooling baked vectors == pooling-then-projecting.)
-- **Determinism is bit-exact cross-platform.** No libm transcendentals in the audio path
+  projection is linear: pooling baked vectors == pooling-then-projecting, *exact before
+  the int16 quantization* the table uses.)
+- **Determinism is bit-exact on the CI-verified platforms (macOS + Linux);** Windows is
+  intended but not yet guaranteed. No libm transcendentals in the audio path
   (`sin`/`exp`/`tanh` are our own pinned impls); synthesis in `f64`; one fixed float→i16
   rounding rule; no fast-math/FMA. Any parallelism must be byte-identical to serial.
-- **`FORMAT_V1` is a versioned contract** over everything affecting an output sample.
+- **`FORMAT_V1` is a versioned contract** over everything affecting an output sample
+  (mapping, quantization scales, tokenizer config, synth + timing constants, punctuation
+  rules, chirp, float→i16 rounding, WAV serialization, math version).
   **Any change that alters even one sample MUST bump the version** (`V1`→`V2`) and
-  regenerate golden fixtures. Golden-WAV hash tests (cross-platform CI) are that contract.
+  regenerate golden fixtures. Golden-WAV hash tests are that contract.
 - **One canonical audio buffer** feeds both file output and playback, so what plays equals
   what's saved.
 

@@ -69,8 +69,14 @@
 - **FR-21** Consecutive subword tokens within the same word SHALL be connected by
   portamento with no intervening silence.
 - **FR-22** A short fixed pause (≈80 ms) SHALL separate distinct words.
-- **FR-23** Punctuation SHALL shape intonation/phrasing: `?` → rising final glide +
-  longer pause; `.`/`!` → falling final glide + longer pause; `,` → medium pause.
+- **FR-23** Prosodic punctuation tokens (`.` `!` `?` `,` `;` `:`) SHALL be treated as
+  control-only markers: they SHALL NOT be voiced as their own syllable and SHALL NOT
+  count toward the voiced-syllable total. Each SHALL shape the **preceding** syllable
+  and the following pause: `?` → rising final glide + longer pause; `.`/`!` → falling
+  final glide + longer pause; `,`/`;`/`:` → medium pause, no contour change. Symbols
+  outside this set SHALL be voiced as normal tokens.
+- **FR-23a** In `--explain` output, prosodic-punctuation markers SHALL be shown as
+  distinct control rows, separate from the per-token knob rows.
 - **FR-24** The utterance SHALL include short fixed leading and trailing silence
   padding.
 
@@ -108,9 +114,16 @@
 
 ### 1.9 Format contract & versioning
 
-- **FR-38** `FORMAT_V1` SHALL bundle all output-affecting parameters: model hash,
-  tokenizer/vocab hash, PCA projection matrix, per-axis squash statistics and squash
-  function, all synthesis constants, and the owned-math implementation version.
+- **FR-38** `FORMAT_V1` SHALL bundle **every** parameter or rule that can affect an
+  output sample, including: the model hash; the tokenizer configuration (the
+  `tokenizer.json` hash **and** the runtime tokenization flags — `add_special_tokens`,
+  normalization/lowercasing, the `##` continuation convention); the PCA projection matrix
+  (by hash); the int16 quantization scales and dequantization rule for the 4 axes and the
+  pooling weight; the pooling rule; the per-axis squash statistics and squash function;
+  all fixed synthesis constants; the timing constants (syllable duration, pauses,
+  padding); the prosodic-punctuation rules; the empty-input "?" chirp constants; the
+  float→i16 rounding rule; the WAV serialization choices (sample rate, bit depth,
+  channels, header bytes); and the owned-math implementation version.
 - **FR-39** Any change that alters one or more output samples SHALL require bumping the
   format identifier (e.g. `FORMAT_V1` → `FORMAT_V2`).
 
@@ -135,8 +148,9 @@
 - **NFR-1** For a fixed format version, identical input text SHALL produce
   byte-identical audio output across repeated runs on the same machine.
 - **NFR-2** For a fixed format version, identical input text SHALL produce
-  byte-identical audio output across macOS, Linux, and Windows (bit-exact
-  cross-platform).
+  byte-identical audio output across the **CI-verified platforms (macOS and Linux)**.
+  The math is designed to be bit-exact on other platforms (incl. Windows), but such
+  platforms are NOT guaranteed until added to the golden-hash CI matrix (NFR-17).
 - **NFR-3** All transcendental math in the audio path (`sin`, `exp`, `tanh`, and any
   others) SHALL use owned, pinned implementations; libm transcendentals SHALL NOT be
   used in the audio path.
@@ -149,14 +163,18 @@
 
 - **NFR-6** The shipped binary SHALL NOT depend on `model2vec-rs`, `candle`, or any
   tensor framework at runtime.
-- **NFR-7** The embedded baked mapping table SHALL be on the order of ~240 KB.
-- **NFR-8** The tool SHALL require no network access at build time or runtime (all
-  assets vendored/committed).
+- **NFR-7** The embedded baked mapping table SHALL be on the order of ~300 KB (header +
+  ~30k per-token records of 4×int16 + int16 weight).
+- **NFR-8** A **normal build** (compiling from the committed assets) and **runtime**
+  SHALL require no network access. **Asset regeneration** via `xtask` is exempt and MAY
+  require a one-time model download, depending on the acquisition decision (FR-40/T-11).
 - **NFR-9** The codebase SHALL be a Cargo workspace of three crates: `dootdoot-core`
   (pure engine library), `dootdoot` (CLI binary), and `xtask` (build-time generator,
   not shipped).
-- **NFR-10** `dootdoot-core` SHALL contain no I/O or audio-device access and SHALL be
-  unit-testable in isolation.
+- **NFR-10** `dootdoot-core` SHALL contain no filesystem or audio-device I/O and SHALL
+  be unit-testable in isolation. WAV serialization in core SHALL target an in-memory
+  byte buffer or a generic `impl std::io::Write`; the `dootdoot` binary SHALL own the
+  actual file write and the playback device.
 
 ### 2.3 Platform & performance
 

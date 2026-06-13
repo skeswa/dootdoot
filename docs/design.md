@@ -21,7 +21,8 @@ intuition for the "language."
 ### 1.1 Goals
 
 1. **Determinism.** Identical input text yields identical audio output, bit-for-bit,
-   on every platform, forever (subject to an explicit, versioned format contract).
+   forever (subject to an explicit, versioned format contract). The design targets every
+   platform; the v1 *guarantee* covers the CI-verified ones, macOS and Linux (§8.1).
 2. **Semantic similarity → sonic similarity.** Semantically similar tokens *and*
    semantically similar token sequences sound similar. This is what makes the output
    a learnable language rather than noise.
@@ -145,20 +146,42 @@ contract (§8). Therefore it can be **precomputed once, offline, for the entire
 ~30k-token vocabulary**, and shipped as a tiny lookup table. The runtime never loads
 model2vec or a tensor framework.
 
-This is sound because **PCA projection is linear**, so sequence pooling done on the
-baked 4-dim vectors is *exactly equal* to pooling the original 64-dim vectors and then
+This works because **PCA projection is linear**. In exact arithmetic, sequence pooling
+on the baked 4-dim vectors equals pooling the original 64-dim vectors and then
 projecting:
 
 ```
 project(mean_w(token_vectors)) == mean_w(project(token_vectors))
 ```
 
-(`mean_w` = the SIF/weighted mean; weights are baked per token.) We therefore bake,
-per token: its **pre-squash 4-dim PCA vector** (as int16) plus its **pooling weight**.
-Total size ≈ 30k × 4 × 2 bytes ≈ **~240 KB**.
+(`mean_w` = the SIF/weighted mean; weights are baked per token.) This identity is exact
+**before quantization**. We store the projected vectors as int16, which introduces a
+small, bounded rounding error, so the precise runtime guarantee is: *the runtime pools
+the frozen quantized approximation, deterministically.* The quantization is part of the
+`FORMAT_V1` contract (§8.2), so the approximation is identical on every run and on every
+verified platform (§8.1).
 
-The nonlinear "squash" (§5.3) is applied *after* pooling and *after* per-token lookup,
-consistently — never baked — so the linearity argument holds.
+**Quantization scheme (deterministic, lossy by a bounded amount).** Each of the 4 axes
+has a fixed dequantization scale `s_k` chosen at build time so the vocab's projected
+values span the int16 range; a stored value `q` dequantizes to `q · s_k` (f64). The
+per-axis max error is `s_k / 2`. Pooling weights are quantized the same way with their
+own scale `s_w`. All five scales live in the file header. The nonlinear "squash" (§5.3)
+is **never baked**; it is applied at runtime after pooling (for the baseline) and after
+per-token lookup (for gestures), so it operates on the dequantized values and the
+linearity argument holds up to int16 rounding.
+
+**Baked file (`format_v1.bin`) layout and size.** Little-endian throughout.
+- *Header* (a few hundred bytes): magic + format version; vocab size; axis count (4);
+  the 4 axis dequant scales + the weight dequant scale (f32 each); the per-axis squash
+  statistics (§5.3); and the model-, tokenizer- and PCA-matrix hashes (§8.2).
+- *Per-token record* (10 bytes): 4 × int16 (quantized PCA components) + 1 × int16
+  (quantized pooling weight).
+- *Total* ≈ 30k × 10 bytes + header ≈ **~300 KB** (int8-quantized model embeddings are a
+  build-time input only and are not shipped).
+
+Note the runtime file stores the **projected** values, so it does **not** carry the
+64→4 PCA matrix; that matrix is a build-time artifact, recorded in the contract only by
+hash for provenance.
 
 See §9 for the resulting runtime/build-time split.
 
@@ -209,10 +232,19 @@ and more learnable (the ear maps meaning to vowel color).
 
 PCA outputs are unbounded. Each axis is squashed into a fixed perceptual range using
 **frozen per-axis statistics** computed offline over the vocab (e.g. percentiles or
-mean/std). The squash function (tanh vs percentile-clamp) is a tuning detail deferred
-to implementation; whichever is chosen becomes part of `FORMAT_V1`.
+mean/std).
 
-Squash is applied in two places, consistently:
+**The squash function is chosen at artifact-generation time, not at the end of tuning.**
+The function (tanh vs percentile-clamp) determines which statistics the header must
+carry, so it cannot be deferred past the point where `format_v1.bin` is produced. The
+build pipeline reflects this: the squash function is selected when squash stats are
+computed (plan task T-15), and any later adjustment during voice tuning (T-46)
+**regenerates the artifact** before the `FORMAT_V1` freeze (T-48). Because the squash is
+applied at runtime and is *not* baked into the per-token vectors, a change touches only
+the header statistics, so regeneration is cheap. Whatever is frozen becomes part of
+`FORMAT_V1` (§8.2).
+
+Squash is applied in two places, consistently, on the dequantized values:
 - **Per token** → the token's local gesture knob values.
 - **On the weighted-mean of the sequence's token vectors** → the utterance baseline.
 
@@ -294,9 +326,15 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
   utterance (`playing` = two glided syllables). Word length becomes audible.
 - **Between words, a short pause** (~80 ms) — the burst-like BB-8 cadence; lets the ear
   segment words.
-- **Punctuation drives intonation:** `?` → final rising glide + longer pause; `.`/`!`
-  → falling glide + longer pause; `,` → medium pause. This supplies sentence-level
-  affect.
+- **Punctuation is control-only, not voiced.** A fixed set of prosodic punctuation
+  tokens (`.` `!` `?` `,` `;` `:`) is recognized and treated as control markers: they do
+  **not** produce their own syllable. Instead each shapes the **preceding** syllable's
+  final glide and inserts a pause: `?` → rising final glide + longer pause; `.`/`!` →
+  falling final glide + longer pause; `,`/`;`/`:` → medium pause, no contour change. They
+  therefore do not add to the voiced-syllable count. Any other symbol that is *not* in
+  this prosodic set is voiced as a normal token (it has its own embedding and gesture).
+  In `--explain`, prosodic punctuation appears as a distinct control row (e.g.
+  `. → falling glide + pause`), separate from the per-token knob rows.
 - **Utterance bounds** — short leading/trailing silence padding so files top-and-tail
   cleanly.
 
@@ -315,6 +353,10 @@ This buffer is the **single source of truth**. WAV writing and live playback are
 thin sinks that consume the identical buffer, guaranteeing *what you hear == what you'd
 save*, bit-for-bit. Tests assert only on this buffer / its WAV serialization; the audio
 device is never in the test path.
+
+To keep `dootdoot-core` I/O-free (§9.2), the core's WAV support **serializes the buffer
+to an in-memory byte vector (or any `impl std::io::Write`)**; it never touches the
+filesystem. The `dootdoot` binary owns the actual file write (and the playback device).
 
 ### 7.2 Decision: audio format = 44.1 kHz / 16-bit signed PCM / mono
 
@@ -340,7 +382,8 @@ Built with `clap` (derive).
 **Input:**
 - Positional `TEXT`: `dootdoot "hello there"`.
 - **Stdin fallback** when `TEXT` is absent and stdin is piped: `echo "hi" | dootdoot`.
-- No arg + interactive TTY → print help.
+- No arg + interactive TTY → print help and **exit non-zero** (consistent with FR-3;
+  distinct from empty/whitespace *input*, which emits the "?" chirp and exits 0).
 
 **Output behavior:**
 - No `-o` → **play live** (default).
@@ -369,10 +412,14 @@ that does not touch the semantic mapping.
 
 ## 8. Determinism contract
 
-### 8.1 Decision: bit-exact cross-platform determinism
+### 8.1 Decision: bit-exact determinism, verified on macOS + Linux
 
-Determinism is the headline property, so we make it **provably portable**: the output
-WAV hashes identically on macOS, Linux, and Windows.
+Determinism is the headline property, so we make it **provably portable**. The design is
+engineered to be bit-exact on any platform, but the **v1 guarantee covers the platforms
+we actually verify in CI: macOS and Linux.** Windows is intended to match and the math is
+written to make that true, but it is **not a guaranteed platform until it is in the
+golden-hash CI matrix** (a planned addition, not a v1 promise). We claim only what we
+test.
 
 The only real threat is **floating-point transcendentals**. IEEE-754 `+ − × ÷` are
 bit-reproducible across platforms (Rust does not auto-contract to FMA), but libm's
@@ -384,24 +431,47 @@ bit-reproducible across platforms (Rust does not auto-contract to FMA), but libm
 - A single fixed **float→i16 rounding rule**; no dithering.
 - No fast-math / FMA contraction in the audio path.
 
-This makes one set of **golden WAV fixtures** authoritative on every OS and turns
-"deterministic" into a demonstrable claim.
+This makes one set of **golden WAV fixtures** authoritative across the verified OSes and
+turns "deterministic" into a demonstrable claim. Adding Windows is a matter of extending
+the CI matrix and committing identical hashes; until then, the guarantee is scoped to
+macOS + Linux.
 
 ### 8.2 Decision: the versioned FORMAT contract
 
 Everything that can affect a single output sample is bundled under one identifier,
-**`FORMAT_V1`**:
+**`FORMAT_V1`**. If a change can move one sample, it is in this list — and changing it
+requires a version bump (below). **`FORMAT_V1` includes:**
 
-- model2vec model hash, tokenizer/vocab hash,
-- the pinned PCA projection matrix,
-- the per-axis squash statistics and squash function,
-- all synthesis constants (formant frequencies, ranges, glide time, warble rate,
-  envelope, ring-mod, durations, pauses, register bias),
-- the owned-math implementation version.
+*Mapping inputs*
+- model2vec model hash (the build-time embedding source);
+- the full tokenizer configuration, by hash of the embedded `tokenizer.json` **plus** the
+  runtime flags that affect tokenization (`add_special_tokens = false`, lowercasing /
+  normalization, the `##` continuation convention) — not just the vocab;
+- the pinned 64→4 PCA projection matrix (by hash);
+- the int16 **quantization scales** for the 4 axes and the pooling weight, and the
+  dequantization rule (§4.2);
+- the per-axis **squash statistics and the squash function** (§5.3);
+- the pooling rule (SIF/weighted-mean definition).
+
+*Synthesis*
+- all fixed synthesis constants (formant frequencies/vowel locus, axis→knob ranges,
+  glide/portamento time, warble rate, ring-mod frequency and mix, envelope shape,
+  register bias, source waveform);
+- timing constants (syllable duration, inter-word pause, leading/trailing padding);
+- the **prosodic-punctuation rules** (which symbols are control-only, their glide/pause
+  effects, §6.4);
+- the **empty-input "?" chirp** gesture constants (§7.4);
+- the owned-math implementation version (§8.1).
+
+*Serialization*
+- the single **float→i16 rounding rule** (no dithering);
+- the **WAV serialization choices** (44.1 kHz, 16-bit signed PCM, mono, and the exact
+  header bytes) — these define the file the golden hashes are taken over.
 
 `FORMAT_V1` is surfaced by `--version`. **Any change that alters a single output sample
 bumps it to `V2`.** This gives users the guarantee: *same text + same FORMAT version =
-same sound, forever, everywhere*, while letting the voice evolve deliberately.
+same sound, forever, on every verified platform (§8.1)*, while letting the voice evolve
+deliberately.
 
 ---
 
@@ -414,7 +484,8 @@ to build time. The resulting split:
 
 **Runtime dependencies (shipped binary):**
 - `tokenizers` (HuggingFace) — tokenize text → IDs using the embedded `tokenizer.json`.
-- the baked **~240 KB** `format_v1.bin` table (token → 4×int16 + weight), embedded.
+- the baked **~300 KB** `format_v1.bin` table (header + per-token 4×int16 + int16
+  weight; layout and size in §4.2), embedded.
 - the **owned math** module.
 - `hound`, `rodio`, `clap`.
 - **No `model2vec-rs`, no `candle`, no tensor framework.** Smaller, faster-starting,
@@ -428,8 +499,9 @@ to build time. The resulting split:
 - **`dootdoot-core`** (library): the pure, deterministic engine — tokenizer wrapper,
   mapping (baked-table load + linear pooling + axis squash), synth (source → formant
   bank → portamento → warble → ring-mod → envelope), the **owned math** module, WAV
-  serialization, and the `FORMAT_V1` constants. No I/O, no audio device. Fully
-  unit-testable and reusable.
+  serialization **to bytes / an `impl Write`**, and the `FORMAT_V1` constants. No
+  filesystem or audio-device I/O (it hands back buffers/bytes; the binary performs the
+  actual writes). Fully unit-testable and reusable.
 - **`dootdoot`** (binary): thin CLI shell — `clap` parsing, stdin handling, `rodio`
   playback, `--explain` printing, error/exit-code mapping. Calls into core.
 - **`xtask`** (build-time tool, not shipped): the offline generator — loads
@@ -442,8 +514,16 @@ to build time. The resulting split:
 
 `assets/format_v1.bin` and `assets/tokenizer.json` are **committed to the repo and
 embedded** in the binary (`include_bytes!`). The frozen contract literally lives in a
-reviewable artifact, and the build never needs network access. How `xtask` obtains the
-`potion-base-2M` model (vendor vs download) is a deferred ops detail (§11).
+reviewable artifact.
+
+Two distinct build paths, with different network stories:
+- **Normal build** (`cargo build`/`test`/`install`): compiles from the committed assets
+  and is **fully offline** — no network, ever. This is the guarantee in NFR-8.
+- **Asset regeneration** (running `xtask` to rebuild `format_v1.bin`): a rare, deliberate
+  operation that needs the `potion-base-2M` model as input. Whether that model is a
+  **vendored blob** (regeneration also offline) or **downloaded once** (regeneration may
+  require network) is the open ops decision in §11 and plan task T-11. Regeneration is
+  **not** covered by the offline guarantee until T-11 settles it.
 
 ---
 
@@ -455,7 +535,8 @@ reviewable artifact, and the build never needs network access. How `xtask` obtai
 | Special tokens (`[CLS]`/`[SEP]`) | **Disabled** (`add_special_tokens = false`). |
 | Unknown tokens (`[UNK]`) | **Kept and voiced** — a consistent "unknown" warble. |
 | Case | Whatever the (uncased) tokenizer does — `Hello` == `hello`. Documented. |
-| Numbers / punctuation | Natural WordPiece subwording; punctuation drives intonation. |
+| Numbers | Natural WordPiece subwording; voiced as normal tokens. |
+| Punctuation | Prosodic punctuation (`.!?,;:`) is **control-only** — shapes the prior syllable's glide + pause, not voiced, not counted as a syllable (§6.4). Other symbols are voiced normally. |
 | Non-Latin scripts / emoji | Largely `[UNK]`/per-char with an English vocab → repetitive. **Acceptable for v1; documented as English-oriented.** |
 | Very long input | **Warn** on stderr past ~2,000 tokens (≈8 min audio); **hard error** at a generous cap (~100k tokens) to prevent runaway files. Both bounds fixed and documented. |
 
@@ -471,8 +552,12 @@ These do not change the architecture and are settled during implementation:
 - **Exact constant values** — formant frequencies and vowel locus, pitch/vowel ranges,
   glide time, warble rate, envelope shape, ring-mod frequency/mix, syllable duration,
   pause lengths, register bias. Tuned **by ear**, then frozen into `FORMAT_V1`.
-- **Squash function** — tanh vs percentile-clamp (§5.3).
-- **How `xtask` obtains `potion-base-2M`** — vendored blob vs scripted download.
+- **Squash function** — tanh vs percentile-clamp. Note this is *not* fully open-ended:
+  it must be chosen when `format_v1.bin` is generated (T-15), and any later change
+  regenerates the artifact before the freeze (§5.3, T-46).
+- **How `xtask` obtains `potion-base-2M`** — vendored blob (regeneration stays offline)
+  vs scripted download (regeneration may need network). This affects only regeneration,
+  never the normal offline build (§9.3, T-11).
 - **Packaging** — `cargo install`, Homebrew, prebuilt release binaries.
 - **License.**
 
@@ -483,8 +568,8 @@ These do not change the architecture and are settled during implementation:
 - **Determinism (goal 1):** frozen `FORMAT_V1` (§8.2) + bit-exact owned math (§8.1) +
   buffer-as-source-of-truth (§7.1) + committed artifacts (§9.3).
 - **Semantic similarity → sonic similarity (goal 2):** model2vec semantics (§4) +
-  linear PCA reduction with exact sequence pooling (§4.2, §5) + two-level baseline/
-  modulation (§5.4).
+  linear PCA reduction with sequence pooling that is exact up to int16 quantization
+  (§4.2, §5) + two-level baseline/modulation (§5.4).
 - **Droid identity (goal 3):** research-grounded fixed formant voice with portamento
   (§6.1–6.3) + fixed/variable split that constrains all input to a tasteful droid
   parameter space.

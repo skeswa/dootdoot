@@ -81,16 +81,22 @@
 - [ ] **T-14 — Canonicalize component signs.** Deterministic rule (largest-magnitude
   loading positive); unit-test reproducibility.
   Deps: T-13 · Reqs: FR-41 · Est: 1h
-- [ ] **T-15 — Compute per-axis squash statistics.** Project full vocab, derive percentile/
-  mean-std stats per axis for the chosen squash.
+- [ ] **T-15 — Choose squash function + compute per-axis stats.** Select the squash
+  (tanh vs percentile-clamp) **here** — it determines which stats the header carries —
+  and derive the per-axis stats over the full vocab. Document the choice; T-46 may revise
+  it and regenerate the artifact before the freeze.
   Deps: T-14 · Reqs: FR-12 · Est: 1.5h
-- [ ] **T-16 — Define `format_v1.bin` binary layout.** Header (magic, version, hashes,
-  PCA matrix, squash stats) + per-token records (4×int16 + weight). Document layout.
+- [ ] **T-16 — Define `format_v1.bin` binary layout.** Little-endian. Header (magic,
+  version, vocab size, axis count, the 4 axis dequant scales + weight dequant scale as
+  f32, squash stats, and model/tokenizer/PCA-matrix hashes) + per-token records
+  (4×int16 quantized PCA + 1×int16 quantized weight = 10 bytes). The runtime file stores
+  projected values, so it does NOT contain the PCA matrix. Document the layout.
   Deps: T-15 · Reqs: FR-10, FR-38 · Est: 1.5h
 - [ ] **T-17 — Serialize per-token 4-vectors + weights to `format_v1.bin`.** Project each
-  token, quantize to int16, write the file; compute and embed model/vocab hashes.
+  token, quantize components and weight to int16 with the header scales, write the file;
+  compute and embed model/tokenizer/PCA hashes.
   Deps: T-16 · Reqs: FR-9, FR-10, FR-40, FR-42 · Est: 2h
-- [ ] **T-18 — Commit `assets/format_v1.bin` + `tokenizer.json`.** Verify size (~240 KB)
+- [ ] **T-18 — Commit `assets/format_v1.bin` + `tokenizer.json`.** Verify size (~300 KB)
   and add a regeneration README note.
   Deps: T-17 · Reqs: FR-42, NFR-7 · Est: 0.5h
 
@@ -179,8 +185,8 @@
 - [ ] **T-41 — Live playback via `rodio`.** Stream the canonical buffer; CoreAudio on Mac.
   Deps: T-36 · Reqs: FR-27, FR-30, NFR-12 · Est: 1.5h
 - [ ] **T-42 — `--explain` table.** Per-token `token │ pitch │ vowel │ contour │ warble`
-  to stderr.
-  Deps: T-24, T-38 · Reqs: FR-31, FR-32 · Est: 1.5h
+  to stderr, with prosodic punctuation shown as distinct control rows.
+  Deps: T-24, T-38 · Reqs: FR-31, FR-32, FR-23a · Est: 1.5h
 - [ ] **T-43 — Input limits.** Warn >~2,000 tokens; hard error >~100,000 tokens (no audio).
   Deps: T-39, T-20 · Reqs: FR-36, FR-37 · Est: 1h
 - [ ] **T-44 — Exit codes & error messages.** Friendly stderr errors; correct exit codes.
@@ -194,9 +200,11 @@
   ring-mod, envelope, register, durations, pauses) until reliably BB-8-like across
   varied text.
   Deps: T-40, T-41 · Reqs: NFR-16 · Est: 3h
-- [ ] **T-46 — Choose & freeze squash function.** Decide tanh vs percentile-clamp; verify
-  axis distributions land tastefully; lock into `FORMAT_V1`.
-  Deps: T-45, T-23 · Reqs: FR-12, FR-39 · Est: 1.5h
+- [ ] **T-46 — Validate/finalize squash; regenerate artifact if changed.** Confirm the
+  squash chosen at T-15 still lands tastefully after by-ear tuning; if it (or its stats)
+  changes, **re-run `xtask` to regenerate `format_v1.bin`** (header stats only — baked
+  vectors are pre-squash) before the freeze. Lock into `FORMAT_V1`.
+  Deps: T-45, T-23, T-15 · Reqs: FR-12, FR-39 · Est: 1.5h
 - [ ] **T-47 — Validate learnability spread.** Spot-check that distinct semantic clusters
   are audibly distinct and similar ones audibly similar; adjust axis ranges if needed.
   Deps: T-45 · Reqs: NFR-14, NFR-15, NFR-16 · Est: 2h
