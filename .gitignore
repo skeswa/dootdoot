@@ -1,0 +1,11 @@
+# Rust build artifacts
+/target/
+
+# Coverage output (cargo-llvm-cov)
+*.profraw
+/lcov.info
+
+# macOS
+.DS_Store
+
+# Note: Cargo.lock is intentionally committed (this is an application; see docs/style.md §12).
