@@ -43,7 +43,7 @@
 - [x] **T-04 — Scaffold `xtask` crate.** Build-time-only binary; add `model2vec-rs`,
       `nalgebra`/`linfa`, serialization deps here only.
       Deps: T-01 · Reqs: FR-40, NFR-6 · Est: 1h
-- [ ] **T-05 — CI skeleton.** GitHub Actions: build + test on macOS and Linux; cache cargo.
+- [x] **T-05 — CI skeleton.** GitHub Actions: build + test on macOS and Linux; cache cargo.
       Deps: T-01 · Reqs: NFR-17 · Est: 1.5h
 
 ---
