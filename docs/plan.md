@@ -37,7 +37,7 @@
       `tokenizer`, `mapping`, `synth`, `mathx` (owned math), `wav`, `format`. Public API
       stubs. No deps yet.
       Deps: T-01 · Reqs: NFR-9, NFR-10 · Est: 1h
-- [ ] **T-03 — Scaffold `dootdoot` binary crate.** Binary depending on `dootdoot-core`;
+- [x] **T-03 — Scaffold `dootdoot` binary crate.** Binary depending on `dootdoot-core`;
       `main` stub.
       Deps: T-01 · Reqs: NFR-9 · Est: 0.5h
 - [ ] **T-04 — Scaffold `xtask` crate.** Build-time-only binary; add `model2vec-rs`,

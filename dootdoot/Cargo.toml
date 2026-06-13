@@ -11,5 +11,8 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[dependencies]
+dootdoot-core = { path = "../dootdoot-core" }
+
 [lints]
 workspace = true
