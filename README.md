@@ -1,6 +1,6 @@
 <h1 align="center">dootdoot</h1>
 
-<p align="center">Turn text into deterministic, BB-8-style droid speech — from your terminal.</p>
+<p align="center">Turn text into deterministic, BB-8-style droid speech, right from your terminal.</p>
 
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
@@ -13,13 +13,12 @@
 > **Status: early development.** The design is complete; implementation is in progress.
 > Expect things to change. See [the roadmap](docs/plan.md).
 
-`dootdoot` reads text and emits short bursts of warbly droid chatter. It's not
-text-to-speech and not a random beep generator — it's a small, **learnable sound
-language**:
+`dootdoot` reads text and emits short bursts of warbly droid chatter. It's a small,
+learnable sound language with three defining properties:
 
-- **Deterministic** — the same text always produces the same audio, bit-for-bit, on every platform.
-- **Semantic** — text with similar *meaning* sounds similar, so you can learn to "hear" words.
-- **Droid by design** — every output is unmistakably the same character, however you phrase the input.
+- **Deterministic.** The same text always produces the same audio, bit-for-bit, on every platform.
+- **Semantic.** Text with similar *meaning* sounds similar, so you can learn to "hear" words.
+- **Droid by design.** However you phrase the input, the output is unmistakably the same character.
 
 ## Installation
 
