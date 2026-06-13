@@ -17,6 +17,12 @@ pub struct TokenVector {
     weight: f64,
 }
 
+/// Gives a pooled sequence baseline vector.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PooledVector {
+    axes: [f64; FORMAT_AXIS_COUNT],
+}
+
 /// Reports why a token ID could not be mapped.
 #[derive(Debug, Clone, Error, PartialEq, Eq)]
 #[error("{message}")]
@@ -92,6 +98,13 @@ impl TokenVector {
     }
 }
 
+impl PooledVector {
+    /// Returns the pooled semantic axes in fixed `FORMAT_V1` order.
+    pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
+        self.axes
+    }
+}
+
 impl MappingError {
     fn new(message: impl Into<String>) -> Self {
         Self {
@@ -111,6 +124,38 @@ pub fn embedded_mapping() -> Result<Mapping<'static>, MappingError> {
         .map_err(|error| {
             MappingError::new(format!("failed to load embedded mapping format: {error}"))
         })
+}
+
+/// Pools dequantized token vectors into a sequence baseline.
+///
+/// The formula is `(1 / token_count) * sum(weight_i * axes_i)`. This
+/// intentionally does not apply the `model2vec.encode()` L2 normalization step.
+///
+/// # Errors
+///
+/// Returns an error when the sequence is empty or its length cannot be
+/// represented for deterministic floating-point division.
+pub fn pool_sequence(tokens: &[TokenVector]) -> Result<PooledVector, MappingError> {
+    if tokens.is_empty() {
+        return Err(MappingError::new("cannot pool an empty token sequence"));
+    }
+
+    let denominator = f64::from(u32::try_from(tokens.len()).map_err(|error| {
+        MappingError::new(format!("token sequence length does not fit u32: {error}"))
+    })?);
+    let mut axes = [0.0_f64; FORMAT_AXIS_COUNT];
+
+    for token in tokens {
+        for (pooled_axis, token_axis) in axes.iter_mut().zip(token.axes()) {
+            *pooled_axis += token_axis * token.weight();
+        }
+    }
+
+    for axis in &mut axes {
+        *axis /= denominator;
+    }
+
+    Ok(PooledVector { axes })
 }
 
 fn dequantize(code: i16, scale: f32) -> f64 {
