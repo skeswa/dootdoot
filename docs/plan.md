@@ -40,7 +40,7 @@
 - [x] **T-03 — Scaffold `dootdoot` binary crate.** Binary depending on `dootdoot-core`;
       `main` stub.
       Deps: T-01 · Reqs: NFR-9 · Est: 0.5h
-- [ ] **T-04 — Scaffold `xtask` crate.** Build-time-only binary; add `model2vec-rs`,
+- [x] **T-04 — Scaffold `xtask` crate.** Build-time-only binary; add `model2vec-rs`,
       `nalgebra`/`linfa`, serialization deps here only.
       Deps: T-01 · Reqs: FR-40, NFR-6 · Est: 1h
 - [ ] **T-05 — CI skeleton.** GitHub Actions: build + test on macOS and Linux; cache cargo.
