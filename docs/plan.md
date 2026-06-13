@@ -203,7 +203,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-42 — `--explain` table.** Per-token `token │ pitch │ vowel │ contour │ warble`
       to stderr, with prosodic punctuation shown as distinct control rows.
       Deps: T-24, T-38 · Reqs: FR-31, FR-32, FR-23a · Est: 1.5h
-- [ ] **T-43 — Input limits.** Warn past ≈8 min/≈40 MB (≈2,000 tokens); hard error before
+- [x] **T-43 — Input limits.** Warn past ≈8 min/≈40 MB (≈2,000 tokens); hard error before
       synthesis past the ≈30 min/≈160 MB ceiling (≈8,000 tokens), no audio. Byte/duration is
       the normative bound; token count is a derived pre-check (design.md §10).
       Deps: T-39, T-20 · Reqs: FR-36, FR-37 · Est: 1h

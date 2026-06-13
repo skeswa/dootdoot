@@ -31,7 +31,8 @@ pub use mathx::{
 pub use sequence::{
     EMPTY_CHIRP_CONTOUR, EMPTY_CHIRP_PITCH_CENTER, EMPTY_CHIRP_START_PITCH_CENTER,
     EMPTY_CHIRP_VOWEL_POSITION, EMPTY_CHIRP_WARBLE_DEPTH, ProsodicPunctuation, SequenceEvent,
-    SequencedUtterance, SyllableEvent, render_empty_chirp, sequence_utterance,
+    SequencedUtterance, SyllableEvent, estimate_utterance_sample_count, render_empty_chirp,
+    sequence_utterance,
 };
 pub use synth::{
     BASE_SYLLABLE_SAMPLES, BASE_SYLLABLE_SECONDS, ENVELOPE_ATTACK_SECONDS, ENVELOPE_DECAY_SECONDS,

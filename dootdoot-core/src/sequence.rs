@@ -4,7 +4,7 @@ use crate::{
     KnobSet, LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES,
     MEDIUM_PUNCTUATION_PAUSE_SAMPLES, TRAILING_SILENCE_SAMPLES, WORD_PAUSE_SAMPLES,
     pitch_center_hz,
-    synth::{SyllableFinalGlide, render_syllable_with_final_glide},
+    synth::{BASE_SYLLABLE_SAMPLES, SyllableFinalGlide, render_syllable_with_final_glide},
 };
 
 /// Gives the fixed empty-chirp start pitch-center knob.
@@ -170,20 +170,34 @@ pub fn render_empty_chirp() -> Vec<f64> {
     samples
 }
 
-/// Lays out voiced syllables and control punctuation into an utterance.
-pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
-    let mut plans = Vec::new();
+/// Estimates the exact number of samples an utterance will render.
+pub fn estimate_utterance_sample_count(events: &[SequenceEvent]) -> u64 {
+    let plans = syllable_plans(events);
 
-    for event in events {
-        match event {
-            SequenceEvent::Syllable(syllable) => plans.push(SyllablePlan::new(*syllable)),
-            SequenceEvent::Punctuation(punctuation) => {
-                if let Some(plan) = plans.last_mut() {
-                    plan.attach_punctuation(*punctuation);
-                }
-            }
+    if plans.is_empty() {
+        return empty_chirp_sample_count();
+    }
+
+    let mut sample_count = u64::from(LEADING_SILENCE_SAMPLES) + u64::from(TRAILING_SILENCE_SAMPLES);
+
+    for (index, plan) in plans.iter().copied().enumerate() {
+        sample_count += u64::from(BASE_SYLLABLE_SAMPLES);
+
+        if let Some(pause_samples) = plan.punctuation_pause_samples {
+            sample_count += u64::from(pause_samples);
+        } else if let Some(next_plan) = plans.get(index + 1)
+            && !next_plan.event.is_continuation()
+        {
+            sample_count += u64::from(WORD_PAUSE_SAMPLES);
         }
     }
+
+    sample_count
+}
+
+/// Lays out voiced syllables and control punctuation into an utterance.
+pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
+    let plans = syllable_plans(events);
 
     if plans.is_empty() {
         return SequencedUtterance::EmptyChirp(render_empty_chirp());
@@ -221,6 +235,29 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
     append_silence(&mut samples, TRAILING_SILENCE_SAMPLES);
 
     SequencedUtterance::Samples(samples)
+}
+
+fn syllable_plans(events: &[SequenceEvent]) -> Vec<SyllablePlan> {
+    let mut plans = Vec::new();
+
+    for event in events {
+        match event {
+            SequenceEvent::Syllable(syllable) => plans.push(SyllablePlan::new(*syllable)),
+            SequenceEvent::Punctuation(punctuation) => {
+                if let Some(plan) = plans.last_mut() {
+                    plan.attach_punctuation(*punctuation);
+                }
+            }
+        }
+    }
+
+    plans
+}
+
+fn empty_chirp_sample_count() -> u64 {
+    u64::from(LEADING_SILENCE_SAMPLES)
+        + u64::from(BASE_SYLLABLE_SAMPLES)
+        + u64::from(TRAILING_SILENCE_SAMPLES)
 }
 
 fn append_silence(samples: &mut Vec<f64>, count: u32) {

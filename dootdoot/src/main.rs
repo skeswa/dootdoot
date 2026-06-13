@@ -7,7 +7,9 @@ use dootdoot::{
     Cli, ResolvedInput, explain_table_for_empty_chirp, explain_table_for_text, output_route,
     play_buffer,
 };
-use dootdoot_core::{render_canonical_buffer, render_text_canonical_buffer, wav_bytes};
+use dootdoot_core::{
+    estimate_utterance_sample_count, render_canonical_buffer, sequence_events_for_text, wav_bytes,
+};
 
 fn main() -> ExitCode {
     match run() {
@@ -24,7 +26,17 @@ fn run() -> Result<(), Box<dyn Error>> {
     let input = dootdoot::read_resolved_input(&cli)?;
     let route = output_route(&cli);
     let buffer = match &input {
-        ResolvedInput::Text(text) => render_text_canonical_buffer(text)?,
+        ResolvedInput::Text(text) => {
+            let events = sequence_events_for_text(text)?;
+
+            if let Some(warning) =
+                dootdoot::enforce_input_limits(estimate_utterance_sample_count(&events))?
+            {
+                eprintln!("{warning}");
+            }
+
+            render_canonical_buffer(&events)
+        }
         ResolvedInput::EmptyChirp => render_canonical_buffer(&[]),
     };
 
