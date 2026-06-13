@@ -8,6 +8,16 @@
 > Legend: **Deps** = task IDs that must finish first. **Reqs** = requirement IDs
 > covered. **Est** = rough effort.
 
+> **Execution method — red-green TDD (mandatory for every task).** Each task below is
+> implemented test-first: write a failing test that pins the behavior (**red**, confirm
+> it fails for the right reason), write the minimum code to pass it (**green**), then
+> **refactor** with the suite green. Task estimates already include writing the tests;
+> "done" means the behavior is covered by a passing test at the appropriate level (value
+> test, `proptest` invariant, `insta` snapshot, or golden-WAV hash — see
+> [`style.md`](./style.md) §9). Where a task's deliverable *is* a test harness or fixture
+> (e.g. T-09/T-10, T-25, T-49–T-53), that test is the red step for the code it guards.
+> Aim for roughly one red-green cycle per `jj` revision.
+
 ---
 
 ## Phase 0 — Workspace & scaffolding

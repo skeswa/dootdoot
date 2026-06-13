@@ -74,6 +74,33 @@ Three crates (a Cargo workspace):
 - **The engine produces one canonical buffer**; file output and playback are sinks of the
   *same* buffer, so what plays equals what's saved.
 
+## Development workflow: red-green TDD
+
+**All changes are implemented test-first, in the red-green-refactor loop. This is
+mandatory, not optional.** For every behavior — each `T-*` task in `docs/plan.md`, each
+bug fix, each new function:
+
+1. **Red** — write a failing test that pins the desired behavior, and run it to confirm
+   it fails *for the right reason* (the assertion, not a compile error or typo).
+2. **Green** — write the minimum code to make that test pass; run the test to confirm.
+3. **Refactor** — clean up code and tests with the suite green, re-running to stay green.
+
+Guidance specific to this project:
+
+- **The architecture exists to make this easy.** The functional core (`dootdoot-core`)
+  is pure and deterministic, so tests are plain value assertions; effects are behind
+  injected traits, so the shell is tested with fakes. If a test is hard to write, fix the
+  design, don't skip the test.
+- **Write the test at the right level** (see `docs/style.md` §9): unit/value tests for
+  pure logic, `proptest` for invariants, `insta` snapshots for structured output, and
+  golden-WAV hash tests for the determinism contract. Reach for the cheapest level that
+  pins the behavior.
+- **Determinism work is inherently test-first:** assert the golden hash / property
+  first, then implement until it holds. A golden-hash change is legitimate only when
+  paired with a `FORMAT` bump (see above).
+- **One red-green cycle ≈ one revision.** Each `jj` revision should land a coherent
+  test-plus-implementation step (see Version control below).
+
 ## Version control
 
 This repository uses **`jj` (Jujutsu)** for version control (colocated with a `.git`
