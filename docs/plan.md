@@ -227,9 +227,17 @@
 
 ## Critical path (longest dependency chain)
 
-`T-01 → T-04 → T-11 → T-12 → T-13 → T-14 → T-15 → T-16 → T-17 → T-18 → T-19/T-20 →
-T-21 → T-22 → T-23 → T-24 → T-33 → T-36 → T-40 → T-45 → T-46/T-47 → T-48 → T-49 →
-T-50 → T-51 → T-54 → T-57`
+```mermaid
+flowchart LR
+    T01[T-01] --> T04[T-04] --> T11[T-11] --> T12[T-12] --> T13[T-13]
+    T13 --> T14[T-14] --> T15[T-15] --> T16[T-16] --> T17[T-17] --> T18[T-18]
+    T18 --> T1920["T-19 / T-20"] --> T21[T-21] --> T22[T-22] --> T23[T-23] --> T24[T-24]
+    T24 --> T33[T-33] --> T36[T-36] --> T40[T-40] --> T45[T-45] --> T4647["T-46 / T-47"]
+    T4647 --> T48[T-48] --> T49[T-49] --> T50[T-50] --> T51[T-51] --> T54[T-54] --> T57[T-57]
+
+    OM["T-06 … T-10<br/>owned math"] --> T33
+    SP["T-26 … T-32<br/>synth primitives"] --> T33
+```
 
 Owned math (T-06–T-10) and the synth primitives (T-26–T-32) proceed in parallel and
 converge at T-33. Tuning (Phase 7) must precede freezing (T-48), which gates all

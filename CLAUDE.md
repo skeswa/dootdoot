@@ -31,15 +31,15 @@ output is a learnable sound-language — not random beeps, not speech synthesis.
 
 The pipeline (full detail in `docs/design.md`):
 
-```
-text → WordPiece tokenize (potion-base-2M vocab, embedded tokenizer.json)
-     → per-token lookup in a baked table: token → 4-D PCA vector (+ pooling weight)
-     → squash to 4 perceptual "knobs": PCA-1 pitch, PCA-2 vowel/formant,
-       PCA-3 contour/glide, PCA-4 warble
-       (sequence = weighted-mean baseline "mood"; each token modulates around it)
-     → formant-synthesis voice: fixed droid "DNA" + the 4 semantic knobs
-     → one canonical Vec<i16> @ 44.1 kHz / 16-bit / mono  (single source of truth)
-     → hound (WAV file) and/or rodio (live playback)
+```mermaid
+flowchart TD
+    text([text]) --> tok["WordPiece tokenize<br/>(potion-base-2M vocab, embedded tokenizer.json)"]
+    tok --> lookup["per-token lookup in a baked table<br/>token → 4-D PCA vector (+ pooling weight)"]
+    lookup --> squash["squash to 4 perceptual knobs<br/>PCA-1 pitch · PCA-2 vowel/formant · PCA-3 contour/glide · PCA-4 warble<br/>sequence = weighted-mean baseline; each token modulates around it"]
+    squash --> voice["formant-synthesis voice<br/>fixed droid DNA + 4 semantic knobs"]
+    voice --> buf["canonical Vec&lt;i16&gt; @ 44.1 kHz / 16-bit / mono<br/><i>single source of truth</i>"]
+    buf --> wav["hound → WAV file"]
+    buf --> play["rodio → live playback"]
 ```
 
 Three crates (a Cargo workspace):

@@ -43,29 +43,18 @@ intuition for the "language."
 The design is a single pipeline. Each stage was chosen to serve one or more of the
 three goals, and later stages depend on earlier ones. The dependency chain:
 
-```
-text
- │
- ▼  (§3) tokenize with model2vec's WordPiece vocab  ── deterministic, gives word/subword units
- │
- ▼  token IDs
- │
- ▼  (§4) look up each token's semantic vector       ── gives MEANING (goal 2)
- │       via a precomputed, baked table
- │
- ▼  4-dim PCA vector per token (+ pooling weight)
- │
- ▼  (§5) squash to 4 perceptual "knobs"             ── learnable, bounded (goal 2)
- │       per-token = local gesture
- │       weighted-mean of tokens = sequence baseline
- │
- ▼  (§6) formant-synthesis voice engine             ── DROID identity (goal 3)
- │       fixed "DNA" + 4 semantic knobs
- │
- ▼  (§7) canonical Vec<i16> @ 44.1 kHz/16-bit/mono  ── single source of truth
- │
- ├─▶ hound  → WAV file        (§7)
- └─▶ rodio  → live playback   (§7)
+```mermaid
+flowchart TD
+    text([text])
+    text --> tok["§3 · tokenize with model2vec's WordPiece vocab<br/><i>deterministic; gives word/subword units</i>"]
+    tok --> ids["token IDs"]
+    ids --> lookup["§4 · look up each token's semantic vector<br/>via a precomputed, baked table<br/><i>gives MEANING — goal 2</i>"]
+    lookup --> pca["4-dim PCA vector per token<br/>(+ pooling weight)"]
+    pca --> squash["§5 · squash to 4 perceptual knobs<br/>per-token = local gesture<br/>weighted-mean of tokens = sequence baseline<br/><i>learnable, bounded — goal 2</i>"]
+    squash --> voice["§6 · formant-synthesis voice engine<br/>fixed DNA + 4 semantic knobs<br/><i>DROID identity — goal 3</i>"]
+    voice --> buf["§7 · canonical Vec&lt;i16&gt; @ 44.1 kHz / 16-bit / mono<br/><i>single source of truth</i>"]
+    buf --> wav["hound → WAV file (§7)"]
+    buf --> play["rodio → live playback (§7)"]
 ```
 
 The determinism guarantee (§8) wraps the whole pipeline; the runtime architecture
