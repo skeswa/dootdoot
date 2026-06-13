@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     Result, SourceFiles, SourceManifest, SourceManifestError, compute_pca_projection,
-    load_source_model,
+    compute_squash_stats, load_source_model,
 };
 
 /// Runs the current xtask source validation step.
@@ -50,7 +50,8 @@ pub fn run() -> Result<()> {
         )));
     }
 
-    compute_pca_projection(&source_model, 4)?;
+    let projection = compute_pca_projection(&source_model, 4)?;
+    compute_squash_stats(&source_model, &projection)?;
 
     Ok(())
 }

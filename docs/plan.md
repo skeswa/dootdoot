@@ -85,7 +85,7 @@
 - [x] **T-14 — Canonicalize component signs.** Deterministic rule (largest-magnitude
       loading positive); unit-test reproducibility.
       Deps: T-13 · Reqs: FR-41 · Est: 1h
-- [ ] **T-15 — Choose squash function + compute per-axis stats.** Select the squash
+- [x] **T-15 — Choose squash function + compute per-axis stats.** Select the squash
       (tanh vs percentile-clamp) **here** — it determines which stats the header carries —
       and derive the per-axis stats over the full vocab. Document the choice; T-46 may revise
       it and regenerate the artifact before the freeze.
