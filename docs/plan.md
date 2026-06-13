@@ -193,7 +193,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-38 — `clap` argument model.** Positional `TEXT`, `-o/--output`, `--play`,
       `--explain`, `--version` (shows `FORMAT_V1`), `--help`.
       Deps: T-03 · Reqs: FR-1, FR-31, FR-33, FR-34 · Est: 1.5h
-- [ ] **T-39 — Input resolution.** Arg vs piped stdin vs interactive TTY; empty/whitespace
+- [x] **T-39 — Input resolution.** Arg vs piped stdin vs interactive TTY; empty/whitespace
       → chirp path.
       Deps: T-38, T-34 · Reqs: FR-2, FR-3, FR-4 · Est: 1.5h
 - [ ] **T-40 — Output routing.** Implement no-`-o`→play, `-o`→write, `-o --play`→both.
