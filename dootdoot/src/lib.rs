@@ -1,11 +1,13 @@
 //! Testable command-line argument model for dootdoot.
 
 mod input;
+mod output;
 
 use std::path::PathBuf;
 
 use clap::Parser;
 pub use input::{ResolvedInput, StdinInput, read_resolved_input, resolve_input};
+pub use output::{OutputRoute, output_route};
 
 /// Parsed command-line arguments for the dootdoot binary.
 #[derive(Debug, Clone, Parser, PartialEq, Eq)]

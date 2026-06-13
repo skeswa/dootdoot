@@ -1,5 +1,6 @@
 //! Pure deterministic engine for dootdoot.
 
+mod engine;
 mod format;
 mod mapping;
 mod mathx;
@@ -8,6 +9,7 @@ mod synth;
 mod tokenizer;
 mod wav;
 
+pub use engine::{EngineError, render_text_canonical_buffer, sequence_events_for_text};
 pub use format::{
     FORMAT_AXIS_COUNT, FORMAT_HASH_BYTES, FORMAT_HEADER_BYTES, FORMAT_MAGIC, FORMAT_SCALE_COUNT,
     FORMAT_SQUASH_STATS_PER_AXIS, FORMAT_TOKEN_RECORD_BYTES, FORMAT_V1, FORMAT_VERSION_NUMBER,
