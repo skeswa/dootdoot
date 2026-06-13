@@ -163,7 +163,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       buffer (`f64`): pitch model (center+portamento+warble) drives the oscillator/source →
       formant bank → ring-mod → amplitude envelope (design.md §6.2).
       Deps: T-28, T-29, T-30, T-31 · Reqs: FR-15, FR-16 · Est: 2h
-- [ ] **T-33 — Utterance sequencer.** Lay out syllables with intra-word glides, inter-word
+- [x] **T-33 — Utterance sequencer.** Lay out syllables with intra-word glides, inter-word
       pauses, punctuation intonation, leading/trailing padding. Punctuation attaches
       **backward only**: leading/standalone markers are dropped (no forward attach); only the
       first of consecutive markers shapes the prior glide; input with zero voiced syllables

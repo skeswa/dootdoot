@@ -37,17 +37,32 @@ pub const BASE_SYLLABLE_SAMPLES: u32 = 6_615;
 /// Gives the fixed pause between separate words in seconds.
 pub const WORD_PAUSE_SECONDS: f64 = 0.080;
 
+/// Gives the fixed pause between separate words in samples.
+pub const WORD_PAUSE_SAMPLES: u32 = 3_528;
+
 /// Gives the pause for comma/semicolon/colon prosody in seconds.
 pub const MEDIUM_PUNCTUATION_PAUSE_SECONDS: f64 = 0.120;
+
+/// Gives the pause for comma/semicolon/colon prosody in samples.
+pub const MEDIUM_PUNCTUATION_PAUSE_SAMPLES: u32 = 5_292;
 
 /// Gives the pause for question/period/exclamation prosody in seconds.
 pub const LONG_PUNCTUATION_PAUSE_SECONDS: f64 = 0.180;
 
+/// Gives the pause for question/period/exclamation prosody in samples.
+pub const LONG_PUNCTUATION_PAUSE_SAMPLES: u32 = 7_938;
+
 /// Gives the fixed leading silence in seconds.
 pub const LEADING_SILENCE_SECONDS: f64 = 0.030;
 
+/// Gives the fixed leading silence in samples.
+pub const LEADING_SILENCE_SAMPLES: u32 = 1_323;
+
 /// Gives the fixed trailing silence in seconds.
 pub const TRAILING_SILENCE_SECONDS: f64 = 0.060;
+
+/// Gives the fixed trailing silence in samples.
+pub const TRAILING_SILENCE_SAMPLES: u32 = 2_646;
 
 /// Gives the fixed portamento glide time in seconds.
 pub const PORTAMENTO_SECONDS: f64 = 0.045;
@@ -82,6 +97,9 @@ pub const PITCH_REGISTER_BIAS_HZ: f64 = 880.0;
 /// Gives the semantic pitch span around the register bias in semitones.
 pub const PITCH_SEMITONE_SPAN: f64 = 7.0;
 
+/// Gives the fixed final-glide span for prosodic punctuation in semitones.
+pub const PUNCTUATION_GLIDE_SEMITONES: f64 = 3.0;
+
 /// Gives the fixed saw contribution in the source oscillator.
 pub const SOURCE_SAW_MIX: f64 = 0.65;
 
@@ -97,6 +115,14 @@ pub const SOURCE_MAX_HARMONICS: u32 = 48;
 /// Marks the synthesis module in the public facade.
 #[derive(Debug)]
 pub struct Synth;
+
+/// Gives the prosodic final-glide shape applied to one syllable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SyllableFinalGlide {
+    Neutral,
+    Rising,
+    Falling,
+}
 
 /// Filters samples through the fixed formant bank.
 #[derive(Debug, Clone, Default)]
@@ -306,6 +332,14 @@ pub fn apply_amplitude_envelope(sample: f64, elapsed_seconds: f64, duration_seco
 
 /// Renders one fixed-duration syllable from semantic knobs.
 pub fn render_syllable(knobs: crate::KnobSet, start_pitch_hz: f64) -> Vec<f64> {
+    render_syllable_with_final_glide(knobs, start_pitch_hz, SyllableFinalGlide::Neutral)
+}
+
+pub(crate) fn render_syllable_with_final_glide(
+    knobs: crate::KnobSet,
+    start_pitch_hz: f64,
+    final_glide: SyllableFinalGlide,
+) -> Vec<f64> {
     let target_pitch_hz = pitch_center_hz(knobs.pitch_center());
     let start_pitch_hz = if start_pitch_hz.is_finite() && start_pitch_hz > 0.0 {
         start_pitch_hz
@@ -324,7 +358,13 @@ pub fn render_syllable(knobs: crate::KnobSet, start_pitch_hz: f64) -> Vec<f64> {
             knobs.contour(),
             elapsed_seconds,
         );
-        let pitch_hz = apply_warble_hz(glided_pitch_hz, knobs.warble_depth(), elapsed_seconds);
+        let final_glide_pitch_hz = apply_final_glide_hz(
+            glided_pitch_hz,
+            target_pitch_hz,
+            final_glide,
+            elapsed_seconds,
+        );
+        let pitch_hz = apply_warble_hz(final_glide_pitch_hz, knobs.warble_depth(), elapsed_seconds);
         let source = source_oscillator_sample(phase, pitch_hz);
         let voiced = formants.process_sample(source, knobs.vowel_position());
         let electronic = ring_modulate(voiced, elapsed_seconds);
@@ -339,6 +379,29 @@ pub fn render_syllable(knobs: crate::KnobSet, start_pitch_hz: f64) -> Vec<f64> {
     }
 
     samples
+}
+
+fn apply_final_glide_hz(
+    pitch_hz: f64,
+    target_pitch_hz: f64,
+    final_glide: SyllableFinalGlide,
+    elapsed_seconds: f64,
+) -> f64 {
+    let semitones = match final_glide {
+        SyllableFinalGlide::Neutral => return pitch_hz,
+        SyllableFinalGlide::Rising => PUNCTUATION_GLIDE_SEMITONES,
+        SyllableFinalGlide::Falling => -PUNCTUATION_GLIDE_SEMITONES,
+    };
+    let final_glide_start_seconds = BASE_SYLLABLE_SECONDS - PORTAMENTO_SECONDS;
+
+    if elapsed_seconds < final_glide_start_seconds {
+        return pitch_hz;
+    }
+
+    let progress = portamento_progress(elapsed_seconds - final_glide_start_seconds, semitones);
+    let final_target_hz = target_pitch_hz * exp((LN_2 * semitones) / 12.0);
+
+    pitch_hz + ((final_target_hz - pitch_hz) * progress)
 }
 
 /// Returns steered formant centers for a vowel-position knob.
