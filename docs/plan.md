@@ -179,7 +179,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 - [x] **T-35 — Float→i16 quantization.** Single fixed rounding rule (no dither); clamp.
       Deps: T-02 · Reqs: FR-25, FR-29, NFR-4 · Est: 1h
-- [ ] **T-36 — Canonical buffer assembly.** Produce one `Vec<i16>` @ 44.1k mono as the
+- [x] **T-36 — Canonical buffer assembly.** Produce one `Vec<i16>` @ 44.1k mono as the
       sole source of truth.
       Deps: T-33, T-35 · Reqs: FR-25, FR-30 · Est: 1h
 - [ ] **T-37 — WAV writer via `hound`.** Serialize the canonical buffer to 44.1k/16-bit/

@@ -45,4 +45,4 @@ pub use synth::{
 pub use tokenizer::{
     TokenizedInput, TokenizedToken, Tokenizer, TokenizerError, embedded_tokenizer,
 };
-pub use wav::{PCM_I16_SCALE, WavWriter, quantize_sample};
+pub use wav::{PCM_I16_SCALE, WavWriter, quantize_sample, render_canonical_buffer};

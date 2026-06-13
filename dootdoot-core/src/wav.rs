@@ -1,11 +1,23 @@
 //! WAV serialization for canonical dootdoot buffers.
 
+use crate::{SequenceEvent, sequence_utterance};
+
 /// Gives the fixed scale from normalized `f64` samples to signed 16-bit PCM.
 pub const PCM_I16_SCALE: f64 = 32_768.0;
 
 /// Marks the WAV serialization module in the public facade.
 #[derive(Debug)]
 pub struct WavWriter;
+
+/// Renders the canonical signed 16-bit mono audio buffer for sequenced events.
+pub fn render_canonical_buffer(events: &[SequenceEvent]) -> Vec<i16> {
+    sequence_utterance(events)
+        .samples()
+        .iter()
+        .copied()
+        .map(quantize_sample)
+        .collect()
+}
 
 /// Quantizes one normalized audio sample to signed 16-bit PCM.
 pub fn quantize_sample(sample: f64) -> i16 {
