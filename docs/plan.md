@@ -96,7 +96,7 @@
       (4×int16 quantized PCA + 1×int16 quantized weight = 10 bytes). The runtime file stores
       projected values, so it does NOT contain the PCA matrix. Document the layout.
       Deps: T-15 · Reqs: FR-10, FR-38 · Est: 1.5h
-- [ ] **T-17 — Serialize per-token 4-vectors + weights to `format_v1.bin`.** Project each
+- [x] **T-17 — Serialize per-token 4-vectors + weights to `format_v1.bin`.** Project each
       token; quantize components and weight to int16 with the **symmetric signed, zero-point-
       free** rule (`s = max|·|/32767`, round-half-to-even, clamp to ±32767, code −32768
       unused; design.md §4.2); write the file; compute and embed model/tokenizer/PCA hashes.

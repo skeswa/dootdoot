@@ -10,6 +10,7 @@ fn build_time_dependencies_stay_in_xtask() {
         "hex",
         "model2vec-rs",
         "nalgebra",
+        "num-traits",
         "safetensors",
         "serde",
         "serde_json",

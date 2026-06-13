@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     Result, SourceFiles, SourceManifest, SourceManifestError, compute_pca_projection,
-    compute_squash_stats, load_source_model,
+    compute_squash_stats, load_source_model, serialize_format_artifact,
 };
 
 /// Runs the current xtask source validation step.
@@ -51,7 +51,22 @@ pub fn run() -> Result<()> {
     }
 
     let projection = compute_pca_projection(&source_model, 4)?;
-    compute_squash_stats(&source_model, &projection)?;
+    let squash_stats = compute_squash_stats(&source_model, &projection)?;
+    let artifact = serialize_format_artifact(&source_model, &projection, &squash_stats, &manifest)?;
+    let generated_dir = workspace.join("target/generated");
+    fs::create_dir_all(&generated_dir).map_err(|error| {
+        SourceManifestError::new(format!(
+            "failed to create {}: {error}",
+            generated_dir.display(),
+        ))
+    })?;
+    let generated_path = generated_dir.join("format_v1.bin");
+    fs::write(&generated_path, artifact).map_err(|error| {
+        SourceManifestError::new(format!(
+            "failed to write {}: {error}",
+            generated_path.display(),
+        ))
+    })?;
 
     Ok(())
 }
