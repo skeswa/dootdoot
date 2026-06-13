@@ -17,7 +17,7 @@
 learnable sound language with three defining properties:
 
 - **Deterministic.** The same text always produces the same audio, bit-for-bit, on every platform.
-- **Semantic.** Text with similar *meaning* sounds similar, so you can learn to "hear" words.
+- **Semantic.** Text with similar _meaning_ sounds similar, so you can learn to "hear" words.
 - **Droid by design.** However you phrase the input, the output is unmistakably the same character.
 
 ## Installation
@@ -69,6 +69,6 @@ cargo test    # run the suite (see docs/style.md §11 for the full toolchain)
 
 ---
 
-<sub>dootdoot is an independent project that produces sounds *reminiscent of* droids from
+<sub>dootdoot is an independent project that produces sounds _reminiscent of_ droids from
 science fiction. It is not affiliated with, endorsed by, or associated with Lucasfilm or
 The Walt Disney Company. "BB-8" is a trademark of its respective owner.</sub>

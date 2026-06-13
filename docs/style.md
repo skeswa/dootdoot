@@ -19,7 +19,7 @@
 These principles justify every concrete rule that follows. When a rule seems
 inconvenient, re-read this section — the rule is almost always serving one of these.
 
-1. **High cohesion, low coupling.** Each file/module does *one* cohesive thing; modules
+1. **High cohesion, low coupling.** Each file/module does _one_ cohesive thing; modules
    depend on each other as little as possible, and only through deliberate, narrow
    seams. Cohesion drives the file rules (§2–§3); decoupling drives the API rules (§6).
 2. **Testability is a structural property, not an afterthought.** The architecture
@@ -46,17 +46,17 @@ inconvenient, re-read this section — the rule is almost always serving one of 
   - **`xtask`** — build-time-only tooling (e.g. the asset generator). Never shipped;
     carries heavy build-time dependencies so the shipped binary does not.
 - **Small files, one cohesive thing each.** Most files SHOULD be under ~200 lines.
-  Length is a *smell*, not a law: split a file when it starts doing two jobs, not when
+  Length is a _smell_, not a law: split a file when it starts doing two jobs, not when
   it crosses a line count. There is **no hard per-file line gate** (it would fight
-  cohesion when one type legitimately needs a long `impl`). Function length *is*
+  cohesion when one type legitimately needs a long `impl`). Function length _is_
   mechanically bounded via `clippy::too_many_lines`.
 - **Files are named after the construct they define.** `Voice` lives in `voice.rs`,
   `TokenId` in `token_id.rs`. Module names match their namesake (singular: `voice`,
   not `voices`); only genuinely collection-like modules go plural.
-- **One *primary* construct per file ("primary-plus-satellites").** A file is named
+- **One _primary_ construct per file ("primary-plus-satellites").** A file is named
   after exactly one primary construct. It MAY also contain only that construct's own
-  `impl`s, its private helpers, and tightly-coupled *satellite* types — its error,
-  builder, iterator (`VoiceError`, `VoiceBuilder`, `VoiceIter`). A second *independent*
+  `impl`s, its private helpers, and tightly-coupled _satellite_ types — its error,
+  builder, iterator (`VoiceError`, `VoiceBuilder`, `VoiceIter`). A second _independent_
   public type belongs in its own file.
 - **Modern module path style, no `mod.rs`.** Use `foo.rs` + `foo/` directories.
   `mod.rs` files are not used.
@@ -76,7 +76,7 @@ last. A reader scanning from the top meets the contract before the mechanism.
 3. **The namesake construct** — the primary type/trait/fn the file is named after.
    Always at the very top of the code. Public consts/types that define its contract sit
    with it.
-4. **Its inherent `impl`(s)** — methods ordered *by relevance*: constructors
+4. **Its inherent `impl`(s)** — methods ordered _by relevance_: constructors
    (`new`/`from_*`/`with_*`) first, then primary operations (most-used first), then
    secondary/niche operations, then trivial accessors last.
 5. **Trait impls for the namesake** — std/derive-style first, then project traits.
@@ -120,7 +120,7 @@ lifetimes (`'a`). Beyond that:
 - **Satellites:** `<Name>Error`, `<Name>Iter`, `<Name>Builder`.
 - **Abbreviations — whole words, with a small allowlist.** Prefer full words. The only
   permitted abbreviations are a documented canonical set — `ctx`, `cfg`, `buf`, `idx`,
-  `id`, `len`, `tmp` — plus **established domain terms** where the abbreviation *is* the
+  `id`, `len`, `tmp` — plus **established domain terms** where the abbreviation _is_ the
   real word: `pcm`, `lfo`, `fft`, `wav`, `hz`, `pca`. Everything else is spelled out.
 
 ---
@@ -142,7 +142,7 @@ Documentation is a hard, partly-enforced contract.
 - **All public members MUST be documented** — enforced by `#![deny(missing_docs)]` at
   each crate root. Missing public docs fail CI.
 - **Non-intuitive or complicated private members MUST also be documented** to the same
-  contract. This is a prose/review rule, *not* lint-enforced, because the lint is
+  contract. This is a prose/review rule, _not_ lint-enforced, because the lint is
   all-or-nothing and trivial private helpers are intentionally left undocumented.
 - Every file/module starts with a `//!` module doc; `lib.rs` carries a crate-level
   `//!` doc.
@@ -326,7 +326,7 @@ The mechanical backbone. Config is committed; CI gates are blocking on `main`.
   `imports_granularity = "Crate"`, plus `format_code_in_doc_comments` and
   `wrap_comments`.
 - These are nightly-only rustfmt options, so **CI formats with a pinned nightly used
-  *only* for formatting**: `cargo +nightly fmt --check`. Building and testing stay on
+  _only_ for formatting**: `cargo +nightly fmt --check`. Building and testing stay on
   pinned stable.
 - No glob imports except a documented crate `prelude` and `use super::*;` inside
   `mod tests`.
@@ -377,7 +377,7 @@ The mechanical backbone. Config is committed; CI gates are blocking on `main`.
   pure safe Rust (`unsafe` lives inside vetted upstream crates), so forbidding it
   outright is a strong correctness/determinism signal.
 - **Escape hatch (default remains forbid):** if a crate genuinely needs `unsafe`,
-  downgrade *that crate* to `unsafe_code = "deny"` with written justification, isolate
+  downgrade _that crate_ to `unsafe_code = "deny"` with written justification, isolate
   all `unsafe` in a dedicated module, set `unsafe_op_in_unsafe_fn = "deny"`, add a
   `// SAFETY:` comment on every block and a `# Safety` doc on every `unsafe fn` (§5),
   and keep blocks minimal.

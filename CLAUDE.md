@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 There is **no Rust code yet** — only design docs in `docs/`. Build it task-by-task from
 `docs/plan.md`, starting at **T-01** (workspace scaffolding). The commands below are the
 agreed tooling and won't run until the workspace exists.
-*(Delete this section once the workspace is scaffolded.)*
+_(Delete this section once the workspace is scaffolded.)_
 
 ## Source-of-truth documents (read before acting; don't re-derive settled decisions)
 
@@ -21,7 +21,7 @@ Keep these in sync with any code you write.
 ## Architecture
 
 A Rust CLI that **deterministically** turns text into BB-8-like droid sound, where
-*semantically similar text sounds similar* (a learnable sound-language). Pipeline detail
+_semantically similar text sounds similar_ (a learnable sound-language). Pipeline detail
 is in `docs/design.md` §2; the workspace has three crates:
 
 - **`dootdoot-core`** — pure, deterministic engine (functional core): tokenizer, mapping,
@@ -36,8 +36,8 @@ is in `docs/design.md` §2; the workspace has three crates:
 - **model2vec / `candle` are BUILD-TIME ONLY.** The shipped binary has no tensor runtime:
   the token→4-axis mapping is precomputed into `assets/format_v1.bin` (~300 KB) and
   `tokenizer.json`, both committed and `include_bytes!`-embedded. (Sound because PCA
-  projection is linear: pooling baked vectors == pooling-then-projecting, *exact before
-  the int16 quantization* the table uses.)
+  projection is linear: pooling baked vectors == pooling-then-projecting, _exact before
+  the int16 quantization_ the table uses.)
 - **The sequence baseline is dootdoot's own pooling, NOT `model2vec.encode()`.** `encode()`
   L2-normalizes the pooled vector (`potion-base-8M` has `normalize: true`); that step is
   nonlinear and does not commute with the projection, so it can't be recovered from baked

@@ -212,7 +212,7 @@
   dissimilar ones (e.g. distance `cat↔dog` < `cat↔airplane`), verified by test.
 - **NFR-15** Semantically similar short sequences SHALL be closer in baseline-axis
   space than dissimilar ones, verified by test. The metric is dootdoot's own sequence
-  baseline (FR-11), not `model2vec.encode()`; the property asserted is *relative*
+  baseline (FR-11), not `model2vec.encode()`; the property asserted is _relative_
   similarity ordering, which the model2vec-derived PCA-space pool preserves.
 - **NFR-16** Every output, regardless of input, SHALL remain within the fixed droid
   parameter space (only the 4 bounded axes vary), preserving a consistent BB-8-family
