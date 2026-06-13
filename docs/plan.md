@@ -90,7 +90,7 @@
       and derive the per-axis stats over the full vocab. Document the choice; T-46 may revise
       it and regenerate the artifact before the freeze.
       Deps: T-14 · Reqs: FR-12 · Est: 1.5h
-- [ ] **T-16 — Define `format_v1.bin` binary layout.** Little-endian. Header (magic,
+- [x] **T-16 — Define `format_v1.bin` binary layout.** Little-endian. Header (magic,
       version, vocab size, axis count, the 4 axis dequant scales + weight dequant scale as
       f32, squash stats, and model/tokenizer/PCA-matrix hashes) + per-token records
       (4×int16 quantized PCA + 1×int16 quantized weight = 10 bytes). The runtime file stores

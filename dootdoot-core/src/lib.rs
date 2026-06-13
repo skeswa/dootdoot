@@ -7,7 +7,11 @@ mod synth;
 mod tokenizer;
 mod wav;
 
-pub use format::{FORMAT_V1, Format};
+pub use format::{
+    FORMAT_AXIS_COUNT, FORMAT_HASH_BYTES, FORMAT_HEADER_BYTES, FORMAT_MAGIC, FORMAT_SCALE_COUNT,
+    FORMAT_SQUASH_STATS_PER_AXIS, FORMAT_TOKEN_RECORD_BYTES, FORMAT_V1, FORMAT_VERSION_NUMBER,
+    Format,
+};
 pub use mapping::Mapping;
 pub use mathx::{
     EXP_POLYNOMIAL_DEGREE, EXP_TABLE_BITS, EXP_TABLE_LEN, MATHX_VERSION, Mathx,
