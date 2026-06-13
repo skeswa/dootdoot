@@ -50,7 +50,7 @@
 
 ## Phase 1 — Owned math (`mathx`) — needed early; everything downstream depends on it
 
-- [ ] **T-06 — Design `mathx` API + value tables.** Decide table sizes/polynomial degrees
+- [x] **T-06 — Design `mathx` API + value tables.** Decide table sizes/polynomial degrees
       for `sin`, `exp`, `tanh`; document the determinism rationale.
       Deps: T-02 · Reqs: NFR-3 · Est: 1.5h
 - [ ] **T-07 — Implement `mathx::sin`/`cos`.** Range-reduction + polynomial/table, `f64`.
