@@ -151,7 +151,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-28 — Formant filter bank.** 2–3 resonant bandpasses; vowel position parameter
       steers center frequencies.
       Deps: T-27 · Reqs: FR-16, FR-18 · Est: 2.5h
-- [ ] **T-29 — Pitch model: register bias + portamento + contour.** Smooth glide between
+- [x] **T-29 — Pitch model: register bias + portamento + contour.** Smooth glide between
       syllables; contour shape applied per gesture.
       Deps: T-27 · Reqs: FR-16, FR-18, FR-19 · Est: 2.5h
 - [ ] **T-30 — Warble LFO.** Fixed-rate vibrato on pitch; depth from warble knob.

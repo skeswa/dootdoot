@@ -1,8 +1,8 @@
 //! Formant synthesis voice engine for droid syllables.
 
-use core::f64::consts::PI;
+use core::f64::consts::{LN_2, PI};
 
-use crate::{cos, sin};
+use crate::{cos, exp, sin};
 
 /// Gives the synthesis sample rate in hertz.
 pub const SYNTH_SAMPLE_RATE_HZ: u32 = 44_100;
@@ -184,6 +184,38 @@ pub fn source_oscillator_sample(phase: f64, frequency_hz: f64) -> f64 {
     let saw = (2.0 / PI) * saw;
 
     (SOURCE_SAW_MIX * saw) + (SOURCE_PULSE_MIX * pulse)
+}
+
+/// Maps a pitch-center knob to hertz in the fixed high register.
+pub fn pitch_center_hz(pitch_center: f64) -> f64 {
+    let semitones = pitch_center.clamp(-1.0, 1.0) * PITCH_SEMITONE_SPAN;
+
+    PITCH_REGISTER_BIAS_HZ * exp((LN_2 * semitones) / 12.0)
+}
+
+/// Computes shaped portamento progress for elapsed time.
+pub fn portamento_progress(elapsed_seconds: f64, contour: f64) -> f64 {
+    if !elapsed_seconds.is_finite() || elapsed_seconds <= 0.0 {
+        return 0.0;
+    }
+
+    let linear = (elapsed_seconds / PORTAMENTO_SECONDS).clamp(0.0, 1.0);
+    let smooth = linear * linear * (3.0 - (2.0 * linear));
+    let bend = linear * (1.0 - linear) * ((2.0 * linear) - 1.0);
+
+    (smooth + (contour.clamp(-1.0, 1.0) * bend)).clamp(0.0, 1.0)
+}
+
+/// Interpolates pitch through portamento from one center to the next.
+pub fn portamento_pitch_hz(
+    start_hz: f64,
+    target_hz: f64,
+    contour: f64,
+    elapsed_seconds: f64,
+) -> f64 {
+    let progress = portamento_progress(elapsed_seconds, contour);
+
+    start_hz + ((target_hz - start_hz) * progress)
 }
 
 /// Returns steered formant centers for a vowel-position knob.
