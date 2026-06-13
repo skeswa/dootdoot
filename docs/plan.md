@@ -53,7 +53,7 @@
 - [x] **T-06 — Design `mathx` API + value tables.** Decide table sizes/polynomial degrees
       for `sin`, `exp`, `tanh`; document the determinism rationale.
       Deps: T-02 · Reqs: NFR-3 · Est: 1.5h
-- [ ] **T-07 — Implement `mathx::sin`/`cos`.** Range-reduction + polynomial/table, `f64`.
+- [x] **T-07 — Implement `mathx::sin`/`cos`.** Range-reduction + polynomial/table, `f64`.
       Deps: T-06 · Reqs: NFR-3, NFR-5 · Est: 2.5h
 - [ ] **T-08 — Implement `mathx::exp` and `mathx::tanh`.** (tanh via exp.)
       Deps: T-06 · Reqs: NFR-3 · Est: 2.5h
