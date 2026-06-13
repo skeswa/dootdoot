@@ -92,6 +92,50 @@ pub const SOURCE_MAX_HARMONICS: u32 = 48;
 #[derive(Debug)]
 pub struct Synth;
 
+/// Filters samples through the fixed formant bank.
+#[derive(Debug, Clone, Default)]
+pub struct FormantFilterBank {
+    filters: [BandpassFilter; FORMANT_COUNT],
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct BandpassFilter {
+    x1: f64,
+    x2: f64,
+    y1: f64,
+    y2: f64,
+}
+
+impl FormantFilterBank {
+    /// Builds a silent formant filter bank.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Processes one sample through vowel-position-steered formants.
+    pub fn process_sample(&mut self, input: f64, vowel_position: f64) -> f64 {
+        let frequencies = formant_frequencies(vowel_position);
+        let mut output = 0.0;
+
+        for (((filter, frequency_hz), q), gain) in self
+            .filters
+            .iter_mut()
+            .zip(frequencies)
+            .zip(FORMANT_Q)
+            .zip(FORMANT_GAINS)
+        {
+            output += filter.process_sample(input, frequency_hz, q) * gain;
+        }
+
+        output
+    }
+
+    /// Clears all filter delay state.
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+}
+
 /// Counts active source harmonics below Nyquist for a frequency.
 pub fn source_harmonic_count(frequency_hz: f64) -> u32 {
     if !frequency_hz.is_finite() || frequency_hz <= 0.0 {
@@ -140,6 +184,47 @@ pub fn source_oscillator_sample(phase: f64, frequency_hz: f64) -> f64 {
     let saw = (2.0 / PI) * saw;
 
     (SOURCE_SAW_MIX * saw) + (SOURCE_PULSE_MIX * pulse)
+}
+
+/// Returns steered formant centers for a vowel-position knob.
+pub fn formant_frequencies(vowel_position: f64) -> [f64; FORMANT_COUNT] {
+    let position = vowel_position.clamp(-1.0, 1.0);
+
+    if position <= 0.0 {
+        interpolate_formants(FORMANT_EE_HZ, FORMANT_AH_HZ, position + 1.0)
+    } else {
+        interpolate_formants(FORMANT_AH_HZ, FORMANT_OO_HZ, position)
+    }
+}
+
+fn interpolate_formants(
+    from: [f64; FORMANT_COUNT],
+    to: [f64; FORMANT_COUNT],
+    amount: f64,
+) -> [f64; FORMANT_COUNT] {
+    std::array::from_fn(|index| from[index] + ((to[index] - from[index]) * amount))
+}
+
+impl BandpassFilter {
+    fn process_sample(&mut self, input: f64, center_hz: f64, q: f64) -> f64 {
+        let omega = (2.0 * PI * center_hz) / f64::from(SYNTH_SAMPLE_RATE_HZ);
+        let sin_omega = sin(omega);
+        let cos_omega = cos(omega);
+        let alpha = sin_omega / (2.0 * q);
+        let a0 = 1.0 + alpha;
+        let b0 = alpha / a0;
+        let b2 = -alpha / a0;
+        let a1 = (-2.0 * cos_omega) / a0;
+        let a2 = (1.0 - alpha) / a0;
+        let output = (b0 * input) + (b2 * self.x2) - (a1 * self.y1) - (a2 * self.y2);
+
+        self.x2 = self.x1;
+        self.x1 = input;
+        self.y2 = self.y1;
+        self.y1 = output;
+
+        output
+    }
 }
 
 fn wrap_phase(phase: f64) -> f64 {
