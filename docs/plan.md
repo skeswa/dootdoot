@@ -82,7 +82,7 @@
 - [ ] **T-13 — Compute top-4 PCA projection.** Center, SVD/PCA via `nalgebra`/`linfa`, keep
       4 components.
       Deps: T-12 · Reqs: FR-40 · Est: 2.5h
-- [ ] **T-14 — Canonicalize component signs.** Deterministic rule (largest-magnitude
+- [x] **T-14 — Canonicalize component signs.** Deterministic rule (largest-magnitude
       loading positive); unit-test reproducibility.
       Deps: T-13 · Reqs: FR-41 · Est: 1h
 - [ ] **T-15 — Choose squash function + compute per-axis stats.** Select the squash

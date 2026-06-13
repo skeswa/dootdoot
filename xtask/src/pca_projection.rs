@@ -15,6 +15,80 @@ pub struct PcaProjection {
 }
 
 impl PcaProjection {
+    /// Creates a PCA projection from raw parts.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when component, eigenvalue, or mean lengths do not
+    /// match the provided shape.
+    pub fn from_parts(
+        components: Vec<f64>,
+        eigenvalues: Vec<f64>,
+        means: Vec<f64>,
+        source_width: usize,
+        axis_count: usize,
+    ) -> Result<Self> {
+        let expected_components = source_width
+            .checked_mul(axis_count)
+            .ok_or_else(|| SourceManifestError::new("PCA projection shape overflowed"))?;
+
+        if components.len() != expected_components {
+            return Err(SourceManifestError::new(format!(
+                "PCA component length mismatch: expected {expected_components}, got {}",
+                components.len(),
+            )));
+        }
+
+        if eigenvalues.len() != axis_count {
+            return Err(SourceManifestError::new(format!(
+                "PCA eigenvalue length mismatch: expected {axis_count}, got {}",
+                eigenvalues.len(),
+            )));
+        }
+
+        if means.len() != source_width {
+            return Err(SourceManifestError::new(format!(
+                "PCA mean length mismatch: expected {source_width}, got {}",
+                means.len(),
+            )));
+        }
+
+        Ok(Self {
+            components,
+            eigenvalues,
+            means,
+            source_width,
+            axis_count,
+        })
+    }
+
+    /// Canonicalizes each component sign by making its largest loading
+    /// positive.
+    pub fn canonicalize_component_signs(&mut self) {
+        for axis in 0..self.axis_count {
+            let start = axis * self.source_width;
+            let end = start + self.source_width;
+            let component = &mut self.components[start..end];
+            let mut pivot_index = 0_usize;
+            let mut pivot_magnitude = 0.0_f64;
+
+            for (index, value) in component.iter().enumerate() {
+                let magnitude = value.abs();
+
+                if magnitude > pivot_magnitude {
+                    pivot_index = index;
+                    pivot_magnitude = magnitude;
+                }
+            }
+
+            if pivot_magnitude > 0.0 && component[pivot_index].is_sign_negative() {
+                for value in component {
+                    *value = -*value;
+                }
+            }
+        }
+    }
+
     /// Returns PCA components in axis-major order.
     #[must_use]
     pub fn components(&self) -> &[f64] {
@@ -105,13 +179,11 @@ pub fn compute_pca_projection(
         components.extend(component);
     }
 
-    Ok(PcaProjection {
-        components,
-        eigenvalues,
-        means,
-        source_width,
-        axis_count,
-    })
+    let mut projection =
+        PcaProjection::from_parts(components, eigenvalues, means, source_width, axis_count)?;
+    projection.canonicalize_component_signs();
+
+    Ok(projection)
 }
 
 fn column_means(source_model: &SourceModel) -> Result<Vec<f64>> {
