@@ -31,6 +31,9 @@ pub const FORMANT_GAINS: [f64; FORMANT_COUNT] = [1.0, 0.55, 0.35];
 /// Gives the fixed base syllable duration in seconds.
 pub const BASE_SYLLABLE_SECONDS: f64 = 0.150;
 
+/// Gives the fixed base syllable duration in samples.
+pub const BASE_SYLLABLE_SAMPLES: u32 = 6_615;
+
 /// Gives the fixed pause between separate words in seconds.
 pub const WORD_PAUSE_SECONDS: f64 = 0.080;
 
@@ -299,6 +302,43 @@ pub fn amplitude_envelope(elapsed_seconds: f64, duration_seconds: f64) -> f64 {
 /// Applies the fixed per-syllable amplitude envelope to a sample.
 pub fn apply_amplitude_envelope(sample: f64, elapsed_seconds: f64, duration_seconds: f64) -> f64 {
     sample * amplitude_envelope(elapsed_seconds, duration_seconds)
+}
+
+/// Renders one fixed-duration syllable from semantic knobs.
+pub fn render_syllable(knobs: crate::KnobSet, start_pitch_hz: f64) -> Vec<f64> {
+    let target_pitch_hz = pitch_center_hz(knobs.pitch_center());
+    let start_pitch_hz = if start_pitch_hz.is_finite() && start_pitch_hz > 0.0 {
+        start_pitch_hz
+    } else {
+        target_pitch_hz
+    };
+    let mut phase = 0.0;
+    let mut formants = FormantFilterBank::new();
+    let mut samples = Vec::new();
+
+    for sample_index in 0..BASE_SYLLABLE_SAMPLES {
+        let elapsed_seconds = f64::from(sample_index) / f64::from(SYNTH_SAMPLE_RATE_HZ);
+        let glided_pitch_hz = portamento_pitch_hz(
+            start_pitch_hz,
+            target_pitch_hz,
+            knobs.contour(),
+            elapsed_seconds,
+        );
+        let pitch_hz = apply_warble_hz(glided_pitch_hz, knobs.warble_depth(), elapsed_seconds);
+        let source = source_oscillator_sample(phase, pitch_hz);
+        let voiced = formants.process_sample(source, knobs.vowel_position());
+        let electronic = ring_modulate(voiced, elapsed_seconds);
+
+        samples.push(apply_amplitude_envelope(
+            electronic,
+            elapsed_seconds,
+            BASE_SYLLABLE_SECONDS,
+        ));
+
+        phase = wrap_phase(phase + (pitch_hz / f64::from(SYNTH_SAMPLE_RATE_HZ)));
+    }
+
+    samples
 }
 
 /// Returns steered formant centers for a vowel-position knob.

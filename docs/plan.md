@@ -159,7 +159,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-31 — Ring-mod + amplitude envelope.** Faint fixed ring-mod; snappy fixed AD
       envelope per syllable.
       Deps: T-27, T-07 · Reqs: FR-16, FR-17 · Est: 1.5h
-- [ ] **T-32 — Single-syllable renderer.** Compose the signal graph into one syllable
+- [x] **T-32 — Single-syllable renderer.** Compose the signal graph into one syllable
       buffer (`f64`): pitch model (center+portamento+warble) drives the oscillator/source →
       formant bank → ring-mod → amplitude envelope (design.md §6.2).
       Deps: T-28, T-29, T-30, T-31 · Reqs: FR-15, FR-16 · Est: 2h

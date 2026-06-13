@@ -497,8 +497,9 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
 
 **FORMAT_V1 synthesis constants.** Initial frozen values:
 
-- base syllable = 150 ms; word pause = 80 ms; medium punctuation pause = 120 ms; long
-  punctuation pause = 180 ms; leading/trailing silence = 30/60 ms.
+- base syllable = 150 ms (6,615 samples at 44.1 kHz); word pause = 80 ms; medium
+  punctuation pause = 120 ms; long punctuation pause = 180 ms; leading/trailing silence =
+  30/60 ms.
 - portamento = 45 ms; warble rate = 8.5 Hz; warble depth = 45 cents.
 - ring-mod = 72 Hz at 8% mix; envelope attack/decay/release = 12/80/25 ms with 35%
   sustain after decay.
