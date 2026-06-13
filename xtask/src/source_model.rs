@@ -18,6 +18,45 @@ pub struct SourceModel {
 }
 
 impl SourceModel {
+    /// Creates a source model from row-major embeddings and one weight per
+    /// token.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the row-major embedding length or weight count
+    /// does not match the provided shape.
+    pub fn from_parts(
+        embeddings: Vec<f32>,
+        weights: Vec<f32>,
+        token_count: usize,
+        embedding_width: usize,
+    ) -> Result<Self> {
+        let expected_embedding_len = token_count
+            .checked_mul(embedding_width)
+            .ok_or_else(|| SourceManifestError::new("source model shape overflowed"))?;
+
+        if embeddings.len() != expected_embedding_len {
+            return Err(SourceManifestError::new(format!(
+                "source embedding length mismatch: expected {expected_embedding_len}, got {}",
+                embeddings.len(),
+            )));
+        }
+
+        if weights.len() != token_count {
+            return Err(SourceManifestError::new(format!(
+                "source weight length mismatch: expected {token_count}, got {}",
+                weights.len(),
+            )));
+        }
+
+        Ok(Self {
+            embeddings,
+            weights,
+            token_count,
+            embedding_width,
+        })
+    }
+
     /// Returns all token embeddings in row-major order.
     #[must_use]
     pub fn embeddings(&self) -> &[f32] {
@@ -87,12 +126,7 @@ pub fn load_source_model(
         Err(_) => vec![1.0; token_count],
     };
 
-    Ok(SourceModel {
-        embeddings,
-        weights,
-        token_count,
-        embedding_width,
-    })
+    SourceModel::from_parts(embeddings, weights, token_count, embedding_width)
 }
 
 fn tensor_shape_2d(tensor: &TensorView<'_>, name: &str) -> Result<[usize; 2]> {

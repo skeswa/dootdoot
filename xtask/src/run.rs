@@ -5,7 +5,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{Result, SourceFiles, SourceManifest, SourceManifestError, load_source_model};
+use crate::{
+    Result, SourceFiles, SourceManifest, SourceManifestError, compute_pca_projection,
+    load_source_model,
+};
 
 /// Runs the current xtask source validation step.
 ///
@@ -40,14 +43,16 @@ pub fn run() -> Result<()> {
     let source_model = load_source_model(&tokenizer, &model, &config)?;
     let expected_width = usize::from(manifest.hidden_dim());
 
-    if source_model.embedding_width() == expected_width {
-        Ok(())
-    } else {
-        Err(SourceManifestError::new(format!(
+    if source_model.embedding_width() != expected_width {
+        return Err(SourceManifestError::new(format!(
             "source embedding width mismatch: expected {expected_width}, got {}",
             source_model.embedding_width(),
-        )))
+        )));
     }
+
+    compute_pca_projection(&source_model, 4)?;
+
+    Ok(())
 }
 
 fn workspace_root() -> Result<PathBuf> {
