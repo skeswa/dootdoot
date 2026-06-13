@@ -29,7 +29,7 @@ is in `docs/design.md` §2; the workspace has three crates:
 - **`dootdoot`** — thin CLI shell (imperative shell): `clap`, stdin, `rodio` playback,
   `--explain`, error/exit mapping. Holds essentially all side effects.
 - **`xtask`** — build-time only, never shipped: generates `assets/format_v1.bin` from
-  `potion-base-2M` via `model2vec-rs`.
+  `potion-base-8M` via `model2vec-rs`.
 
 ### Load-bearing invariants (violating these breaks the core promises)
 
@@ -39,7 +39,7 @@ is in `docs/design.md` §2; the workspace has three crates:
   projection is linear: pooling baked vectors == pooling-then-projecting, *exact before
   the int16 quantization* the table uses.)
 - **The sequence baseline is dootdoot's own pooling, NOT `model2vec.encode()`.** `encode()`
-  L2-normalizes the pooled vector (`potion-base-2M` has `normalize: true`); that step is
+  L2-normalizes the pooled vector (`potion-base-8M` has `normalize: true`); that step is
   nonlinear and does not commute with the projection, so it can't be recovered from baked
   4-axis vectors. dootdoot's baseline is the token-weight-scaled mean in PCA space,
   denominator = token count, **no L2 norm** — a documented, FORMAT_V1-pinned divergence

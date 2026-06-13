@@ -68,12 +68,16 @@
 
 ## Phase 2 — Build-time asset generation (`xtask`)
 
-- [ ] **T-11 — Acquire `potion-base-2M` (upstream F32).** Decide vendored-blob vs scripted
-  download; place model + `tokenizer.json` under `assets/` (or a build cache).
-  Document the choice. (dtype is build-time only; xtask emits its own int16 artifact.)
-  Deps: T-04 · Reqs: FR-5, FR-42, NFR-8 · Est: 1.5h
+- [ ] **T-11 — Acquire `potion-base-8M` (upstream F32) + pin a source manifest.** Decide
+  vendored-blob vs scripted download; place model + `tokenizer.json` under `assets/` (or a
+  build cache). Commit `assets/source_manifest.toml` pinning HF repo, exact commit SHA,
+  `model.safetensors`/`tokenizer.json` SHA-256, `hidden_dim=256`, `normalize=true`, dtype;
+  have `xtask` validate the acquired files against it (and abort on mismatch) before doing
+  any work. Document the choice. (dtype is build-time only; xtask emits its own int16
+  artifact.)
+  Deps: T-04 · Reqs: FR-5, FR-42, FR-43, NFR-8 · Est: 1.5h
 - [ ] **T-12 — Load model & extract all token embeddings.** Use `model2vec-rs` to read the
-  ~30k × ~64 embedding matrix and per-token weights.
+  ~30k × ~256 embedding matrix and per-token weights.
   Deps: T-11 · Reqs: FR-40 · Est: 2h
 - [ ] **T-13 — Compute top-4 PCA projection.** Center, SVD/PCA via `nalgebra`/`linfa`, keep
   4 components.

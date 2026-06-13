@@ -22,7 +22,7 @@
 
 ### 1.2 Tokenization
 
-- **FR-5** The tool SHALL tokenize input using the `potion-base-2M` WordPiece
+- **FR-5** The tool SHALL tokenize input using the `potion-base-8M` WordPiece
   tokenizer loaded from an embedded `tokenizer.json`.
 - **FR-6** The tool SHALL disable special tokens during tokenization
   (`add_special_tokens = false`); `[CLS]`/`[SEP]` SHALL NOT produce sound.
@@ -42,7 +42,7 @@
   being the token count `n`** (i.e. `(1/n) · Σ_i (w_i · v_i)`), and SHALL NOT apply an L2
   normalization. This is a dootdoot-specific, model2vec-derived pooling rule and is
   deliberately NOT byte-equivalent to `model2vec.encode()` for the L2-normalized
-  `potion-base-2M` model.
+  `potion-base-8M` model.
 - **FR-12** The tool SHALL squash each axis to a bounded perceptual range using
   frozen per-axis statistics, applied (a) per token for local gestures and (b) on the
   pooled sequence vector for the baseline.
@@ -143,7 +143,7 @@
 
 ### 1.10 Build-time generation (xtask)
 
-- **FR-40** An `xtask` tool SHALL generate `assets/format_v1.bin` from `potion-base-2M`
+- **FR-40** An `xtask` tool SHALL generate `assets/format_v1.bin` from `potion-base-8M`
   by extracting all token embeddings, computing the top-4 PCA projection, canonicalizing
   component signs deterministically, computing squash statistics, and serializing the
   per-token vectors and weights.
@@ -152,6 +152,13 @@
   reproducible.
 - **FR-42** `assets/format_v1.bin` and `assets/tokenizer.json` SHALL be committed to
   the repository and embedded into the shipped binary.
+- **FR-43** A committed `assets/source_manifest.toml` SHALL pin the immutable upstream
+  source: HF repo, exact commit revision (SHA, not a branch/tag), expected SHA-256 of
+  `model.safetensors` and `tokenizer.json`, and the structural expectations
+  `hidden_dim = 256`, `normalize = true`, and dtype. `xtask` SHALL validate the acquired
+  files against this manifest (revision, file hashes, structural fields) **before**
+  computing or writing any asset, and SHALL abort on any mismatch, so that regeneration is
+  reproducible.
 
 ---
 

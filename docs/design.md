@@ -129,12 +129,12 @@ semantics therefore also fixes the tokenizer choice.
 
 ## 4. Tokens → semantics (the meaning layer)
 
-### 4.1 Decision: source semantics from model2vec (`potion-base-2M`)
+### 4.1 Decision: source semantics from model2vec (`potion-base-8M`)
 
 `model2vec` distills a sentence-transformer into a **static embedding lookup table**:
 every token maps to a fixed semantic vector, and `model2vec.encode()` embeds a whole
 sequence by mean-pooling the token vectors and then **L2-normalizing** the result
-(`potion-base-2M` ships `normalize: true`). This is an ideal fit:
+(`potion-base-8M` ships `normalize: true`). This is an ideal fit:
 
 - **Deterministic** — a frozen lookup table plus a fixed pooling rule is a pure function.
 - **Semantic at both levels** — token-level *and* sequence-level similarity are
@@ -145,12 +145,19 @@ sequence by mean-pooling the token vectors and then **L2-normalizing** the resul
 - **Offline / embeddable** — a small `safetensors` file, read only at build time.
 - **Rust-native** — `model2vec-rs` exists and is maintained.
 
-**Model choice:** `potion-base-2M`. Selected as the **smallest** potion model: with
-~2M parameters and ~64-dim vectors it is the cheapest to process at build time, and `2M`
-gives coarser semantics than `8M`/`32M` but is sufficient because we further reduce to
-4 axes (§5) and only need broad semantic contrasts to be audible.
+**Model choice:** `potion-base-8M` (~7.6M parameters, **~256-dim** vectors). Because the
+model is a **build-time-only input** (§4.2) — projected to 4 PCA axes and baked into the
+~300 KB table, never loaded at runtime — source size costs nothing in the shipped binary
+or at runtime, so we pick for *semantic quality*, not footprint. `8M` (avg MTEB ≈ 51)
+materially out-scores the tiny `2M` (≈ mid-40s): its 256-dim embeddings give the top-4 PCA
+a richer, better-conditioned space to draw from, which directly strengthens the
+similarity property the whole language rests on (goal 2; tested by NFR-14/15). We stop at
+`8M` rather than `32M` because the gain to `32M` is marginal (≈ 52) while its source is
+larger to process — and everything downstream (4 axes → bounded knobs → droid voice) is a
+lossy funnel that caps how much extra source fidelity is audible. The 4-axis reduction
+keeps the artifact tiny regardless of source dimensionality.
 
-**Source dtype.** Upstream `minishlab/potion-base-2M` currently publishes **F32**
+**Source dtype.** Upstream `minishlab/potion-base-8M` currently publishes **F32**
 `safetensors`. dtype is irrelevant to the shipped binary — the model is a build-time
 input only (§4.2) and is never embedded. `xtask` reads whatever the upstream weights are,
 projects to 4 axes, and produces its **own int16-quantized** `format_v1.bin` (§4.2);
@@ -169,14 +176,14 @@ model2vec or a tensor framework.
 
 This works because **PCA projection is linear**, so projection commutes with the
 weighted mean. In exact arithmetic, pooling the baked 4-dim vectors equals pooling the
-original 64-dim vectors and then projecting:
+original 256-dim vectors and then projecting:
 
 ```
 project(mean_w(token_vectors)) == mean_w(project(token_vectors))
 ```
 
 (`mean_w` = the weight-scaled mean defined below; weights are baked per token.) This is
-what lets us pool *after* baking the projected vectors instead of shipping the 64-dim
+what lets us pool *after* baking the projected vectors instead of shipping the 256-dim
 table. The identity is exact **before quantization**; we store the projected vectors as
 int16, which introduces a small, bounded rounding error, so the precise runtime guarantee
 is: *the runtime pools the frozen quantized approximation, deterministically.* The
@@ -186,12 +193,18 @@ on every run and on every verified platform (§8.1).
 **The sequence baseline is dootdoot's own pooling, not `model2vec.encode()`.** The
 identity above commutes the *projection* with the mean — it does **not** reproduce
 model2vec's sequence embedding, because `model2vec.encode()` mean-pools and then
-**L2-normalizes** the pooled vector (`potion-base-2M` has `normalize: true`). That final
+**L2-normalizes** the pooled vector (`potion-base-8M` has `normalize: true`). That final
 normalization is nonlinear and does **not** commute with the PCA projection, so it cannot
-be recovered from the baked 4-dim per-token vectors alone — recovering it would require
-the original 64-dim norm at runtime, i.e. shipping the ~2 MB+ 64-dim table we deliberately
-dropped. dootdoot therefore defines its **own** sequence baseline in PCA space and skips
-the L2 step. The pooling rule is the token-weight-scaled mean over the `n` tokens:
+be recovered from the baked 4-dim per-token vectors alone. The blocker is the norm of the
+*pooled* high-dimensional vector: `‖mean(x_i)‖² = (1/n²) Σ_i Σ_j ⟨x_i, x_j⟩`, which
+depends on the full **pairwise dot products** between the original 256-dim token vectors,
+not on any per-token quantity. **A per-token scalar norm cannot reconstruct it** (the
+cross-token terms `⟨x_i, x_j⟩`, `i ≠ j`, are irreducibly pairwise) — so there is no
+"cheap" way to bake the L2 step back in; reproducing it would mean carrying the full
+~15 MB+ 256-dim table (~30k × 256 × int16) at runtime to recompute those dot products,
+which we deliberately dropped. dootdoot therefore defines its **own** sequence baseline in
+PCA space and skips the L2 step entirely. The pooling rule is the token-weight-scaled mean
+over the `n` tokens:
 
 ```
 baseline_pre = (1 / n) · Σ_i (w_i · v_i)      // v_i = dequantized 4-dim token vector,
@@ -240,8 +253,29 @@ operates on the dequantized values and the linearity argument holds up to int16 
   build-time input only and are not shipped).
 
 Note the runtime file stores the **projected** values, so it does **not** carry the
-64→4 PCA matrix; that matrix is a build-time artifact, recorded in the contract only by
+256→4 PCA matrix; that matrix is a build-time artifact, recorded in the contract only by
 hash for provenance.
+
+**Source manifest (reproducible regeneration).** A mutable model *name* is not a
+reproducible input: `minishlab/potion-base-8M` could be re-uploaded and silently change
+what `xtask` ingests. The `FORMAT_V1` model hash catches such drift *after* generation
+(the baked output would no longer match the committed artifact), but it does nothing to
+make regeneration itself reproducible. So the source is pinned by a committed
+**`assets/source_manifest.toml`**, the immutable contract for what `xtask` consumes:
+
+- **`hf_repo`** — `minishlab/potion-base-8M`.
+- **`revision`** — the exact immutable commit SHA (not a branch/tag).
+- **`model_sha256`** / **`tokenizer_sha256`** — expected hashes of `model.safetensors` and
+  `tokenizer.json`.
+- **`hidden_dim = 256`**, **`normalize = true`**, **`dtype`** (the upstream F32) — the
+  structural expectations the rest of the pipeline relies on.
+
+`xtask` **validates the downloaded/vendored files against this manifest before computing
+or writing anything** (matching revision, byte-hashes, and the structural fields), and
+aborts on any mismatch. This makes "regenerate the asset" deterministic and reviewable:
+two runs from the same manifest produce byte-identical `format_v1.bin`. The manifest is
+committed alongside the assets (§9.3); the model hash it pins is the same one recorded in
+`FORMAT_V1` (§8.2), so the build input and the runtime contract cannot silently diverge.
 
 See §9 for the resulting runtime/build-time split.
 
@@ -249,9 +283,9 @@ See §9 for the resulting runtime/build-time split.
 
 ## 5. Semantics → perceptual axes (the learnable layer)
 
-### 5.1 Decision: reduce ~64 dims to exactly 4 axes via pinned PCA
+### 5.1 Decision: reduce ~256 dims to exactly 4 axes via pinned PCA
 
-64 dimensions are neither audible nor learnable. We collapse them to a **small, stable,
+256 dimensions are neither audible nor learnable. We collapse them to a **small, stable,
 perceptually meaningful** set.
 
 **Mechanism: pinned PCA.** Offline, we run the entire vocab through PCA, keep the top
@@ -563,7 +597,7 @@ requires a version bump (below). **`FORMAT_V1` includes:**
   normalization, the `##` continuation convention) — not just the vocab;
 - the **control-token drop filter** set (`[PAD]`/`[CLS]`/`[SEP]`/`[MASK]`, `[UNK]`
   excluded) applied after tokenization (§3.3);
-- the pinned 64→4 PCA projection matrix (by hash);
+- the pinned 256→4 PCA projection matrix (by hash);
 - the int16 **quantization scales and rule** for the 4 axes and the pooling weight —
   symmetric signed, zero-point-free, `s = max|·|/32767`, round-half-to-even, code −32768
   unused (§4.2);
@@ -612,20 +646,21 @@ to build time. The resulting split:
   cleaner to build on Apple Silicon.
 
 **Build-time only (`xtask`, never shipped):**
-- `model2vec-rs` (loads `potion-base-2M`), `nalgebra`/`linfa` (PCA/SVD).
+- `model2vec-rs` (loads `potion-base-8M`), `nalgebra`/`linfa` (PCA/SVD).
 
 ### 9.2 Decision: workspace layout (lib + bin + xtask)
 
 - **`dootdoot-core`** (library): the pure, deterministic engine — tokenizer wrapper,
-  mapping (baked-table load + linear pooling + axis squash), synth (source → formant
-  bank → portamento → warble → ring-mod → envelope), the **owned math** module, WAV
+  mapping (baked-table load + linear pooling + axis squash), synth (the §6.2 signal
+  graph: control pitch model + oscillator/source → formant bank → ring-mod → envelope),
+  the **owned math** module, WAV
   serialization **to bytes / an `impl Write`**, and the `FORMAT_V1` constants. No
   filesystem or audio-device I/O (it hands back buffers/bytes; the binary performs the
   actual writes). Fully unit-testable and reusable.
 - **`dootdoot`** (binary): thin CLI shell — `clap` parsing, stdin handling, `rodio`
   playback, `--explain` printing, error/exit-code mapping. Calls into core.
 - **`xtask`** (build-time tool, not shipped): the offline generator — loads
-  `potion-base-2M` via `model2vec-rs`, extracts all 64-dim embeddings, computes PCA→4,
+  `potion-base-8M` via `model2vec-rs`, extracts all 256-dim embeddings, computes PCA→4,
   **canonicalizes component signs** (e.g. force each component's largest-magnitude
   loading positive, so the result is reproducible), computes squash stats, and writes
   the committed `assets/format_v1.bin`.
@@ -634,13 +669,16 @@ to build time. The resulting split:
 
 `assets/format_v1.bin` and `assets/tokenizer.json` are **committed to the repo and
 embedded** in the binary (`include_bytes!`). The frozen contract literally lives in a
-reviewable artifact.
+reviewable artifact. `assets/source_manifest.toml` (§4.2) is committed alongside them: it
+pins the immutable upstream source (repo, commit SHA, file hashes, `hidden_dim`,
+`normalize`, dtype) that `xtask` validates before regenerating, so the build input is as
+reviewable and reproducible as the output.
 
 Two distinct build paths, with different network stories:
 - **Normal build** (`cargo build`/`test`/`install`): compiles from the committed assets
   and is **fully offline** — no network, ever. This is the guarantee in NFR-8.
 - **Asset regeneration** (running `xtask` to rebuild `format_v1.bin`): a rare, deliberate
-  operation that needs the `potion-base-2M` model as input. Whether that model is a
+  operation that needs the `potion-base-8M` model as input. Whether that model is a
   **vendored blob** (regeneration also offline) or **downloaded once** (regeneration may
   require network) is the open ops decision in §11 and plan task T-11. Regeneration is
   **not** covered by the offline guarantee until T-11 settles it.
@@ -675,7 +713,7 @@ These do not change the architecture and are settled during implementation:
 - **Squash function** — tanh vs percentile-clamp. Note this is *not* fully open-ended:
   it must be chosen when `format_v1.bin` is generated (T-15), and any later change
   regenerates the artifact before the freeze (§5.3, T-46).
-- **How `xtask` obtains `potion-base-2M`** — vendored blob (regeneration stays offline)
+- **How `xtask` obtains `potion-base-8M`** — vendored blob (regeneration stays offline)
   vs scripted download (regeneration may need network). This affects only regeneration,
   never the normal offline build (§9.3, T-11).
 - **Packaging** — `cargo install`, Homebrew, prebuilt release binaries.
