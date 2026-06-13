@@ -1,5 +1,6 @@
 //! Testable command-line argument model for dootdoot.
 
+mod explain;
 mod input;
 mod output;
 mod playback;
@@ -7,6 +8,7 @@ mod playback;
 use std::path::PathBuf;
 
 use clap::Parser;
+pub use explain::{explain_table_for_empty_chirp, explain_table_for_text};
 pub use input::{ResolvedInput, StdinInput, read_resolved_input, resolve_input};
 pub use output::{OutputRoute, output_route};
 pub use playback::{PlaybackError, play_buffer, playback_samples};

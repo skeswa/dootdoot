@@ -3,8 +3,8 @@
 use thiserror::Error;
 
 use crate::{
-    MappingError, ProsodicPunctuation, SequenceEvent, TokenizerError, assemble_knobs,
-    embedded_mapping, embedded_tokenizer, pool_sequence, render_canonical_buffer,
+    KnobSet, MappingError, ProsodicPunctuation, SequenceEvent, TokenVector, TokenizerError,
+    assemble_knobs, embedded_mapping, embedded_tokenizer, pool_sequence, render_canonical_buffer,
 };
 
 /// Reports why text could not be rendered.
@@ -21,7 +21,50 @@ pub enum EngineError {
 #[derive(Debug, Clone, Copy)]
 enum EventTemplate {
     Voiced(usize),
-    Punctuation(ProsodicPunctuation),
+    Punctuation(usize),
+}
+
+#[derive(Debug, Clone)]
+struct VoicedToken {
+    text: String,
+    vector: TokenVector,
+    continuation: bool,
+}
+
+#[derive(Debug, Clone)]
+struct PunctuationToken {
+    text: String,
+    punctuation: ProsodicPunctuation,
+}
+
+#[derive(Debug, Clone)]
+struct TextAnalysis {
+    events: Vec<SequenceEvent>,
+    explain_rows: Vec<ExplainRow>,
+}
+
+/// Gives one row in the `--explain` table.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExplainRow {
+    /// A voiced token row with semantic knobs.
+    Token(ExplainTokenRow),
+    /// A control-only prosodic punctuation row.
+    Punctuation(ExplainPunctuationRow),
+}
+
+/// Gives one voiced token row in the `--explain` table.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExplainTokenRow {
+    token: String,
+    knobs: KnobSet,
+    continuation: bool,
+}
+
+/// Gives one prosodic punctuation row in the `--explain` table.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExplainPunctuationRow {
+    token: String,
+    punctuation: ProsodicPunctuation,
 }
 
 /// Converts text into sequencer events.
@@ -31,38 +74,74 @@ enum EventTemplate {
 /// Returns an error if the embedded tokenizer or mapping cannot process the
 /// input.
 pub fn sequence_events_for_text(text: &str) -> Result<Vec<SequenceEvent>, EngineError> {
+    Ok(analyze_text(text)?.events)
+}
+
+/// Converts text into `--explain` rows.
+///
+/// # Errors
+///
+/// Returns an error if the embedded tokenizer or mapping cannot process the
+/// input.
+pub fn explain_rows_for_text(text: &str) -> Result<Vec<ExplainRow>, EngineError> {
+    Ok(analyze_text(text)?.explain_rows)
+}
+
+fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
     let tokenizer = embedded_tokenizer()?;
     let mapping = embedded_mapping()?;
     let encoded_input = tokenizer.tokenize(text)?;
     let mut templates = Vec::new();
     let mut voiced_tokens = Vec::new();
+    let mut punctuation_tokens = Vec::new();
 
     for token in encoded_input.tokens() {
         if let Some(punctuation) = ProsodicPunctuation::from_text(token.text()) {
-            templates.push(EventTemplate::Punctuation(punctuation));
+            templates.push(EventTemplate::Punctuation(punctuation_tokens.len()));
+            punctuation_tokens.push(PunctuationToken {
+                text: token.text().to_owned(),
+                punctuation,
+            });
         } else {
             let token_vector = mapping.lookup(token.id())?;
 
             templates.push(EventTemplate::Voiced(voiced_tokens.len()));
-            voiced_tokens.push((token_vector, token.is_continuation()));
+            voiced_tokens.push(VoicedToken {
+                text: token.text().to_owned(),
+                vector: token_vector,
+                continuation: token.is_continuation(),
+            });
         }
     }
 
     if voiced_tokens.is_empty() {
-        return Ok(templates
-            .into_iter()
-            .filter_map(|template| match template {
-                EventTemplate::Punctuation(punctuation) => {
-                    Some(SequenceEvent::punctuation(punctuation))
+        let mut events = Vec::new();
+        let mut explain_rows = Vec::new();
+
+        for template in templates {
+            match template {
+                EventTemplate::Punctuation(index) => {
+                    let punctuation = &punctuation_tokens[index];
+
+                    events.push(SequenceEvent::punctuation(punctuation.punctuation));
+                    explain_rows.push(ExplainRow::punctuation(
+                        punctuation.text.clone(),
+                        punctuation.punctuation,
+                    ));
                 }
-                EventTemplate::Voiced(_) => None,
-            })
-            .collect());
+                EventTemplate::Voiced(_) => {}
+            }
+        }
+
+        return Ok(TextAnalysis {
+            events,
+            explain_rows,
+        });
     }
 
     let token_vectors = voiced_tokens
         .iter()
-        .map(|(token_vector, _continuation)| *token_vector)
+        .map(|token| token.vector)
         .collect::<Vec<_>>();
     let baseline = mapping.squash_pooled(pool_sequence(&token_vectors)?);
     let squashed_tokens = token_vectors
@@ -70,17 +149,38 @@ pub fn sequence_events_for_text(text: &str) -> Result<Vec<SequenceEvent>, Engine
         .copied()
         .map(|token_vector| mapping.squash_token(token_vector))
         .collect::<Vec<_>>();
+    let mut events = Vec::new();
+    let mut explain_rows = Vec::new();
 
-    Ok(templates
-        .into_iter()
-        .map(|template| match template {
-            EventTemplate::Punctuation(punctuation) => SequenceEvent::punctuation(punctuation),
-            EventTemplate::Voiced(index) => SequenceEvent::syllable(
-                assemble_knobs(baseline, squashed_tokens[index]),
-                voiced_tokens[index].1,
-            ),
-        })
-        .collect())
+    for template in templates {
+        match template {
+            EventTemplate::Punctuation(index) => {
+                let punctuation = &punctuation_tokens[index];
+
+                events.push(SequenceEvent::punctuation(punctuation.punctuation));
+                explain_rows.push(ExplainRow::punctuation(
+                    punctuation.text.clone(),
+                    punctuation.punctuation,
+                ));
+            }
+            EventTemplate::Voiced(index) => {
+                let token = &voiced_tokens[index];
+                let knobs = assemble_knobs(baseline, squashed_tokens[index]);
+
+                events.push(SequenceEvent::syllable(knobs, token.continuation));
+                explain_rows.push(ExplainRow::token(
+                    token.text.clone(),
+                    knobs,
+                    token.continuation,
+                ));
+            }
+        }
+    }
+
+    Ok(TextAnalysis {
+        events,
+        explain_rows,
+    })
 }
 
 /// Renders text into the canonical signed 16-bit mono audio buffer.
@@ -92,4 +192,47 @@ pub fn render_text_canonical_buffer(text: &str) -> Result<Vec<i16>, EngineError>
     let events = sequence_events_for_text(text)?;
 
     Ok(render_canonical_buffer(&events))
+}
+
+impl ExplainRow {
+    fn token(token: String, knobs: KnobSet, continuation: bool) -> Self {
+        Self::Token(ExplainTokenRow {
+            token,
+            knobs,
+            continuation,
+        })
+    }
+
+    fn punctuation(token: String, punctuation: ProsodicPunctuation) -> Self {
+        Self::Punctuation(ExplainPunctuationRow { token, punctuation })
+    }
+}
+
+impl ExplainTokenRow {
+    /// Returns the tokenizer text for this voiced row.
+    pub fn token(&self) -> &str {
+        &self.token
+    }
+
+    /// Returns the semantic knobs for this voiced row.
+    pub fn knobs(&self) -> KnobSet {
+        self.knobs
+    }
+
+    /// Returns true when this token is a `WordPiece` continuation.
+    pub fn is_continuation(&self) -> bool {
+        self.continuation
+    }
+}
+
+impl ExplainPunctuationRow {
+    /// Returns the tokenizer text for this control row.
+    pub fn token(&self) -> &str {
+        &self.token
+    }
+
+    /// Returns the prosodic punctuation marker for this control row.
+    pub fn punctuation(&self) -> ProsodicPunctuation {
+        self.punctuation
+    }
 }

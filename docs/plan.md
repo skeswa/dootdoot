@@ -200,7 +200,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       Deps: T-38, T-36, T-37 · Reqs: FR-26, FR-27, FR-28 · Est: 1h
 - [x] **T-41 — Live playback via `rodio`.** Stream the canonical buffer; CoreAudio on Mac.
       Deps: T-36 · Reqs: FR-27, FR-30, NFR-12 · Est: 1.5h
-- [ ] **T-42 — `--explain` table.** Per-token `token │ pitch │ vowel │ contour │ warble`
+- [x] **T-42 — `--explain` table.** Per-token `token │ pitch │ vowel │ contour │ warble`
       to stderr, with prosodic punctuation shown as distinct control rows.
       Deps: T-24, T-38 · Reqs: FR-31, FR-32, FR-23a · Est: 1.5h
 - [ ] **T-43 — Input limits.** Warn past ≈8 min/≈40 MB (≈2,000 tokens); hard error before
