@@ -134,7 +134,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       frozen modulation depth (design.md §5.4). Produce the per-syllable knob set {pitch, vowel,
       contour, warble} in fixed axis order; test single-token (`knob==B_k`) and clamp at bounds.
       Deps: T-23 · Reqs: FR-13, FR-14, FR-18 · Est: 1.5h
-- [ ] **T-25 — Semantic-sanity tests.** Assert `cat↔dog` < `cat↔airplane` (token) and
+- [x] **T-25 — Semantic-sanity tests.** Assert `cat↔dog` < `cat↔airplane` (token) and
       analogous sequence-level ordering.
       Deps: T-24 · Reqs: NFR-14, NFR-15 · Est: 1.5h
 
