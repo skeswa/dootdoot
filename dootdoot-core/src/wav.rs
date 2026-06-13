@@ -1,6 +1,10 @@
 //! WAV serialization for canonical dootdoot buffers.
 
-use crate::{SequenceEvent, sequence_utterance};
+use std::io::{Cursor, Seek, Write};
+
+use thiserror::Error;
+
+use crate::{SYNTH_SAMPLE_RATE_HZ, SequenceEvent, sequence_utterance};
 
 /// Gives the fixed scale from normalized `f64` samples to signed 16-bit PCM.
 pub const PCM_I16_SCALE: f64 = 32_768.0;
@@ -8,6 +12,14 @@ pub const PCM_I16_SCALE: f64 = 32_768.0;
 /// Marks the WAV serialization module in the public facade.
 #[derive(Debug)]
 pub struct WavWriter;
+
+/// Reports why WAV serialization failed.
+#[derive(Debug, Error)]
+pub enum WavError {
+    /// Wraps errors from the WAV encoder.
+    #[error("failed to write WAV data: {0}")]
+    Encoder(#[from] hound::Error),
+}
 
 /// Renders the canonical signed 16-bit mono audio buffer for sequenced events.
 pub fn render_canonical_buffer(events: &[SequenceEvent]) -> Vec<i16> {
@@ -17,6 +29,45 @@ pub fn render_canonical_buffer(events: &[SequenceEvent]) -> Vec<i16> {
         .copied()
         .map(quantize_sample)
         .collect()
+}
+
+/// Serializes canonical samples to an in-memory WAV byte vector.
+///
+/// # Errors
+///
+/// Returns an error if the WAV encoder rejects the stream.
+pub fn wav_bytes(samples: &[i16]) -> Result<Vec<u8>, WavError> {
+    let mut cursor = Cursor::new(Vec::new());
+
+    write_wav(&mut cursor, samples)?;
+
+    Ok(cursor.into_inner())
+}
+
+/// Writes canonical samples as 44.1 kHz, 16-bit, mono PCM WAV.
+///
+/// # Errors
+///
+/// Returns an error if the WAV encoder rejects the stream or writer.
+pub fn write_wav<W>(writer: W, samples: &[i16]) -> Result<(), WavError>
+where
+    W: Write + Seek,
+{
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate: SYNTH_SAMPLE_RATE_HZ,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let mut wav_writer = hound::WavWriter::new(writer, spec)?;
+
+    for sample in samples {
+        wav_writer.write_sample(*sample)?;
+    }
+
+    wav_writer.finalize()?;
+
+    Ok(())
 }
 
 /// Quantizes one normalized audio sample to signed 16-bit PCM.

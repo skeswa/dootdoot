@@ -182,7 +182,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-36 — Canonical buffer assembly.** Produce one `Vec<i16>` @ 44.1k mono as the
       sole source of truth.
       Deps: T-33, T-35 · Reqs: FR-25, FR-30 · Est: 1h
-- [ ] **T-37 — WAV writer via `hound`.** Serialize the canonical buffer to 44.1k/16-bit/
+- [x] **T-37 — WAV writer via `hound`.** Serialize the canonical buffer to 44.1k/16-bit/
       mono WAV.
       Deps: T-36 · Reqs: FR-26, FR-29 · Est: 1h
 
