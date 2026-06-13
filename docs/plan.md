@@ -126,7 +126,7 @@
       baseline vector: `(1/n) · Σ(wᵢ·vᵢ)`, denominator = token count `n`, **no L2 norm**
       (dootdoot-specific, not `model2vec.encode()`; design.md §4.2).
       Deps: T-21 · Reqs: FR-11 · Est: 1h
-- [ ] **T-23 — Axis squash.** Implement chosen squash using frozen stats + `mathx`; apply
+- [x] **T-23 — Axis squash.** Implement chosen squash using frozen stats + `mathx`; apply
       per-token and to baseline.
       Deps: T-22, T-08 · Reqs: FR-12 · Est: 1.5h
 - [ ] **T-24 — Knob assembly.** Per axis `k`: `knob = clamp(B_k + α_k·(T_{k}−B_k),

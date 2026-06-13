@@ -13,7 +13,8 @@ pub use format::{
     Format, FormatArtifact, FormatError, FormatSquashFunction, SquashAxisStats, embedded_format_v1,
 };
 pub use mapping::{
-    Mapping, MappingError, PooledVector, TokenVector, embedded_mapping, pool_sequence,
+    Mapping, MappingError, PooledVector, SquashedVector, TokenVector, embedded_mapping,
+    pool_sequence,
 };
 pub use mathx::{
     EXP_POLYNOMIAL_DEGREE, EXP_TABLE_BITS, EXP_TABLE_LEN, MATHX_VERSION, Mathx,

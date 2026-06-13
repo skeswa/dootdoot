@@ -2,7 +2,10 @@
 
 use thiserror::Error;
 
-use crate::{FORMAT_AXIS_COUNT, FORMAT_TOKEN_RECORD_BYTES, FormatArtifact, embedded_format_v1};
+use crate::{
+    FORMAT_AXIS_COUNT, FORMAT_TOKEN_RECORD_BYTES, FormatArtifact, FormatSquashFunction,
+    embedded_format_v1, tanh,
+};
 
 /// Maps tokenizer IDs to baked semantic vectors and pooling weights.
 #[derive(Debug, Clone)]
@@ -20,6 +23,12 @@ pub struct TokenVector {
 /// Gives a pooled sequence baseline vector.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PooledVector {
+    axes: [f64; FORMAT_AXIS_COUNT],
+}
+
+/// Gives a bounded squashed semantic vector.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SquashedVector {
     axes: [f64; FORMAT_AXIS_COUNT],
 }
 
@@ -79,6 +88,33 @@ impl<'a> Mapping<'a> {
     pub fn token_count(&self) -> usize {
         self.format.token_count()
     }
+
+    /// Applies the frozen axis squash to one token vector.
+    pub fn squash_token(&self, token: TokenVector) -> SquashedVector {
+        self.squash_axes(token.axes())
+    }
+
+    /// Applies the frozen axis squash to a pooled sequence baseline.
+    pub fn squash_pooled(&self, pooled: PooledVector) -> SquashedVector {
+        self.squash_axes(pooled.axes())
+    }
+
+    fn squash_axes(&self, input_axes: [f64; FORMAT_AXIS_COUNT]) -> SquashedVector {
+        match self.format.squash_function() {
+            FormatSquashFunction::TanhZScore => {
+                let mut axes = [0.0_f64; FORMAT_AXIS_COUNT];
+
+                for (squashed_axis, (input_axis, stats)) in axes
+                    .iter_mut()
+                    .zip(input_axes.into_iter().zip(self.format.squash_stats()))
+                {
+                    *squashed_axis = tanh((input_axis - stats.mean()) / stats.standard_deviation());
+                }
+
+                SquashedVector { axes }
+            }
+        }
+    }
 }
 
 impl TokenVector {
@@ -100,6 +136,18 @@ impl TokenVector {
 
 impl PooledVector {
     /// Returns the pooled semantic axes in fixed `FORMAT_V1` order.
+    pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
+        self.axes
+    }
+}
+
+impl SquashedVector {
+    /// Builds a squashed vector from bounded axis values.
+    pub fn new(axes: [f64; FORMAT_AXIS_COUNT]) -> Self {
+        Self { axes }
+    }
+
+    /// Returns the squashed axes in fixed `FORMAT_V1` order.
     pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
         self.axes
     }
