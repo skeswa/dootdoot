@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Format every source file in the repo, in place.
+#
+#   - Rust:  `cargo +nightly fmt`  (nightly rustfmt is required — rustfmt.toml uses
+#            nightly-only options; see docs/style.md §11).
+#   - Everything else (Markdown, TOML, YAML, JSON, CSS, JS/TS, ...): `oxfmt`.
+#
+# Safe to run before any Rust exists: the Rust step is skipped until a Cargo
+# workspace appears, so this works today and keeps working once T-01 lands.
+#
+# Usage: scripts/fmt
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+# --- Rust ------------------------------------------------------------------
+if [ -f Cargo.toml ]; then
+  if command -v cargo >/dev/null 2>&1; then
+    echo "==> cargo +nightly fmt"
+    cargo +nightly fmt
+  else
+    echo "==> skipping Rust: cargo not found on PATH" >&2
+  fi
+else
+  echo "==> skipping Rust: no Cargo.toml yet"
+fi
+
+# --- Everything else (oxfmt) -----------------------------------------------
+if command -v oxfmt >/dev/null 2>&1; then
+  oxfmt_cmd=(oxfmt)
+elif command -v npx >/dev/null 2>&1; then
+  oxfmt_cmd=(npx --yes oxfmt)
+else
+  echo "error: oxfmt not found. Install with 'npm add -D oxfmt' (or 'npm i -g oxfmt')," >&2
+  echo "       or make 'npx' available. See https://oxc.rs/docs/guide/usage/formatter" >&2
+  exit 1
+fi
+
+echo "==> ${oxfmt_cmd[*]} ."
+"${oxfmt_cmd[@]}" .

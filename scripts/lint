@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Lint every source file in the repo WITHOUT modifying it. The non-mutating
+# counterpart to scripts/fmt; suitable for CI.
+#
+#   - Rust:  `cargo clippy --all-targets -- -D warnings`  (warnings are errors)
+#            `cargo +nightly fmt --check`                  (formatting must be clean)
+#   - Everything else (Markdown, TOML, YAML, JSON, CSS, JS/TS, ...):
+#            `oxfmt --check`                               (formatting must be clean)
+#
+# Safe to run before any Rust exists: the Rust steps are skipped until a Cargo
+# workspace appears. Runs all checks before exiting so you see every failure at
+# once; exits non-zero if any check fails.
+#
+# Usage: scripts/lint
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+status=0
+
+# --- Rust ------------------------------------------------------------------
+if [ -f Cargo.toml ]; then
+  if command -v cargo >/dev/null 2>&1; then
+    echo "==> cargo +nightly fmt --check"
+    cargo +nightly fmt --check || status=1
+    echo "==> cargo clippy --all-targets -- -D warnings"
+    cargo clippy --all-targets -- -D warnings || status=1
+  else
+    echo "==> skipping Rust: cargo not found on PATH" >&2
+  fi
+else
+  echo "==> skipping Rust: no Cargo.toml yet"
+fi
+
+# --- Everything else (oxfmt) -----------------------------------------------
+if command -v oxfmt >/dev/null 2>&1; then
+  oxfmt_cmd=(oxfmt)
+elif command -v npx >/dev/null 2>&1; then
+  oxfmt_cmd=(npx --yes oxfmt)
+else
+  echo "error: oxfmt not found. Install with 'npm add -D oxfmt' (or 'npm i -g oxfmt')," >&2
+  echo "       or make 'npx' available. See https://oxc.rs/docs/guide/usage/formatter" >&2
+  exit 1
+fi
+
+echo "==> ${oxfmt_cmd[*]} --check ."
+"${oxfmt_cmd[@]}" --check . || status=1
+
+exit "$status"
