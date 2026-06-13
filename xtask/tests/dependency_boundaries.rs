@@ -6,7 +6,15 @@ const CLI_MANIFEST: &str = include_str!("../../dootdoot/Cargo.toml");
 
 #[test]
 fn build_time_dependencies_stay_in_xtask() {
-    for dependency in ["hex", "model2vec-rs", "nalgebra", "serde", "sha2", "toml"] {
+    for dependency in [
+        "hex",
+        "model2vec-rs",
+        "nalgebra",
+        "serde",
+        "serde_json",
+        "sha2",
+        "toml",
+    ] {
         assert!(
             XTASK_MANIFEST.contains(dependency),
             "xtask manifest should include {dependency}",

@@ -68,7 +68,7 @@
 
 ## Phase 2 — Build-time asset generation (`xtask`)
 
-- [ ] **T-11 — Acquire `potion-base-8M` (upstream F32) + pin a source manifest.** Decide
+- [x] **T-11 — Acquire `potion-base-8M` (upstream F32) + pin a source manifest.** Decide
       vendored-blob vs scripted download; place model + `tokenizer.json` under `assets/` (or a
       build cache). Commit `assets/source_manifest.toml` pinning HF repo, exact commit SHA,
       `model.safetensors`/`tokenizer.json` SHA-256, `hidden_dim=256`, `normalize=true`, dtype;
