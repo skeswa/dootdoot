@@ -57,7 +57,7 @@
       Deps: T-06 · Reqs: NFR-3, NFR-5 · Est: 2.5h
 - [x] **T-08 — Implement `mathx::exp` and `mathx::tanh`.** (tanh via exp.)
       Deps: T-06 · Reqs: NFR-3 · Est: 2.5h
-- [ ] **T-09 — `mathx` accuracy tests.** Compare to `std` within tolerance across the
+- [x] **T-09 — `mathx` accuracy tests.** Compare to `std` within tolerance across the
       domain; assert no NaNs/inf at boundaries.
       Deps: T-07, T-08 · Reqs: NFR-19 · Est: 2h
 - [ ] **T-10 — `mathx` pinned-output tests.** Assert exact bit outputs at fixed sample
