@@ -1417,6 +1417,7 @@ dependencies = [
  "hex",
  "model2vec-rs",
  "nalgebra",
+ "safetensors",
  "serde",
  "serde_json",
  "sha2",

@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{Result, SourceFiles, SourceManifest, SourceManifestError};
+use crate::{Result, SourceFiles, SourceManifest, SourceManifestError, load_source_model};
 
 /// Runs the current xtask source validation step.
 ///
@@ -36,7 +36,18 @@ pub fn run() -> Result<()> {
         &model,
         &tokenizer,
         &config,
-    ))
+    ))?;
+    let source_model = load_source_model(&tokenizer, &model, &config)?;
+    let expected_width = usize::from(manifest.hidden_dim());
+
+    if source_model.embedding_width() == expected_width {
+        Ok(())
+    } else {
+        Err(SourceManifestError::new(format!(
+            "source embedding width mismatch: expected {expected_width}, got {}",
+            source_model.embedding_width(),
+        )))
+    }
 }
 
 fn workspace_root() -> Result<PathBuf> {
