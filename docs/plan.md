@@ -129,7 +129,7 @@
 - [x] **T-23 — Axis squash.** Implement chosen squash using frozen stats + `mathx`; apply
       per-token and to baseline.
       Deps: T-22, T-08 · Reqs: FR-12 · Est: 1.5h
-- [ ] **T-24 — Knob assembly.** Per axis `k`: `knob = clamp(B_k + α_k·(T_{k}−B_k),
+- [x] **T-24 — Knob assembly.** Per axis `k`: `knob = clamp(B_k + α_k·(T_{k}−B_k),
 lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α_k` is the
       frozen modulation depth (design.md §5.4). Produce the per-syllable knob set {pitch, vowel,
       contour, warble} in fixed axis order; test single-token (`knob==B_k`) and clamp at bounds.

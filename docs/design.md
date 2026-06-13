@@ -382,6 +382,9 @@ knob_{i,k} = clamp( B_k + α_k · (T_{i,k} − B_k), lo_k, hi_k )
 The `α_k` vector, the per-axis `[lo_k, hi_k]` bounds, and the final clamp are all part of
 `FORMAT_V1` (§8.2).
 
+`FORMAT_V1` freezes `α = [0.85, 0.90, 1.10, 1.20]` in pitch/vowel/contour/warble order.
+All four squashed knob axes use bounds `[-1.0, 1.0]`.
+
 ---
 
 ## 6. Perceptual axes → sound (the droid voice)

@@ -32,6 +32,31 @@ pub struct SquashedVector {
     axes: [f64; FORMAT_AXIS_COUNT],
 }
 
+/// Gives the frozen per-axis modulation depths in pitch/vowel/contour/warble
+/// order.
+pub const KNOB_MODULATION_DEPTHS: [f64; FORMAT_AXIS_COUNT] = [0.85, 0.90, 1.10, 1.20];
+
+/// Gives the frozen per-axis knob bounds in pitch/vowel/contour/warble order.
+pub const KNOB_BOUNDS: [KnobBounds; FORMAT_AXIS_COUNT] = [
+    KnobBounds::new(-1.0, 1.0),
+    KnobBounds::new(-1.0, 1.0),
+    KnobBounds::new(-1.0, 1.0),
+    KnobBounds::new(-1.0, 1.0),
+];
+
+/// Gives one frozen knob range.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct KnobBounds {
+    lower: f64,
+    upper: f64,
+}
+
+/// Gives one syllable's semantic knob row.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct KnobSet {
+    axes: [f64; FORMAT_AXIS_COUNT],
+}
+
 /// Reports why a token ID could not be mapped.
 #[derive(Debug, Clone, Error, PartialEq, Eq)]
 #[error("{message}")]
@@ -153,6 +178,50 @@ impl SquashedVector {
     }
 }
 
+impl KnobBounds {
+    /// Builds a knob bound pair.
+    pub const fn new(lower: f64, upper: f64) -> Self {
+        Self { lower, upper }
+    }
+
+    /// Returns the lower bound.
+    pub fn lower(&self) -> f64 {
+        self.lower
+    }
+
+    /// Returns the upper bound.
+    pub fn upper(&self) -> f64 {
+        self.upper
+    }
+}
+
+impl KnobSet {
+    /// Returns semantic knobs in pitch/vowel/contour/warble order.
+    pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
+        self.axes
+    }
+
+    /// Returns the pitch-center knob.
+    pub fn pitch_center(&self) -> f64 {
+        self.axes[0]
+    }
+
+    /// Returns the vowel/formant-position knob.
+    pub fn vowel_position(&self) -> f64 {
+        self.axes[1]
+    }
+
+    /// Returns the contour/glide-shape knob.
+    pub fn contour(&self) -> f64 {
+        self.axes[2]
+    }
+
+    /// Returns the warble-depth knob.
+    pub fn warble_depth(&self) -> f64 {
+        self.axes[3]
+    }
+}
+
 impl MappingError {
     fn new(message: impl Into<String>) -> Self {
         Self {
@@ -204,6 +273,31 @@ pub fn pool_sequence(tokens: &[TokenVector]) -> Result<PooledVector, MappingErro
     }
 
     Ok(PooledVector { axes })
+}
+
+/// Assembles one per-syllable knob row from squashed baseline and token values.
+pub fn assemble_knobs(baseline: SquashedVector, token: SquashedVector) -> KnobSet {
+    let baseline_axes = baseline.axes();
+    let token_axes = token.axes();
+    let mut axes = [0.0_f64; FORMAT_AXIS_COUNT];
+
+    for (index, axis) in axes.iter_mut().enumerate() {
+        let bounds = KNOB_BOUNDS[index];
+        *axis = (baseline_axes[index]
+            + (KNOB_MODULATION_DEPTHS[index] * (token_axes[index] - baseline_axes[index])))
+            .clamp(bounds.lower(), bounds.upper());
+    }
+
+    KnobSet { axes }
+}
+
+/// Assembles one knob row per voiced syllable token.
+pub fn assemble_knob_sequence(baseline: SquashedVector, tokens: &[SquashedVector]) -> Vec<KnobSet> {
+    tokens
+        .iter()
+        .copied()
+        .map(|token| assemble_knobs(baseline, token))
+        .collect()
 }
 
 fn dequantize(code: i16, scale: f32) -> f64 {

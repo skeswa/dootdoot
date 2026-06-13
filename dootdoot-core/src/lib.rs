@@ -13,7 +13,8 @@ pub use format::{
     Format, FormatArtifact, FormatError, FormatSquashFunction, SquashAxisStats, embedded_format_v1,
 };
 pub use mapping::{
-    Mapping, MappingError, PooledVector, SquashedVector, TokenVector, embedded_mapping,
+    KNOB_BOUNDS, KNOB_MODULATION_DEPTHS, KnobBounds, KnobSet, Mapping, MappingError, PooledVector,
+    SquashedVector, TokenVector, assemble_knob_sequence, assemble_knobs, embedded_mapping,
     pool_sequence,
 };
 pub use mathx::{
