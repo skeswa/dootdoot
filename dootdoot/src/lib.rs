@@ -2,12 +2,14 @@
 
 mod input;
 mod output;
+mod playback;
 
 use std::path::PathBuf;
 
 use clap::Parser;
 pub use input::{ResolvedInput, StdinInput, read_resolved_input, resolve_input};
 pub use output::{OutputRoute, output_route};
+pub use playback::{PlaybackError, play_buffer, playback_samples};
 
 /// Parsed command-line arguments for the dootdoot binary.
 #[derive(Debug, Clone, Parser, PartialEq, Eq)]

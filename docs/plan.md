@@ -198,7 +198,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       Deps: T-38, T-34 · Reqs: FR-2, FR-3, FR-4 · Est: 1.5h
 - [x] **T-40 — Output routing.** Implement no-`-o`→play, `-o`→write, `-o --play`→both.
       Deps: T-38, T-36, T-37 · Reqs: FR-26, FR-27, FR-28 · Est: 1h
-- [ ] **T-41 — Live playback via `rodio`.** Stream the canonical buffer; CoreAudio on Mac.
+- [x] **T-41 — Live playback via `rodio`.** Stream the canonical buffer; CoreAudio on Mac.
       Deps: T-36 · Reqs: FR-27, FR-30, NFR-12 · Est: 1.5h
 - [ ] **T-42 — `--explain` table.** Per-token `token │ pitch │ vowel │ contour │ warble`
       to stderr, with prosodic punctuation shown as distinct control rows.

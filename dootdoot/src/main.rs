@@ -3,7 +3,7 @@
 use std::{error::Error, fs, process::ExitCode};
 
 use clap::Parser;
-use dootdoot::{Cli, ResolvedInput, output_route};
+use dootdoot::{Cli, ResolvedInput, output_route, play_buffer};
 use dootdoot_core::{render_canonical_buffer, render_text_canonical_buffer, wav_bytes};
 
 fn main() -> ExitCode {
@@ -25,8 +25,12 @@ fn run() -> Result<(), Box<dyn Error>> {
         ResolvedInput::EmptyChirp => render_canonical_buffer(&[]),
     };
 
-    if let Some(path) = route.output {
+    if let Some(path) = &route.output {
         fs::write(path, wav_bytes(&buffer)?)?;
+    }
+
+    if route.play {
+        play_buffer(&buffer)?;
     }
 
     Ok(())
