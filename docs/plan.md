@@ -102,7 +102,7 @@
       unused; design.md §4.2); write the file; compute and embed model/tokenizer/PCA hashes.
       Unit-test the quantize↔dequantize round-trip and tie-rounding determinism.
       Deps: T-16 · Reqs: FR-9, FR-10, FR-40, FR-42 · Est: 2h
-- [ ] **T-18 — Commit `assets/format_v1.bin` + `tokenizer.json`.** Verify size (~300 KB)
+- [x] **T-18 — Commit `assets/format_v1.bin` + `tokenizer.json`.** Verify size (~300 KB)
       and add a regeneration README note.
       Deps: T-17 · Reqs: FR-42, NFR-7 · Est: 0.5h
 
