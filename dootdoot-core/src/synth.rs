@@ -70,6 +70,9 @@ pub const ENVELOPE_DECAY_SECONDS: f64 = 0.080;
 /// Gives the fixed envelope release in seconds.
 pub const ENVELOPE_RELEASE_SECONDS: f64 = 0.025;
 
+/// Gives the fixed envelope sustain level after decay.
+pub const ENVELOPE_SUSTAIN_LEVEL: f64 = 0.35;
+
 /// Gives the high-register pitch bias in hertz.
 pub const PITCH_REGISTER_BIAS_HZ: f64 = 880.0;
 
@@ -239,6 +242,63 @@ pub fn apply_warble_hz(pitch_hz: f64, warble_depth: f64, elapsed_seconds: f64) -
     let cents = warble_offset_cents(warble_depth, elapsed_seconds);
 
     pitch_hz * exp(LN_2 * (cents / 1_200.0))
+}
+
+/// Applies the fixed faint ring modulator to a sample.
+pub fn ring_modulate(sample: f64, elapsed_seconds: f64) -> f64 {
+    if !elapsed_seconds.is_finite() {
+        return sample;
+    }
+
+    let phase = 2.0 * PI * RING_MOD_FREQUENCY_HZ * elapsed_seconds;
+    let carrier = sin(phase);
+
+    sample * ((1.0 - RING_MOD_MIX) + (RING_MOD_MIX * carrier))
+}
+
+/// Computes the fixed per-syllable amplitude envelope.
+pub fn amplitude_envelope(elapsed_seconds: f64, duration_seconds: f64) -> f64 {
+    if !elapsed_seconds.is_finite()
+        || !duration_seconds.is_finite()
+        || elapsed_seconds <= 0.0
+        || duration_seconds <= 0.0
+        || elapsed_seconds >= duration_seconds
+    {
+        return 0.0;
+    }
+
+    if elapsed_seconds <= ENVELOPE_ATTACK_SECONDS {
+        return (elapsed_seconds / ENVELOPE_ATTACK_SECONDS).clamp(0.0, 1.0);
+    }
+
+    let decay_end = ENVELOPE_ATTACK_SECONDS + ENVELOPE_DECAY_SECONDS;
+
+    if elapsed_seconds <= decay_end {
+        let progress =
+            ((elapsed_seconds - ENVELOPE_ATTACK_SECONDS) / ENVELOPE_DECAY_SECONDS).clamp(0.0, 1.0);
+
+        return 1.0 + ((ENVELOPE_SUSTAIN_LEVEL - 1.0) * progress);
+    }
+
+    let release_start = (duration_seconds - ENVELOPE_RELEASE_SECONDS).max(decay_end);
+
+    if elapsed_seconds >= release_start {
+        let release_seconds = duration_seconds - release_start;
+
+        if release_seconds <= 0.0 {
+            return 0.0;
+        }
+
+        return ENVELOPE_SUSTAIN_LEVEL
+            * ((duration_seconds - elapsed_seconds) / release_seconds).clamp(0.0, 1.0);
+    }
+
+    ENVELOPE_SUSTAIN_LEVEL
+}
+
+/// Applies the fixed per-syllable amplitude envelope to a sample.
+pub fn apply_amplitude_envelope(sample: f64, elapsed_seconds: f64, duration_seconds: f64) -> f64 {
+    sample * amplitude_envelope(elapsed_seconds, duration_seconds)
 }
 
 /// Returns steered formant centers for a vowel-position knob.

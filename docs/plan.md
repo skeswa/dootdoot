@@ -156,7 +156,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       Deps: T-27 · Reqs: FR-16, FR-18, FR-19 · Est: 2.5h
 - [x] **T-30 — Warble LFO.** Fixed-rate vibrato on pitch; depth from warble knob.
       Deps: T-29, T-07 · Reqs: FR-16, FR-18 · Est: 1h
-- [ ] **T-31 — Ring-mod + amplitude envelope.** Faint fixed ring-mod; snappy fixed AD
+- [x] **T-31 — Ring-mod + amplitude envelope.** Faint fixed ring-mod; snappy fixed AD
       envelope per syllable.
       Deps: T-27, T-07 · Reqs: FR-16, FR-17 · Est: 1.5h
 - [ ] **T-32 — Single-syllable renderer.** Compose the signal graph into one syllable
