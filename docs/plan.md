@@ -55,7 +55,7 @@
       Deps: T-02 · Reqs: NFR-3 · Est: 1.5h
 - [x] **T-07 — Implement `mathx::sin`/`cos`.** Range-reduction + polynomial/table, `f64`.
       Deps: T-06 · Reqs: NFR-3, NFR-5 · Est: 2.5h
-- [ ] **T-08 — Implement `mathx::exp` and `mathx::tanh`.** (tanh via exp.)
+- [x] **T-08 — Implement `mathx::exp` and `mathx::tanh`.** (tanh via exp.)
       Deps: T-06 · Reqs: NFR-3 · Est: 2.5h
 - [ ] **T-09 — `mathx` accuracy tests.** Compare to `std` within tolerance across the
       domain; assert no NaNs/inf at boundaries.
