@@ -10,7 +10,7 @@ mod wav;
 pub use format::{
     FORMAT_AXIS_COUNT, FORMAT_HASH_BYTES, FORMAT_HEADER_BYTES, FORMAT_MAGIC, FORMAT_SCALE_COUNT,
     FORMAT_SQUASH_STATS_PER_AXIS, FORMAT_TOKEN_RECORD_BYTES, FORMAT_V1, FORMAT_VERSION_NUMBER,
-    Format,
+    Format, FormatArtifact, FormatError, FormatSquashFunction, SquashAxisStats, embedded_format_v1,
 };
 pub use mapping::Mapping;
 pub use mathx::{

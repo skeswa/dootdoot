@@ -110,7 +110,7 @@
 
 ## Phase 3 — Core mapping layer (`mapping`, `format`, `tokenizer`)
 
-- [ ] **T-19 — `format` module: load embedded artifact.** `include_bytes!` the table;
+- [x] **T-19 — `format` module: load embedded artifact.** `include_bytes!` the table;
       parse header; expose PCA stats, squash stats, hashes, `FORMAT_V1` id.
       Deps: T-02, T-18 · Reqs: FR-9, FR-33, FR-38 · Est: 2h
 - [ ] **T-20 — `tokenizer` wrapper.** Wrap HF `tokenizers` with embedded `tokenizer.json`;
