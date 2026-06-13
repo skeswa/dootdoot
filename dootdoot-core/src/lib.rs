@@ -19,5 +19,7 @@ pub use mathx::{
     sin, tanh,
 };
 pub use synth::Synth;
-pub use tokenizer::Tokenizer;
+pub use tokenizer::{
+    TokenizedInput, TokenizedToken, Tokenizer, TokenizerError, embedded_tokenizer,
+};
 pub use wav::WavWriter;
