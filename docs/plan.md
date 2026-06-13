@@ -119,7 +119,7 @@
       so literal `"[MASK]"` etc. are dropped; test literal `"[CLS]"`/`"[MASK]"` and that
       filtered-to-empty routes to the chirp (design.md §3.3).
       Deps: T-02, T-18 · Reqs: FR-5, FR-6, FR-8 · Est: 2h
-- [ ] **T-21 — Token → 4-vector lookup.** Map IDs to baked vectors + weights; handle
+- [x] **T-21 — Token → 4-vector lookup.** Map IDs to baked vectors + weights; handle
       `[UNK]` via its own entry.
       Deps: T-19, T-20 · Reqs: FR-7, FR-9 · Est: 1h
 - [ ] **T-22 — Sequence pooling.** Token-weight-scaled mean of per-token 4-vectors →
