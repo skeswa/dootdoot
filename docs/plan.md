@@ -33,7 +33,7 @@
       `dootdoot-core`, `dootdoot`, `xtask`. Set edition, shared lints, release profile
       (no fast-math, no FMA-contraction flags).
       Deps: — · Reqs: NFR-9 · Est: 1h
-- [ ] **T-02 — Scaffold `dootdoot-core` crate.** Library crate with empty module tree:
+- [x] **T-02 — Scaffold `dootdoot-core` crate.** Library crate with empty module tree:
       `tokenizer`, `mapping`, `synth`, `mathx` (owned math), `wav`, `format`. Public API
       stubs. No deps yet.
       Deps: T-01 · Reqs: NFR-9, NFR-10 · Est: 1h
