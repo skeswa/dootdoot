@@ -142,7 +142,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ## Phase 4 — Synthesis engine (`synth`)
 
-- [ ] **T-26 — Define fixed synthesis constants.** Initial values for formant freqs/vowel
+- [x] **T-26 — Define fixed synthesis constants.** Initial values for formant freqs/vowel
       locus, glide time, warble rate, ring-mod freq/mix, envelope, register bias,
       durations, pauses. (Refined in Phase 7.)
       Deps: T-02 · Reqs: FR-17, FR-20, FR-22, FR-24 · Est: 1.5h

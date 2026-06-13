@@ -495,6 +495,18 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
 - **Utterance bounds** — short leading/trailing silence padding so files top-and-tail
   cleanly.
 
+**FORMAT_V1 synthesis constants.** Initial frozen values:
+
+- base syllable = 150 ms; word pause = 80 ms; medium punctuation pause = 120 ms; long
+  punctuation pause = 180 ms; leading/trailing silence = 30/60 ms.
+- portamento = 45 ms; warble rate = 8.5 Hz; warble depth = 45 cents.
+- ring-mod = 72 Hz at 8% mix; envelope attack/decay/release = 12/80/25 ms.
+- pitch register bias = 880 Hz with a 7-semitone semantic span; source mix = 65% saw +
+  35% pulse at 42% pulse width.
+- The 3-formant vowel loci are `ee` `[270, 2290, 3010]` Hz, `ah`
+  `[730, 1090, 2440]` Hz, and `oo` `[300, 870, 2240]` Hz, with Q `[8, 10, 12]` and
+  gains `[1.0, 0.55, 0.35]`.
+
 Net effect: short words = quick single warbles; long words = flowing multi-syllable
 warbles; sentences = phrased bursts with intonation — recognizable "droid speech,"
 with the semantic _timbre_ (pitch/vowel/swoop/warble) as the learnable content.
