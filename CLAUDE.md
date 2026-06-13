@@ -38,6 +38,12 @@ is in `docs/design.md` §2; the workspace has three crates:
   `tokenizer.json`, both committed and `include_bytes!`-embedded. (Sound because PCA
   projection is linear: pooling baked vectors == pooling-then-projecting, *exact before
   the int16 quantization* the table uses.)
+- **The sequence baseline is dootdoot's own pooling, NOT `model2vec.encode()`.** `encode()`
+  L2-normalizes the pooled vector (`potion-base-2M` has `normalize: true`); that step is
+  nonlinear and does not commute with the projection, so it can't be recovered from baked
+  4-axis vectors. dootdoot's baseline is the token-weight-scaled mean in PCA space,
+  denominator = token count, **no L2 norm** — a documented, FORMAT_V1-pinned divergence
+  (design.md §4.2, FR-11). Goal: relative semantic ordering, not `encode()` equivalence.
 - **Determinism is bit-exact on the CI-verified platforms (macOS + Linux);** Windows is
   intended but not yet guaranteed. No libm transcendentals in the audio path
   (`sin`/`exp`/`tanh` are our own pinned impls); synthesis in `f64`; one fixed float→i16

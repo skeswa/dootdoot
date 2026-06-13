@@ -37,8 +37,12 @@
   lookup in an embedded baked table keyed by token ID.
 - **FR-10** The baked table SHALL store, per token, a 4-dimensional int16 PCA vector
   and a scalar pooling weight.
-- **FR-11** The tool SHALL compute a sequence baseline vector as the
-  pooling-weighted mean of the per-token 4-dimensional vectors.
+- **FR-11** The tool SHALL compute a sequence baseline vector in PCA space as the
+  token-weight-scaled mean of the per-token 4-dimensional vectors, with the **denominator
+  being the token count `n`** (i.e. `(1/n) · Σ_i (w_i · v_i)`), and SHALL NOT apply an L2
+  normalization. This is a dootdoot-specific, model2vec-derived pooling rule and is
+  deliberately NOT byte-equivalent to `model2vec.encode()` for the L2-normalized
+  `potion-base-2M` model.
 - **FR-12** The tool SHALL squash each axis to a bounded perceptual range using
   frozen per-axis statistics, applied (a) per token for local gestures and (b) on the
   pooled sequence vector for the baseline.
@@ -119,7 +123,9 @@
   `tokenizer.json` hash **and** the runtime tokenization flags — `add_special_tokens`,
   normalization/lowercasing, the `##` continuation convention); the PCA projection matrix
   (by hash); the int16 quantization scales and dequantization rule for the 4 axes and the
-  pooling weight; the pooling rule; the per-axis squash statistics and squash function;
+  pooling weight; the sequence pooling rule (the weight-scaled mean with denominator =
+  token count, and the deliberate omission of L2 normalization); the per-axis squash
+  statistics and squash function;
   all fixed synthesis constants; the timing constants (syllable duration, pauses,
   padding); the prosodic-punctuation rules; the empty-input "?" chirp constants; the
   float→i16 rounding rule; the WAV serialization choices (sample rate, bit depth,
@@ -190,7 +196,9 @@
 - **NFR-14** Semantically similar tokens SHALL be closer in 4-axis space than
   dissimilar ones (e.g. distance `cat↔dog` < `cat↔airplane`), verified by test.
 - **NFR-15** Semantically similar short sequences SHALL be closer in baseline-axis
-  space than dissimilar ones, verified by test.
+  space than dissimilar ones, verified by test. The metric is dootdoot's own sequence
+  baseline (FR-11), not `model2vec.encode()`; the property asserted is *relative*
+  similarity ordering, which the model2vec-derived PCA-space pool preserves.
 - **NFR-16** Every output, regardless of input, SHALL remain within the fixed droid
   parameter space (only the 4 bounded axes vary), preserving a consistent BB-8-family
   identity.

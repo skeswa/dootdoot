@@ -121,12 +121,16 @@ semantics therefore also fixes the tokenizer choice.
 ### 4.1 Decision: source semantics from model2vec (`potion-base-2M`, int8)
 
 `model2vec` distills a sentence-transformer into a **static embedding lookup table**:
-every token maps to a fixed semantic vector, and it pools tokens (weighted mean) to
-embed whole sequences. This is an ideal fit:
+every token maps to a fixed semantic vector, and `model2vec.encode()` embeds a whole
+sequence by mean-pooling the token vectors and then **L2-normalizing** the result
+(`potion-base-2M` ships `normalize: true`). This is an ideal fit:
 
-- **Deterministic** — a frozen lookup table plus linear pooling is a pure function.
+- **Deterministic** — a frozen lookup table plus a fixed pooling rule is a pure function.
 - **Semantic at both levels** — token-level *and* sequence-level similarity are
-  meaningful (satisfies both halves of goal 2).
+  meaningful (satisfies both halves of goal 2). dootdoot derives its sequence baseline
+  from the same per-token vectors via its **own** pooling rule (§4.2), which intentionally
+  drops the L2 step; the goal is *audible relative similarity*, not byte-equivalence to
+  `model2vec.encode()`.
 - **Offline / embeddable** — a small `safetensors` file; int8-quantizable to a few MB.
 - **Rust-native** — `model2vec-rs` exists and is maintained.
 
@@ -146,20 +150,43 @@ contract (§8). Therefore it can be **precomputed once, offline, for the entire
 ~30k-token vocabulary**, and shipped as a tiny lookup table. The runtime never loads
 model2vec or a tensor framework.
 
-This works because **PCA projection is linear**. In exact arithmetic, sequence pooling
-on the baked 4-dim vectors equals pooling the original 64-dim vectors and then
-projecting:
+This works because **PCA projection is linear**, so projection commutes with the
+weighted mean. In exact arithmetic, pooling the baked 4-dim vectors equals pooling the
+original 64-dim vectors and then projecting:
 
 ```
 project(mean_w(token_vectors)) == mean_w(project(token_vectors))
 ```
 
-(`mean_w` = the SIF/weighted mean; weights are baked per token.) This identity is exact
-**before quantization**. We store the projected vectors as int16, which introduces a
-small, bounded rounding error, so the precise runtime guarantee is: *the runtime pools
-the frozen quantized approximation, deterministically.* The quantization is part of the
-`FORMAT_V1` contract (§8.2), so the approximation is identical on every run and on every
-verified platform (§8.1).
+(`mean_w` = the weight-scaled mean defined below; weights are baked per token.) This is
+what lets us pool *after* baking the projected vectors instead of shipping the 64-dim
+table. The identity is exact **before quantization**; we store the projected vectors as
+int16, which introduces a small, bounded rounding error, so the precise runtime guarantee
+is: *the runtime pools the frozen quantized approximation, deterministically.* The
+quantization is part of the `FORMAT_V1` contract (§8.2), so the approximation is identical
+on every run and on every verified platform (§8.1).
+
+**The sequence baseline is dootdoot's own pooling, not `model2vec.encode()`.** The
+identity above commutes the *projection* with the mean — it does **not** reproduce
+model2vec's sequence embedding, because `model2vec.encode()` mean-pools and then
+**L2-normalizes** the pooled vector (`potion-base-2M` has `normalize: true`). That final
+normalization is nonlinear and does **not** commute with the PCA projection, so it cannot
+be recovered from the baked 4-dim per-token vectors alone — recovering it would require
+the original 64-dim norm at runtime, i.e. shipping the ~2 MB+ 64-dim table we deliberately
+dropped. dootdoot therefore defines its **own** sequence baseline in PCA space and skips
+the L2 step. The pooling rule is the token-weight-scaled mean over the `n` tokens:
+
+```
+baseline_pre = (1 / n) · Σ_i (w_i · v_i)      // v_i = dequantized 4-dim token vector,
+baseline     = squash(baseline_pre)            // w_i = dequantized pooling weight
+```
+
+The denominator is the **token count `n`** (matching `model2vec-rs`'s pre-normalization
+pooling, which divides the weight-scaled sum by token count), *not* `Σ_i w_i`. This is a
+deliberate, documented divergence: the baseline is a *dootdoot-specific, model2vec-derived*
+PCA-space pool. It preserves coarse semantic continuity for the "mood" baseline (goal 2,
+sequence half; verified by NFR-15) while keeping the runtime artifact tiny and tensor-free.
+The exact rule (denominator, the skipped L2 step) is part of `FORMAT_V1` (§8.2).
 
 **Quantization scheme (deterministic, lossy by a bounded amount).** Each of the 4 axes
 has a fixed dequantization scale `s_k` chosen at build time so the vocab's projected
@@ -246,7 +273,8 @@ the header statistics, so regeneration is cheap. Whatever is frozen becomes part
 
 Squash is applied in two places, consistently, on the dequantized values:
 - **Per token** → the token's local gesture knob values.
-- **On the weighted-mean of the sequence's token vectors** → the utterance baseline.
+- **On the sequence baseline** (the token-weight-scaled mean defined in §4.2, denominator
+  = token count, no L2 normalization) → the utterance baseline.
 
 ### 5.4 Decision: two-level application (sequence baseline + per-token modulation)
 
@@ -451,7 +479,8 @@ requires a version bump (below). **`FORMAT_V1` includes:**
 - the int16 **quantization scales** for the 4 axes and the pooling weight, and the
   dequantization rule (§4.2);
 - the per-axis **squash statistics and the squash function** (§5.3);
-- the pooling rule (SIF/weighted-mean definition).
+- the **sequence pooling rule** (§4.2): the token-weight-scaled mean with denominator =
+  token count, and the deliberate omission of model2vec's L2 normalization.
 
 *Synthesis*
 - all fixed synthesis constants (formant frequencies/vowel locus, axis→knob ranges,
@@ -568,8 +597,9 @@ These do not change the architecture and are settled during implementation:
 - **Determinism (goal 1):** frozen `FORMAT_V1` (§8.2) + bit-exact owned math (§8.1) +
   buffer-as-source-of-truth (§7.1) + committed artifacts (§9.3).
 - **Semantic similarity → sonic similarity (goal 2):** model2vec semantics (§4) +
-  linear PCA reduction with sequence pooling that is exact up to int16 quantization
-  (§4.2, §5) + two-level baseline/modulation (§5.4).
+  linear PCA reduction with a dootdoot-specific PCA-space sequence pool (weight-scaled
+  mean, no L2 normalization), exact up to int16 quantization (§4.2, §5) + two-level
+  baseline/modulation (§5.4).
 - **Droid identity (goal 3):** research-grounded fixed formant voice with portamento
   (§6.1–6.3) + fixed/variable split that constrains all input to a tasteful droid
   parameter space.

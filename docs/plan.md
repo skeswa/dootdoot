@@ -113,8 +113,9 @@
 - [ ] **T-21 — Token → 4-vector lookup.** Map IDs to baked vectors + weights; handle
   `[UNK]` via its own entry.
   Deps: T-19, T-20 · Reqs: FR-7, FR-9 · Est: 1h
-- [ ] **T-22 — Sequence pooling.** Pooling-weighted mean of per-token 4-vectors → baseline
-  vector.
+- [ ] **T-22 — Sequence pooling.** Token-weight-scaled mean of per-token 4-vectors →
+  baseline vector: `(1/n) · Σ(wᵢ·vᵢ)`, denominator = token count `n`, **no L2 norm**
+  (dootdoot-specific, not `model2vec.encode()`; design.md §4.2).
   Deps: T-21 · Reqs: FR-11 · Est: 1h
 - [ ] **T-23 — Axis squash.** Implement chosen squash using frozen stats + `mathx`; apply
   per-token and to baseline.
