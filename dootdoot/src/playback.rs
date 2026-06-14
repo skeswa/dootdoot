@@ -50,7 +50,9 @@ pub fn playback_samples(samples: &[i16]) -> Vec<f32> {
 ///
 /// Returns an error if the default output device cannot be opened.
 pub fn play_buffer(samples: &[i16]) -> Result<(), PlaybackError> {
-    let sink = DeviceSinkBuilder::open_default_sink().map_err(PlaybackError::output_device)?;
+    let mut sink = DeviceSinkBuilder::open_default_sink().map_err(PlaybackError::output_device)?;
+    sink.log_on_drop(false);
+
     let player = Player::connect_new(sink.mixer());
     let source = SamplesBuffer::new(
         PLAYBACK_CHANNELS,
