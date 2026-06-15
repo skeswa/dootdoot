@@ -309,7 +309,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-62 — Asset regeneration guide.** How to re-run `xtask` and when a `V2` bump is
       required.
       Deps: T-18, T-54 · Reqs: FR-39, FR-40 · Est: 1h
-- [ ] **T-63 — Packaging.** `cargo install` support; optional Homebrew formula / prebuilt
+- [x] **T-63 — Packaging.** `cargo install` support; optional Homebrew formula / prebuilt
       release binaries; choose license.
       Deps: T-60 · Reqs: NFR-11 · Est: 2.5h
 

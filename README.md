@@ -12,7 +12,8 @@
 
 > **Status: FORMAT_V1 is locked.** The v1 sound contract is frozen; future
 > sample-affecting changes require a new format version. Packaging work is still in
-> progress. See [the roadmap](docs/plan.md).
+> progress. See [the roadmap](docs/plan.md) and
+> [packaging notes](docs/reference/packaging.md).
 
 `dootdoot` reads text and emits short bursts of warbly droid chatter. It's a small,
 learnable sound language with three defining properties:
@@ -32,7 +33,13 @@ cargo build --release
 # binary at ./target/release/dootdoot
 ```
 
-Prebuilt binaries, `cargo install`, and Homebrew are planned for the first release.
+**Local Cargo install** from a checkout:
+
+```sh
+cargo install --path dootdoot --locked
+```
+
+Prebuilt binaries and Homebrew are deferred until tag-based release automation exists.
 
 ## Usage
 

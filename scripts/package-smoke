@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Verify local install packaging without modifying the user's Cargo bin dir.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+cargo package -p dootdoot --list --allow-dirty >/dev/null
+cargo package -p dootdoot-core --list --allow-dirty >/dev/null
+cargo install --path dootdoot --root target/cargo-install-smoke --debug --locked --force

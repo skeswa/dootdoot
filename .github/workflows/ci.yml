@@ -43,6 +43,9 @@ jobs:
       - name: Lint
         run: scripts/lint
 
+      - name: Packaging smoke
+        run: scripts/package-smoke
+
       - name: Cross-platform Golden WAV hashes
         run: cargo test -p dootdoot-core --test golden_wav_hashes
 
