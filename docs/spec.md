@@ -179,6 +179,8 @@
 - **FR-47** `FORMAT_V2` phrase prosody SHALL apply deterministic phrase metadata to
   synthesis by varying pause length, pre-boundary syllable lengthening, phrase-level pitch
   offsets, final lowering, pitch reset, and sparse emphasis within fixed bounds.
+- **FR-48** `FORMAT_V2` affect analysis SHALL pool VADER-derived token valence and owned
+  arousal proxies into deterministic utterance-level valence and arousal scores.
 
 ---
 

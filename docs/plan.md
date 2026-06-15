@@ -348,7 +348,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       commit AFINN, SentiWordNet, SUBTLEX-US, NRC-VAD, Warriner, Zipf, or VAD-derived
       tables until an explicit asset-license policy exists.
       Deps: T-66 · Reqs: FR-38, FR-40, FR-42, FR-43, NFR-8 · Est: 2h
-- [ ] **T-68 — Pool affect into an utterance mood.** Compute deterministic valence and
+- [x] **T-68 — Pool affect into an utterance mood.** Compute deterministic valence and
       arousal scores per token/phrase, pool them into an utterance-level mood, and add
       tests for punctuation/case/intensifier-driven arousal plus negative/positive
       valence examples.

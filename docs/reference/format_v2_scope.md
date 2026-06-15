@@ -53,3 +53,13 @@ The first V2 performance channel applies the pure phrase plan to synthesis:
 
 The active CLI version string is `FORMAT_V2`; the embedded semantic mapping artifact is
 still the locked `format_v1.bin` table.
+
+## Implemented Affect Analysis
+
+V2 affect analysis reads the committed MIT VADER valence table and owned arousal-signal
+configuration. It returns per-token valence/arousal rows plus an utterance mood:
+
+- valence is the average normalized VADER score across matched tokens;
+- arousal combines punctuation density, repeated markers, all-caps words, owned
+  intensifiers/dampeners, token count, character/WordPiece complexity, and valence energy;
+- all scores are deterministic and clamped to the documented fixed bounds.
