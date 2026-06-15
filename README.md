@@ -10,9 +10,9 @@
 
 <!-- Add these once the project ships: CI status, crates.io version, downloads. -->
 
-> **Status: FORMAT_V1 is locked.** The v1 sound contract is frozen; future
-> sample-affecting changes require a new format version. Packaging work is still in
-> progress. See [the roadmap](docs/plan.md) and
+> **Status: FORMAT_V2 expressiveness work is in progress.** `FORMAT_V1` remains the
+> locked v1 contract; the active branch is adding deterministic V2 performance channels.
+> Packaging work is still in progress. See [the roadmap](docs/plan.md) and
 > [packaging notes](docs/reference/packaging.md).
 
 `dootdoot` reads text and emits short bursts of warbly droid chatter. It's a small,

@@ -1,11 +1,14 @@
 //! Utterance sequencing for rendered droid syllables.
 
+use core::f64::consts::LN_2;
+
 use crate::{
-    KnobSet, LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES,
-    MEDIUM_PUNCTUATION_PAUSE_SAMPLES, TRAILING_SILENCE_SAMPLES, WORD_PAUSE_SAMPLES,
-    pitch_center_hz,
+    CLAUSE_SYLLABLE_SAMPLES, KnobSet, LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES,
+    MEDIUM_PUNCTUATION_PAUSE_SAMPLES, PhraseBoundaryStrength, PhraseSyllablePlan,
+    SENTENCE_SYLLABLE_SAMPLES, TRAILING_SILENCE_SAMPLES, exp, pitch_center_hz, plan_phrase_prosody,
     synth::{
-        BASE_SYLLABLE_SAMPLES, SyllableFinalGlide, render_syllable_with_final_glide,
+        BASE_SYLLABLE_SAMPLES, SyllableFinalGlide, SyllablePerformance,
+        render_syllable_with_final_glide, render_syllable_with_performance,
         warble_phase_offset_for_syllable,
     },
 };
@@ -71,7 +74,6 @@ pub enum SequencedUtterance {
 struct SyllablePlan {
     event: SyllableEvent,
     final_glide: SyllableFinalGlide,
-    punctuation_pause_samples: Option<u32>,
     punctuation_seen: bool,
 }
 
@@ -184,16 +186,9 @@ pub fn estimate_utterance_sample_count(events: &[SequenceEvent]) -> u64 {
 
     let mut sample_count = u64::from(LEADING_SILENCE_SAMPLES) + u64::from(TRAILING_SILENCE_SAMPLES);
 
-    for (index, plan) in plans.iter().copied().enumerate() {
-        sample_count += u64::from(BASE_SYLLABLE_SAMPLES);
-
-        if let Some(pause_samples) = plan.punctuation_pause_samples {
-            sample_count += u64::from(pause_samples);
-        } else if let Some(next_plan) = plans.get(index + 1)
-            && !next_plan.event.is_continuation()
-        {
-            sample_count += u64::from(WORD_PAUSE_SAMPLES);
-        }
+    for phrase_syllable in plan_phrase_prosody(events).syllables() {
+        sample_count += u64::from(phrase_syllable_samples(*phrase_syllable));
+        sample_count += u64::from(phrase_syllable.pause_samples());
     }
 
     sample_count
@@ -202,6 +197,7 @@ pub fn estimate_utterance_sample_count(events: &[SequenceEvent]) -> u64 {
 /// Lays out voiced syllables and control punctuation into an utterance.
 pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
     let plans = syllable_plans(events);
+    let phrase_plan = plan_phrase_prosody(events);
 
     if plans.is_empty() {
         return SequencedUtterance::EmptyChirp(render_empty_chirp());
@@ -209,37 +205,64 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
 
     let mut samples = Vec::new();
     let mut previous_pitch_hz = None;
+    let mut pending_reset_semitones = 0.0;
 
     append_silence(&mut samples, LEADING_SILENCE_SAMPLES);
 
-    for (index, plan) in plans.iter().copied().enumerate() {
+    for (index, (plan, phrase_syllable)) in plans
+        .iter()
+        .copied()
+        .zip(phrase_plan.syllables().iter().copied())
+        .enumerate()
+    {
         let syllable = plan.event;
-        let target_pitch_hz = pitch_center_hz(syllable.knobs().pitch_center());
+        let pitch_offset_semitones =
+            phrase_syllable.declination_offset_semitones() + pending_reset_semitones;
+        let target_pitch_hz = pitch_with_offset(syllable.knobs(), pitch_offset_semitones);
         let start_pitch_hz = match previous_pitch_hz {
             Some(previous_pitch_hz) => previous_pitch_hz,
             None => target_pitch_hz,
         };
 
-        samples.extend(render_syllable_with_final_glide(
+        samples.extend(render_syllable_with_performance(
             syllable.knobs(),
             start_pitch_hz,
             plan.final_glide,
             warble_phase_offset_for_syllable(index),
+            SyllablePerformance::new(
+                phrase_syllable_samples(phrase_syllable),
+                pitch_offset_semitones,
+                phrase_syllable.final_lowering_semitones(),
+                phrase_syllable.is_emphasized(),
+            ),
         ));
-        previous_pitch_hz = Some(target_pitch_hz);
+        pending_reset_semitones = phrase_syllable.pitch_reset_semitones();
+        previous_pitch_hz = if pending_reset_semitones > 0.0 {
+            None
+        } else {
+            Some(target_pitch_hz)
+        };
 
-        if let Some(pause_samples) = plan.punctuation_pause_samples {
-            append_silence(&mut samples, pause_samples);
-        } else if let Some(next_plan) = plans.get(index + 1)
-            && !next_plan.event.is_continuation()
-        {
-            append_silence(&mut samples, WORD_PAUSE_SAMPLES);
+        if phrase_syllable.pause_samples() > 0 {
+            append_silence(&mut samples, phrase_syllable.pause_samples());
         }
     }
 
     append_silence(&mut samples, TRAILING_SILENCE_SAMPLES);
 
     SequencedUtterance::Samples(samples)
+}
+
+fn phrase_syllable_samples(phrase_syllable: PhraseSyllablePlan) -> u32 {
+    match phrase_syllable.boundary_strength() {
+        PhraseBoundaryStrength::None | PhraseBoundaryStrength::Word => BASE_SYLLABLE_SAMPLES,
+        PhraseBoundaryStrength::Clause => CLAUSE_SYLLABLE_SAMPLES,
+        PhraseBoundaryStrength::Sentence => SENTENCE_SYLLABLE_SAMPLES,
+    }
+}
+
+fn pitch_with_offset(knobs: KnobSet, offset_semitones: f64) -> f64 {
+    pitch_center_hz(knobs.pitch_center()) * exp((LN_2 * offset_semitones) / 12.0)
 }
 
 fn syllable_plans(events: &[SequenceEvent]) -> Vec<SyllablePlan> {
@@ -276,7 +299,6 @@ impl SyllablePlan {
         Self {
             event,
             final_glide: SyllableFinalGlide::Neutral,
-            punctuation_pause_samples: None,
             punctuation_seen: false,
         }
     }
@@ -286,11 +308,5 @@ impl SyllablePlan {
             self.final_glide = punctuation.final_glide();
             self.punctuation_seen = true;
         }
-
-        let pause_samples = punctuation.pause_samples();
-        self.punctuation_pause_samples = Some(match self.punctuation_pause_samples {
-            Some(existing_pause_samples) => existing_pause_samples.max(pause_samples),
-            None => pause_samples,
-        });
     }
 }

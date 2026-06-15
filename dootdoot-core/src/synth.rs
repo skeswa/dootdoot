@@ -34,6 +34,12 @@ pub const BASE_SYLLABLE_SECONDS: f64 = 0.170;
 /// Gives the fixed base syllable duration in samples.
 pub const BASE_SYLLABLE_SAMPLES: u32 = 7_497;
 
+/// Gives the lengthened syllable samples before a clause boundary.
+pub const CLAUSE_SYLLABLE_SAMPLES: u32 = 8_397;
+
+/// Gives the lengthened syllable samples before a sentence boundary.
+pub const SENTENCE_SYLLABLE_SAMPLES: u32 = 9_371;
+
 /// Gives the fixed pause between separate words in seconds.
 pub const WORD_PAUSE_SECONDS: f64 = 0.110;
 
@@ -142,6 +148,12 @@ pub const BODY_LAYER_MIX: f64 = 0.18;
 /// Gives the fixed upper-mid sparkle wet mix.
 pub const UPPER_MID_SPARKLE_MIX: f64 = 0.045;
 
+/// Gives the fixed pitch lift for sparse phrase emphasis.
+pub const PHRASE_EMPHASIS_PITCH_SEMITONES: f64 = 0.35;
+
+/// Gives the fixed amplitude lift for sparse phrase emphasis.
+pub const PHRASE_EMPHASIS_GAIN: f64 = 1.08;
+
 /// Marks the synthesis module in the public facade.
 #[derive(Debug)]
 pub struct Synth;
@@ -152,6 +164,15 @@ pub(crate) enum SyllableFinalGlide {
     Neutral,
     Rising,
     Falling,
+}
+
+/// Gives phrase-level controls applied while rendering one syllable.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct SyllablePerformance {
+    duration_samples: u32,
+    pitch_offset_semitones: f64,
+    final_lowering_semitones: f64,
+    emphasized: bool,
 }
 
 /// Filters samples through the fixed formant bank.
@@ -282,7 +303,15 @@ pub fn portamento_pitch_hz(
 
 /// Computes the deterministic per-syllable pitch micro-gesture in cents.
 pub fn internal_pitch_offset_cents(contour: f64, elapsed_seconds: f64) -> f64 {
-    let progress = syllable_progress(elapsed_seconds);
+    internal_pitch_offset_cents_for_duration(contour, elapsed_seconds, BASE_SYLLABLE_SECONDS)
+}
+
+fn internal_pitch_offset_cents_for_duration(
+    contour: f64,
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+) -> f64 {
+    let progress = syllable_progress(elapsed_seconds, duration_seconds);
     let sweep = contour.clamp(-1.0, 1.0) * INTERNAL_PITCH_SWEEP_CENTS * (1.0 - (2.0 * progress));
     let arch = INTERNAL_PITCH_ARCH_CENTS * sin(PI * progress);
 
@@ -476,7 +505,21 @@ pub fn upper_mid_sparkle_sample(phase: f64, elapsed_seconds: f64, warble_depth: 
 
 /// Computes the deterministic per-syllable vowel trajectory.
 pub fn vowel_trajectory_position(vowel_position: f64, contour: f64, elapsed_seconds: f64) -> f64 {
-    let progress = syllable_progress(elapsed_seconds);
+    vowel_trajectory_position_for_duration(
+        vowel_position,
+        contour,
+        elapsed_seconds,
+        BASE_SYLLABLE_SECONDS,
+    )
+}
+
+fn vowel_trajectory_position_for_duration(
+    vowel_position: f64,
+    contour: f64,
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+) -> f64 {
+    let progress = syllable_progress(elapsed_seconds, duration_seconds);
     let sweep = contour.clamp(-1.0, 1.0) * VOWEL_TRAJECTORY_SWEEP * ((2.0 * progress) - 1.0);
     let bloom = VOWEL_TRAJECTORY_BLOOM * sin(PI * progress);
 
@@ -488,13 +531,63 @@ pub fn render_syllable(knobs: crate::KnobSet, start_pitch_hz: f64) -> Vec<f64> {
     render_syllable_with_final_glide(knobs, start_pitch_hz, SyllableFinalGlide::Neutral, 0.0)
 }
 
+impl SyllablePerformance {
+    pub(crate) fn new(
+        duration_samples: u32,
+        pitch_offset_semitones: f64,
+        final_lowering_semitones: f64,
+        emphasized: bool,
+    ) -> Self {
+        Self {
+            duration_samples,
+            pitch_offset_semitones,
+            final_lowering_semitones,
+            emphasized,
+        }
+    }
+
+    fn default_v1() -> Self {
+        Self {
+            duration_samples: BASE_SYLLABLE_SAMPLES,
+            pitch_offset_semitones: 0.0,
+            final_lowering_semitones: 0.0,
+            emphasized: false,
+        }
+    }
+}
+
 pub(crate) fn render_syllable_with_final_glide(
     knobs: crate::KnobSet,
     start_pitch_hz: f64,
     final_glide: SyllableFinalGlide,
     warble_phase_offset: f64,
 ) -> Vec<f64> {
-    let target_pitch_hz = pitch_center_hz(knobs.pitch_center());
+    render_syllable_with_performance(
+        knobs,
+        start_pitch_hz,
+        final_glide,
+        warble_phase_offset,
+        SyllablePerformance::default_v1(),
+    )
+}
+
+pub(crate) fn render_syllable_with_performance(
+    knobs: crate::KnobSet,
+    start_pitch_hz: f64,
+    final_glide: SyllableFinalGlide,
+    warble_phase_offset: f64,
+    performance: SyllablePerformance,
+) -> Vec<f64> {
+    let duration_samples = performance.duration_samples.max(1);
+    let duration_seconds = f64::from(duration_samples) / f64::from(SYNTH_SAMPLE_RATE_HZ);
+    let pitch_offset_semitones = performance.pitch_offset_semitones
+        + if performance.emphasized {
+            PHRASE_EMPHASIS_PITCH_SEMITONES
+        } else {
+            0.0
+        };
+    let target_pitch_hz =
+        pitch_center_hz(knobs.pitch_center()) * semitone_multiplier(pitch_offset_semitones);
     let start_pitch_hz = if start_pitch_hz.is_finite() && start_pitch_hz > 0.0 {
         start_pitch_hz
     } else {
@@ -506,7 +599,7 @@ pub(crate) fn render_syllable_with_final_glide(
     let mut formants = FormantFilterBank::new();
     let mut samples = Vec::new();
 
-    for sample_index in 0..BASE_SYLLABLE_SAMPLES {
+    for sample_index in 0..duration_samples {
         let elapsed_seconds = f64::from(sample_index) / f64::from(SYNTH_SAMPLE_RATE_HZ);
         let glided_pitch_hz = portamento_pitch_hz(
             start_pitch_hz,
@@ -519,9 +612,21 @@ pub(crate) fn render_syllable_with_final_glide(
             target_pitch_hz,
             final_glide,
             elapsed_seconds,
+            duration_seconds,
         );
-        let internal_pitch_hz =
-            apply_internal_pitch_swoop_hz(final_glide_pitch_hz, knobs.contour(), elapsed_seconds);
+        let phrase_final_pitch_hz = apply_phrase_final_shift_hz(
+            final_glide_pitch_hz,
+            target_pitch_hz,
+            performance.final_lowering_semitones,
+            elapsed_seconds,
+            duration_seconds,
+        );
+        let internal_pitch_hz = apply_internal_pitch_swoop_hz_for_duration(
+            phrase_final_pitch_hz,
+            knobs.contour(),
+            elapsed_seconds,
+            duration_seconds,
+        );
         let pitch_hz = apply_warble_hz_with_phase(
             internal_pitch_hz,
             knobs.warble_depth(),
@@ -529,19 +634,28 @@ pub(crate) fn render_syllable_with_final_glide(
             warble_phase_offset,
         );
         let source = source_oscillator_sample(phase, pitch_hz);
-        let vowel_position =
-            vowel_trajectory_position(knobs.vowel_position(), knobs.contour(), elapsed_seconds);
+        let vowel_position = vowel_trajectory_position_for_duration(
+            knobs.vowel_position(),
+            knobs.contour(),
+            elapsed_seconds,
+            duration_seconds,
+        );
         let voiced = formants.process_sample(source, vowel_position);
         let layered = voiced
             + body_layer_sample(body_phase, vowel_position)
             + attack_transient_sample(elapsed_seconds, knobs.contour())
             + upper_mid_sparkle_sample(sparkle_phase, elapsed_seconds, knobs.warble_depth());
+        let layered = if performance.emphasized {
+            layered * PHRASE_EMPHASIS_GAIN
+        } else {
+            layered
+        };
         let electronic = ring_modulate(layered, elapsed_seconds);
 
         samples.push(apply_amplitude_envelope(
             electronic,
             elapsed_seconds,
-            BASE_SYLLABLE_SECONDS,
+            duration_seconds,
         ));
 
         phase = wrap_phase(phase + (pitch_hz / f64::from(SYNTH_SAMPLE_RATE_HZ)));
@@ -558,18 +672,31 @@ pub(crate) fn render_syllable_with_final_glide(
     samples
 }
 
+fn apply_internal_pitch_swoop_hz_for_duration(
+    pitch_hz: f64,
+    contour: f64,
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+) -> f64 {
+    let cents =
+        internal_pitch_offset_cents_for_duration(contour, elapsed_seconds, duration_seconds);
+
+    pitch_hz * exp(LN_2 * (cents / 1_200.0))
+}
+
 fn apply_final_glide_hz(
     pitch_hz: f64,
     target_pitch_hz: f64,
     final_glide: SyllableFinalGlide,
     elapsed_seconds: f64,
+    duration_seconds: f64,
 ) -> f64 {
     let semitones = match final_glide {
         SyllableFinalGlide::Neutral => return pitch_hz,
         SyllableFinalGlide::Rising => PUNCTUATION_GLIDE_SEMITONES,
         SyllableFinalGlide::Falling => -PUNCTUATION_GLIDE_SEMITONES,
     };
-    let final_glide_start_seconds = BASE_SYLLABLE_SECONDS - PORTAMENTO_SECONDS;
+    let final_glide_start_seconds = duration_seconds - PORTAMENTO_SECONDS;
 
     if elapsed_seconds < final_glide_start_seconds {
         return pitch_hz;
@@ -577,6 +704,32 @@ fn apply_final_glide_hz(
 
     let progress = portamento_progress(elapsed_seconds - final_glide_start_seconds, semitones);
     let final_target_hz = target_pitch_hz * exp((LN_2 * semitones) / 12.0);
+
+    pitch_hz + ((final_target_hz - pitch_hz) * progress)
+}
+
+fn apply_phrase_final_shift_hz(
+    pitch_hz: f64,
+    target_pitch_hz: f64,
+    final_lowering_semitones: f64,
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+) -> f64 {
+    if final_lowering_semitones == 0.0 {
+        return pitch_hz;
+    }
+
+    let final_shift_start_seconds = duration_seconds - PORTAMENTO_SECONDS;
+
+    if elapsed_seconds < final_shift_start_seconds {
+        return pitch_hz;
+    }
+
+    let progress = portamento_progress(
+        elapsed_seconds - final_shift_start_seconds,
+        final_lowering_semitones,
+    );
+    let final_target_hz = target_pitch_hz * semitone_multiplier(final_lowering_semitones);
 
     pitch_hz + ((final_target_hz - pitch_hz) * progress)
 }
@@ -646,10 +799,14 @@ fn wrap_phase(phase: f64) -> f64 {
     }
 }
 
-fn syllable_progress(elapsed_seconds: f64) -> f64 {
-    if !elapsed_seconds.is_finite() {
+fn semitone_multiplier(semitones: f64) -> f64 {
+    exp((LN_2 * semitones) / 12.0)
+}
+
+fn syllable_progress(elapsed_seconds: f64, duration_seconds: f64) -> f64 {
+    if !elapsed_seconds.is_finite() || !duration_seconds.is_finite() || duration_seconds <= 0.0 {
         return 0.0;
     }
 
-    (elapsed_seconds / BASE_SYLLABLE_SECONDS).clamp(0.0, 1.0)
+    (elapsed_seconds / duration_seconds).clamp(0.0, 1.0)
 }

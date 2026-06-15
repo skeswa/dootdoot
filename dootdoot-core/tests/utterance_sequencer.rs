@@ -1,10 +1,10 @@
 //! Utterance sequencer tests.
 
 use dootdoot_core::{
-    BASE_SYLLABLE_SAMPLES, KnobSet, LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES,
-    ProsodicPunctuation, SequenceEvent, SequencedUtterance, SquashedVector,
-    TRAILING_SILENCE_SAMPLES, WORD_PAUSE_SAMPLES, assemble_knobs, render_empty_chirp,
-    sequence_utterance,
+    BASE_SYLLABLE_SAMPLES, CLAUSE_SYLLABLE_SAMPLES, KnobSet, LEADING_SILENCE_SAMPLES,
+    LONG_PUNCTUATION_PAUSE_SAMPLES, ProsodicPunctuation, SENTENCE_SYLLABLE_SAMPLES, SequenceEvent,
+    SequencedUtterance, SquashedVector, TRAILING_SILENCE_SAMPLES, WORD_PAUSE_SAMPLES,
+    assemble_knobs, render_empty_chirp, sequence_utterance,
 };
 
 #[test]
@@ -145,7 +145,7 @@ fn sequencer_drops_leading_punctuation_and_adds_attached_pause() {
     ]);
     let samples = rendered_samples(&output);
     let leading = usize::try_from(LEADING_SILENCE_SAMPLES).expect("leading silence fits usize");
-    let syllable = usize::try_from(BASE_SYLLABLE_SAMPLES).expect("syllable fits usize");
+    let syllable = usize::try_from(SENTENCE_SYLLABLE_SAMPLES).expect("syllable fits usize");
     let long_pause =
         usize::try_from(LONG_PUNCTUATION_PAUSE_SAMPLES).expect("long pause fits usize");
     let trailing = usize::try_from(TRAILING_SILENCE_SAMPLES).expect("trailing silence fits usize");
@@ -226,7 +226,7 @@ fn sequencer_uses_first_consecutive_marker_for_glide_and_longest_single_pause() 
         SequenceEvent::punctuation(ProsodicPunctuation::Comma),
     ]);
     let leading = usize::try_from(LEADING_SILENCE_SAMPLES).expect("leading silence fits usize");
-    let syllable = usize::try_from(BASE_SYLLABLE_SAMPLES).expect("syllable fits usize");
+    let syllable = usize::try_from(CLAUSE_SYLLABLE_SAMPLES).expect("syllable fits usize");
     let long_pause =
         usize::try_from(LONG_PUNCTUATION_PAUSE_SAMPLES).expect("long pause fits usize");
     let trailing = usize::try_from(TRAILING_SILENCE_SAMPLES).expect("trailing silence fits usize");

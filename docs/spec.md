@@ -176,6 +176,9 @@
 - **FR-46** `FORMAT_V2` explain output SHALL keep semantic token rows visible and MAY add
   stderr-only control/performance rows for mood, phrase, complexity, or archetype
   decisions where useful for learnability.
+- **FR-47** `FORMAT_V2` phrase prosody SHALL apply deterministic phrase metadata to
+  synthesis by varying pause length, pre-boundary syllable lengthening, phrase-level pitch
+  offsets, final lowering, pitch reset, and sparse emphasis within fixed bounds.
 
 ---
 

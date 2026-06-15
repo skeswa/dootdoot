@@ -337,7 +337,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       and sparse emphasis. Pin behavior with value tests and `insta` snapshots before
       wiring it into synthesis.
       Deps: T-64 · Reqs: FR-20, FR-22, FR-23, FR-24, NFR-16 · Est: 2.5h
-- [ ] **T-66 — Integrate phrase prosody into sequencing and synthesis.** Apply the
+- [x] **T-66 — Integrate phrase prosody into sequencing and synthesis.** Apply the
       phrase plan to variable pauses, pre-boundary lengthening, phrase-level pitch offsets,
       and sparse emphasis. Update output-length estimation, input-limit tests, and
       `FORMAT_V2` golden hashes once the constants are frozen.

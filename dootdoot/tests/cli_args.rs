@@ -4,7 +4,7 @@ use std::{path::PathBuf, process::Command};
 
 use clap::Parser;
 use dootdoot::Cli;
-use dootdoot_core::FORMAT_V1;
+use dootdoot_core::ACTIVE_FORMAT;
 
 #[test]
 fn cli_parses_text_output_play_and_explain_flags() {
@@ -25,7 +25,7 @@ fn cli_parses_text_output_play_and_explain_flags() {
 }
 
 #[test]
-fn binary_version_surfaces_format_v1() {
+fn binary_version_surfaces_active_format() {
     let output = Command::new(env!("CARGO_BIN_EXE_dootdoot"))
         .arg("--version")
         .output()
@@ -33,7 +33,7 @@ fn binary_version_surfaces_format_v1() {
     let stdout = String::from_utf8(output.stdout).expect("version output is utf8");
 
     assert!(output.status.success());
-    assert!(stdout.contains(FORMAT_V1));
+    assert!(stdout.contains(ACTIVE_FORMAT));
 }
 
 #[test]

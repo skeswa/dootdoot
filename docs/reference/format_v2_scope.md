@@ -38,3 +38,18 @@ routing.
 
 Any V2 channel that can alter a rendered sample belongs to the format contract and
 requires regenerated golden WAV hashes. V1 assets and constants remain locked.
+
+## Implemented Phrase Prosody
+
+The first V2 performance channel applies the pure phrase plan to synthesis:
+
+- word boundaries keep the base syllable duration and use the existing word pause;
+- clause punctuation uses `8,397` syllable samples plus the medium punctuation pause;
+- sentence punctuation uses `9,371` syllable samples plus the long punctuation pause;
+- phrase declination, pitch reset, final lowering, and sparse emphasis are deterministic
+  scalar offsets applied before syllable rendering;
+- consecutive punctuation keeps the first marker's glide/lengthening role while the
+  longest single pause wins.
+
+The active CLI version string is `FORMAT_V2`; the embedded semantic mapping artifact is
+still the locked `format_v1.bin` table.

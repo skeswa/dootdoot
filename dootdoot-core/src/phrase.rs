@@ -51,6 +51,7 @@ pub enum PhraseBoundaryStrength {
 struct PendingSyllable {
     event: SyllableEvent,
     punctuation: Option<ProsodicPunctuation>,
+    punctuation_pause_samples: u32,
 }
 
 impl PhrasePlan {
@@ -129,7 +130,7 @@ pub fn plan_phrase_prosody(events: &[SequenceEvent]) -> PhrasePlan {
             pitch_reset_semitones: pitch_reset_semitones(boundary_strength),
             final_lowering_semitones: final_lowering_semitones(punctuation, boundary_strength),
             pre_boundary_lengthening: pre_boundary_lengthening(boundary_strength),
-            pause_samples: pause_samples(boundary_strength),
+            pause_samples: pause_samples(syllable, boundary_strength),
             emphasized,
         });
 
@@ -153,12 +154,17 @@ fn pending_syllables(events: &[SequenceEvent]) -> Vec<PendingSyllable> {
             SequenceEvent::Syllable(syllable) => syllables.push(PendingSyllable {
                 event: *syllable,
                 punctuation: None,
+                punctuation_pause_samples: 0,
             }),
             SequenceEvent::Punctuation(punctuation) => {
-                if let Some(syllable) = syllables.last_mut()
-                    && syllable.punctuation.is_none()
-                {
-                    syllable.punctuation = Some(*punctuation);
+                if let Some(syllable) = syllables.last_mut() {
+                    if syllable.punctuation.is_none() {
+                        syllable.punctuation = Some(*punctuation);
+                    }
+
+                    syllable.punctuation_pause_samples = syllable
+                        .punctuation_pause_samples
+                        .max(punctuation.pause_samples());
                 }
             }
         }
@@ -190,7 +196,11 @@ fn boundary_strength(syllables: &[PendingSyllable], index: usize) -> PhraseBound
     }
 }
 
-fn pause_samples(boundary_strength: PhraseBoundaryStrength) -> u32 {
+fn pause_samples(syllable: PendingSyllable, boundary_strength: PhraseBoundaryStrength) -> u32 {
+    if syllable.punctuation_pause_samples > 0 {
+        return syllable.punctuation_pause_samples;
+    }
+
     match boundary_strength {
         PhraseBoundaryStrength::None => 0,
         PhraseBoundaryStrength::Word => WORD_PAUSE_SAMPLES,

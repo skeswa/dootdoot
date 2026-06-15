@@ -2,8 +2,8 @@
 
 use dootdoot_core::{
     BASE_SYLLABLE_SAMPLES, KnobSet, LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES,
-    SequenceEvent, SquashedVector, TRAILING_SILENCE_SAMPLES, WORD_PAUSE_SAMPLES, assemble_knobs,
-    estimate_utterance_sample_count, render_canonical_buffer,
+    SENTENCE_SYLLABLE_SAMPLES, SequenceEvent, SquashedVector, TRAILING_SILENCE_SAMPLES,
+    WORD_PAUSE_SAMPLES, assemble_knobs, estimate_utterance_sample_count, render_canonical_buffer,
 };
 
 #[test]
@@ -15,7 +15,7 @@ fn utterance_estimate_matches_rendered_canonical_buffer_length() {
         SequenceEvent::syllable(knobs, false),
     ];
     let expected = u64::from(LEADING_SILENCE_SAMPLES)
-        + u64::from(BASE_SYLLABLE_SAMPLES)
+        + u64::from(SENTENCE_SYLLABLE_SAMPLES)
         + u64::from(LONG_PUNCTUATION_PAUSE_SAMPLES)
         + u64::from(BASE_SYLLABLE_SAMPLES)
         + u64::from(TRAILING_SILENCE_SAMPLES);
