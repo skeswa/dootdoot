@@ -63,8 +63,8 @@ fn format_v1_synthesis_constants_are_pinned() {
     assert_eq!(bits(runtime(SOURCE_PULSE_WIDTH)), bits(0.38));
     assert_eq!(bits(runtime(ATTACK_TRANSIENT_SECONDS)), bits(0.020));
     assert_eq!(bits(runtime(ATTACK_TRANSIENT_MIX)), bits(0.07));
-    assert_eq!(bits(runtime(BODY_LAYER_MIX)), bits(0.11));
-    assert_eq!(bits(runtime(UPPER_MID_SPARKLE_MIX)), bits(0.055));
+    assert_eq!(bits(runtime(BODY_LAYER_MIX)), bits(0.18));
+    assert_eq!(bits(runtime(UPPER_MID_SPARKLE_MIX)), bits(0.045));
 }
 
 #[test]

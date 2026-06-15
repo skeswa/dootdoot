@@ -137,10 +137,10 @@ pub const ATTACK_TRANSIENT_SECONDS: f64 = 0.020;
 pub const ATTACK_TRANSIENT_MIX: f64 = 0.07;
 
 /// Gives the fixed low-body layer wet mix.
-pub const BODY_LAYER_MIX: f64 = 0.11;
+pub const BODY_LAYER_MIX: f64 = 0.18;
 
 /// Gives the fixed upper-mid sparkle wet mix.
-pub const UPPER_MID_SPARKLE_MIX: f64 = 0.055;
+pub const UPPER_MID_SPARKLE_MIX: f64 = 0.045;
 
 /// Marks the synthesis module in the public facade.
 #[derive(Debug)]

@@ -260,7 +260,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       more phrase air; update exact sample-count estimation and input-limit tests for any timing
       changes. Preserve deterministic timing templates, not runtime randomness.
       Deps: T-49, T-43 · Reqs: FR-20, FR-21, FR-22, FR-24, FR-36, FR-37, NFR-16 · Est: 2h
-- [ ] **T-51 — Final integrated BB-8 tuning pass.** Tune by ear across varied text and the local
+- [x] **T-51 — Final integrated BB-8 tuning pass.** Tune by ear across varied text and the local
       BB-8 reference clips after the layered voice changes land. Use the T-45 metrics to confirm
       directionally improved body, upper-mid brightness, gesture motion, harmonicity, and phrase
       air, but accept/reject by listening for reliable BB-8-family identity.
