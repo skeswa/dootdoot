@@ -285,7 +285,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       `"playing"`, `"cat"`, `"dog"`, `"airplane"`, `"?"`, punctuation, `[UNK]` triggers,
       a long input.
       Deps: T-54 · Reqs: NFR-17 · Est: 1h
-- [ ] **T-56 — Generate & commit golden WAV hashes.** SHA-256 of each corpus output (after
+- [x] **T-56 — Generate & commit golden WAV hashes.** SHA-256 of each corpus output (after
       freeze).
       Deps: T-55 · Reqs: NFR-17 · Est: 1h
 - [ ] **T-57 — Golden-WAV hash test.** Assert outputs match committed hashes; wire into CI
