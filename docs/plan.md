@@ -288,7 +288,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-56 — Generate & commit golden WAV hashes.** SHA-256 of each corpus output (after
       freeze).
       Deps: T-55 · Reqs: NFR-17 · Est: 1h
-- [ ] **T-57 — Golden-WAV hash test.** Assert outputs match committed hashes; wire into CI
+- [x] **T-57 — Golden-WAV hash test.** Assert outputs match committed hashes; wire into CI
       on macOS + Linux.
       Deps: T-56, T-05 · Reqs: NFR-1, NFR-2, NFR-17 · Est: 1.5h
 - [ ] **T-58 — Double-run determinism test.** Each corpus input twice → byte-identical.

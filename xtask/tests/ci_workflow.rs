@@ -10,6 +10,8 @@ fn ci_runs_build_lint_and_test_on_linux_and_macos() {
         "actions/cache@v4",
         "cargo build --workspace --all-targets",
         "scripts/lint",
+        "Golden WAV hashes",
+        "cargo test -p dootdoot-core --test golden_wav_hashes",
         "cargo test",
     ] {
         assert!(

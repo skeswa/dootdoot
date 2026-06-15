@@ -43,5 +43,8 @@ jobs:
       - name: Lint
         run: scripts/lint
 
+      - name: Golden WAV hashes
+        run: cargo test -p dootdoot-core --test golden_wav_hashes
+
       - name: Test
         run: cargo test

@@ -504,6 +504,7 @@ name = "dootdoot-core"
 version = "0.1.0"
 dependencies = [
  "hound",
+ "sha2",
  "thiserror 2.0.18",
  "tokenizers",
 ]
