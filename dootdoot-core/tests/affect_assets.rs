@@ -1,4 +1,4 @@
-//! `FORMAT_V2` affect asset tests.
+//! `VOICE_V2` affect asset tests.
 
 use std::{fs, path::Path};
 

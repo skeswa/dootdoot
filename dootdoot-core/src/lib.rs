@@ -23,10 +23,10 @@ pub use engine::{
     explain_rows_for_text, render_text_canonical_buffer, sequence_events_for_text,
 };
 pub use format::{
-    ACTIVE_FORMAT, FORMAT_AXIS_COUNT, FORMAT_HASH_BYTES, FORMAT_HEADER_BYTES, FORMAT_MAGIC,
-    FORMAT_SCALE_COUNT, FORMAT_SQUASH_STATS_PER_AXIS, FORMAT_TOKEN_RECORD_BYTES, FORMAT_V1,
-    FORMAT_V2, FORMAT_V3, FORMAT_VERSION_NUMBER, Format, FormatArtifact, FormatError,
-    FormatSquashFunction, SquashAxisStats, embedded_format_v1,
+    ACTIVE_VOICE, FORMAT_ARTIFACT_V1, FORMAT_AXIS_COUNT, FORMAT_HASH_BYTES, FORMAT_HEADER_BYTES,
+    FORMAT_MAGIC, FORMAT_SCALE_COUNT, FORMAT_SQUASH_STATS_PER_AXIS, FORMAT_TOKEN_RECORD_BYTES,
+    FORMAT_VERSION_NUMBER, Format, FormatArtifact, FormatError, FormatSquashFunction,
+    SquashAxisStats, VOICE_V1, VOICE_V2, VOICE_V3, VOICE_V4, embedded_format_v1,
 };
 pub use mapping::{
     KNOB_BOUNDS, KNOB_MODULATION_DEPTHS, KnobBounds, KnobSet, Mapping, MappingError, PooledVector,

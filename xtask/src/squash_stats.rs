@@ -2,7 +2,7 @@
 
 use crate::{PcaProjection, Result, SourceManifestError, SourceModel};
 
-/// Identifies the runtime squash function selected for `FORMAT_V1`.
+/// Identifies the runtime squash function selected for `VOICE_V1`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SquashFunction {
     /// Applies tanh to a z-scored projected axis value.

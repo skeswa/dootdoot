@@ -281,6 +281,6 @@ already move, but the synthesizer turns them into a too-clean, too-regular sound
 ## Format Note
 
 All recommended changes alter output samples. Because T-48 has not locked the final
-format yet, these can still be treated as part of pre-freeze `FORMAT_V1` tuning. Once
+format yet, these can still be treated as part of pre-freeze `VOICE_V1` tuning. Once
 the format is locked, the same changes would require a version bump and regenerated
 golden fixtures.

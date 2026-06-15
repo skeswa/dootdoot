@@ -36,12 +36,12 @@ If the source manifest changes, review and commit it with the regenerated assets
 tokenizer changes, copy the new pinned `tokenizer.json` byte-for-byte from the validated
 cache.
 
-## When to Bump the Format
+## When to Bump the Voice
 
-`FORMAT_V1` is locked. Any change that alters one rendered sample requires a new format
+`VOICE_V1` is locked. Any change that alters one rendered sample requires a new voice
 identifier, new reference documentation, and regenerated golden WAV hashes.
 
-Examples that require a new format identifier (`FORMAT_V2`, `FORMAT_V3`, etc.):
+Examples that require a new voice identifier (`VOICE_V2`, `VOICE_V3`, etc.):
 
 - A different source model, tokenizer, source revision, PCA projection, axis count, or
   quantization rule.
@@ -49,7 +49,7 @@ Examples that require a new format identifier (`FORMAT_V2`, `FORMAT_V3`, etc.):
 - Changes to knob assembly, synthesis constants, timing constants, punctuation rules,
   empty-chirp constants, owned math, float-to-i16 rounding, or WAV serialization.
 
-Examples that do not require a format bump:
+Examples that do not require a voice bump:
 
 - Documentation-only edits.
 - Packaging metadata that does not affect runtime behavior.

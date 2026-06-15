@@ -10,9 +10,10 @@
 
 <!-- Add these once the project ships: CI status, crates.io version, downloads. -->
 
-> **Status: FORMAT_V3 phrase continuity is active.** `FORMAT_V1` remains the locked v1
-> contract, `FORMAT_V2` remains the locked expressiveness contract, and the active
-> branch now smooths token-to-token phrase transitions. Packaging work is still in
+> **Status: VOICE_V4 repeated-onset smoothing is active.** `VOICE_V1` remains the locked
+> v1 contract, `VOICE_V2` remains the locked expressiveness contract, `VOICE_V3` remains
+> the locked phrase-continuity contract, and the active branch now smooths repeated
+> connected-token onsets. Packaging work is still in
 > progress. See
 > [the roadmap](docs/plan.md) and
 > [packaging notes](docs/reference/packaging.md).
@@ -62,7 +63,7 @@ hello │ +0.185 │ -0.340 │ +0.512 │ -0.118
 ? │ control:question │ - │ - │ -
 ```
 
-The exact numbers depend on the frozen mapping and active format. Punctuation and
+The exact numbers depend on the frozen mapping and active voice. Punctuation and
 performance rows are control markers: they shape neighboring voiced syllables and pauses,
 but do not produce their own voiced tokens.
 

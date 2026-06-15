@@ -3,15 +3,15 @@
 use std::num::IntErrorKind;
 
 use dootdoot_core::{
-    FORMAT_AXIS_COUNT, FORMAT_HEADER_BYTES, FORMAT_TOKEN_RECORD_BYTES, FORMAT_V1, FormatArtifact,
-    embedded_format_v1,
+    FORMAT_ARTIFACT_V1, FORMAT_AXIS_COUNT, FORMAT_HEADER_BYTES, FORMAT_TOKEN_RECORD_BYTES,
+    FormatArtifact, embedded_format_v1,
 };
 
 #[test]
 fn embedded_format_v1_parses_and_exposes_header() {
     let artifact = embedded_format_v1().expect("embedded artifact should parse");
 
-    assert_eq!(artifact.format_id(), FORMAT_V1);
+    assert_eq!(artifact.artifact_id(), FORMAT_ARTIFACT_V1);
     assert_eq!(artifact.header_byte_len(), FORMAT_HEADER_BYTES);
     assert_eq!(artifact.token_count(), 29_528);
     assert_eq!(artifact.axis_scales().len(), FORMAT_AXIS_COUNT);

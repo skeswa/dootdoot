@@ -10,9 +10,9 @@
 > texture** — the things that make BB-8 read as _communicating_ rather than
 > _beeping_.
 >
-> It does **not** decide anything or change `FORMAT_V1`. It is input to a future
+> It does **not** decide anything or change `VOICE_V1`. It is input to a future
 > planning pass. Where a proposal would alter output samples, this document says so.
-> Closing these gaps belongs in **`FORMAT_V2`** (§8) and, in a few places, requires
+> Closing these gaps belongs in **`VOICE_V2`** (§8) and, in a few places, requires
 > revisiting normative requirements fixed in v1.
 
 ---
@@ -94,14 +94,14 @@ These are frozen in v1 and are what the four gaps push against:
 
 None of these is wrong: each buys determinism, droid identity, or learnability.
 Together, they define the limits the requested expressiveness now runs into. Closing
-the gaps is therefore a **`FORMAT_V2`** conversation that revisits a few of these
+the gaps is therefore a **`VOICE_V2`** conversation that revisits a few of these
 choices (§8).
 
 > **Spec update (resolved):** the requirement that fixed the syllable duration (**FR-20**)
 > has been **removed**, and the fixed-inter-word-pause requirement (**FR-22**) has been
 > **revised** to allow deterministic, boundary-dependent pauses. Variable duration and
 > pacing are therefore no longer blocked at the requirements level; the top two rows above
-> are now `FORMAT_V1` _implementation_ choices, free to change in `FORMAT_V2`. The
+> are now `VOICE_V1` _implementation_ choices, free to change in `VOICE_V2`. The
 > remaining policy questions (NFR-16, archetype palette) are unchanged. §8 reflects this.
 
 ---
@@ -295,7 +295,7 @@ Declination, variable pauses, and emphasis are **timing/pitch-offset templates**
 fit the "fixed deterministic template" philosophy that Phase 7 already embraced for
 micro-gestures, and require only new frozen constants. **Pre-boundary lengthening** needs
 variable duration, which the removal of FR-20 now permits (revised FR-22 likewise frees
-the inter-word pause). All of this remains a `FORMAT_V2` change — the v1 golden hashes are
+the inter-word pause). All of this remains a `VOICE_V2` change — the v1 golden hashes are
 unaffected — but it is no longer blocked at the requirements level (§8).
 
 ---
@@ -358,7 +358,7 @@ sound-symbolic words to render more vividly.
 
 A complexity scalar is a **new baked per-token value** (or a runtime function of token
 length + a baked Zipf table) plus new synthesis logic that varies sub-gesture count.
-This is a **`FORMAT_V2`** change (new mapping input + new synthesis behavior) and
+This is a **`VOICE_V2`** change (new mapping input + new synthesis behavior) and
 **broadens NFR-16** (more than 4 axes now vary) — but complexity is _orthogonal to the
 learnable semantic language_: it changes how _articulated_ a word is, not its
 _meaning-timbre_, so the learnable property is preserved (§7.2). Variable sub-gesture
@@ -449,9 +449,9 @@ separates "calm" from "agitated."
 
 ### 6.4 Contract impact
 
-A new baked affect table + an affect→prosody driver is a **`FORMAT_V2`** change and the
+A new baked affect table + an affect→prosody driver is a **`VOICE_V2`** change and the
 biggest expansion of the input-dependent surface. It must be folded into the
-`FORMAT_V1`→`V2` contract (new mapping input, new synthesis behavior) and surfaced in
+`VOICE_V1`→`V2` contract (new mapping input, new synthesis behavior) and surfaced in
 `--explain` (an extra mood row supports the learnability goal). It
 also **broadens NFR-16** — but, as with complexity, affect is a _separate orthogonal
 channel_ (mood) layered over the learnable semantic gesture, so it deepens expression
@@ -502,7 +502,7 @@ is a pure function of the text.
 
 ### 7.3 Contract impact
 
-New synthesis archetypes + a selection rule = **`FORMAT_V2`**, and the most significant
+New synthesis archetypes + a selection rule = **`VOICE_V2`**, and the most significant
 **reinterpretation of NFR-16** (the "bounded droid parameter space" now includes a
 discrete archetype dimension). Recommend doing this _last_ and conservatively, after the
 affect channel exists to drive selection — an archetype palette with nothing principled
@@ -519,9 +519,9 @@ buffer-as-source-of-truth and bit-exact guarantees (§8.1 of `design.md`) are un
 
 What they _do_ require is honest contract accounting:
 
-1. **This is a `FORMAT_V2`.** Every proposal alters output samples. Per the freeze rule,
+1. **This is a `VOICE_V2`.** Every proposal alters output samples. Per the freeze rule,
    the v1 golden fixtures stay as the v1 contract; v2 gets its own version id, header,
-   and regenerated golden hashes. The `FORMAT_V1` lock (T-54) already established the
+   and regenerated golden hashes. The `VOICE_V1` lock (T-54) already established the
    machinery for that.
 2. **Requirement changes — two already resolved, one still open:**
    - **FR-20 (fixed syllable duration) — removed.** This was the hard one: pre-boundary

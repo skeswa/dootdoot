@@ -111,7 +111,7 @@
   (`token │ pitch │ vowel │ contour │ warble`) to stderr.
 - **FR-32** `--explain` output SHALL go to stderr only and SHALL NOT appear in any
   piped audio or file output.
-- **FR-33** The tool SHALL provide `--version`, which SHALL surface the active format
+- **FR-33** The tool SHALL provide `--version`, which SHALL surface the active voice
   identifier.
 - **FR-34** The tool SHALL provide `--help`.
 - **FR-35** The tool SHALL return exit code 0 on success and a non-zero code on error.
@@ -124,11 +124,11 @@
   would exceed the fixed output ceiling of **≈30 minutes / ≈160 MB** (≈8,000 tokens at
   44.1 kHz·16-bit·mono). The byte/duration ceiling is normative; the token count is a
   derived pre-synthesis check. (These are operational limits, not sample-affecting, so
-  they are NOT part of `FORMAT_V1`.)
+  they are NOT part of `VOICE_V1`.)
 
 ### 1.9 Format contract & versioning
 
-- **FR-38** `FORMAT_V1` SHALL bundle **every** parameter or rule that can affect an
+- **FR-38** `VOICE_V1` SHALL bundle **every** parameter or rule that can affect an
   output sample, including: the model hash; the tokenizer configuration (the
   `tokenizer.json` hash **and** the runtime tokenization flags — `add_special_tokens`,
   normalization/lowercasing, the `##` continuation convention); the control-token drop
@@ -144,7 +144,7 @@
   float→i16 rounding rule; the WAV serialization choices (sample rate, bit depth,
   channels, header bytes); and the owned-math implementation version.
 - **FR-39** Any change that alters one or more output samples SHALL require bumping the
-  format identifier (e.g. `FORMAT_V1` → `FORMAT_V2` → `FORMAT_V3`).
+  voice identifier (e.g. `VOICE_V1` → `VOICE_V2` → `VOICE_V3` → `VOICE_V4`).
 
 ### 1.10 Build-time generation (xtask)
 
@@ -165,56 +165,70 @@
   computing or writing any asset, and SHALL abort on any mismatch, so that regeneration is
   reproducible.
 
-### 1.11 FORMAT_V2 expressiveness
+### 1.11 VOICE_V2 expressiveness
 
-- **FR-44** `FORMAT_V2` MAY add deterministic, bounded performance channels for phrase
+- **FR-44** `VOICE_V2` MAY add deterministic, bounded performance channels for phrase
   timing, affect, complexity, and a small gesture-archetype palette, while keeping the
   four PCA-derived semantic axes as the learnable meaning core.
-- **FR-45** Every `FORMAT_V2` performance channel SHALL be a pure function of the
+- **FR-45** Every `VOICE_V2` performance channel SHALL be a pure function of the
   token/control-event stream and SHALL NOT depend on runtime randomness, clocks, seeds,
   external services, or platform-dependent state.
-- **FR-46** `FORMAT_V2` explain output SHALL keep semantic token rows visible and MAY add
+- **FR-46** `VOICE_V2` explain output SHALL keep semantic token rows visible and MAY add
   stderr-only control/performance rows for mood, phrase, complexity, or archetype
   decisions where useful for learnability.
-- **FR-47** `FORMAT_V2` phrase prosody SHALL apply deterministic phrase metadata to
+- **FR-47** `VOICE_V2` phrase prosody SHALL apply deterministic phrase metadata to
   synthesis by varying pause length, pre-boundary syllable lengthening, phrase-level pitch
   offsets, final lowering, pitch reset, and sparse emphasis within fixed bounds.
-- **FR-48** `FORMAT_V2` affect analysis SHALL pool VADER-derived token valence and owned
+- **FR-48** `VOICE_V2` affect analysis SHALL pool VADER-derived token valence and owned
   arousal proxies into deterministic utterance-level valence and arousal scores.
-- **FR-49** `FORMAT_V2` synthesis SHALL map utterance arousal to deterministic duration
+- **FR-49** `VOICE_V2` synthesis SHALL map utterance arousal to deterministic duration
   rate, pitch lift, brightness, warble amount, and sub-gesture density, and SHALL map
   valence to contour and darker/brighter vowel/texture bias within fixed bounds.
-- **FR-50** `FORMAT_V2` complexity analysis SHALL compute a deterministic bounded scalar
+- **FR-50** `VOICE_V2` complexity analysis SHALL compute a deterministic bounded scalar
   from owned inputs only: non-whitespace character count and continuation `WordPiece`
   subtoken count. Frequency, Zipf, iconicity, or other third-party psycholinguistic
   assets SHALL remain excluded until an explicit asset-license policy admits them.
-- **FR-51** `FORMAT_V2` synthesis SHALL map the complexity scalar to deterministic
+- **FR-51** `VOICE_V2` synthesis SHALL map the complexity scalar to deterministic
   compound articulation by increasing bounded sub-gesture count, articulation density,
   and optional duration scaling without changing the semantic meaning-timbre axes.
-- **FR-52** `FORMAT_V2` gesture archetype selection SHALL use a fixed bounded palette
+- **FR-52** `VOICE_V2` gesture archetype selection SHALL use a fixed bounded palette
   (`chatter`, `yelp`, `moan`, `stutter/burst`, `tremble`) plus sparse non-vocal seasoning
   flags, and SHALL be a pure function of affect, complexity, punctuation, and phrase
   position.
-- **FR-53** `FORMAT_V2` synthesis SHALL render selected gesture archetypes with bounded,
+- **FR-53** `VOICE_V2` synthesis SHALL render selected gesture archetypes with bounded,
   deterministic yelp, moan, stutter/burst, and tremble texture paths plus sparse servo
   and noise-tail seasoning, all inside finite BB-8-family parameter bounds.
-- **FR-54** The frozen `FORMAT_V2` contract SHALL be documented with final
+- **FR-54** The frozen `VOICE_V2` contract SHALL be documented with final
   phrase/affect/complexity/archetype acceptance, contextual-clip directional checks,
-  the surfaced `dootdoot FORMAT_V2` version string, and regenerated golden WAV hashes.
+  the surfaced `dootdoot VOICE_V2` version string, and regenerated golden WAV hashes.
 
-### 1.12 FORMAT_V3 phrase continuity
+### 1.12 VOICE_V3 phrase continuity
 
-- **FR-55** `FORMAT_V3` SHALL render connected token sequences with phrase-continuous
+- **FR-55** `VOICE_V3` SHALL render connected token sequences with phrase-continuous
   oscillator/filter state across syllables, except after punctuation boundaries that
   intentionally reset the phrase.
-- **FR-56** `FORMAT_V3` word boundaries SHALL keep deterministic boundary duration but
+- **FR-56** `VOICE_V3` word boundaries SHALL keep deterministic boundary duration but
   SHALL render quiet transition bridges instead of hard zero-filled inter-word gaps.
-- **FR-57** `FORMAT_V3` connected syllable edges SHALL use a deterministic nonzero
+- **FR-57** `VOICE_V3` connected syllable edges SHALL use a deterministic nonzero
   envelope floor so token boundaries do not restart every syllable from silence.
-- **FR-58** `FORMAT_V3` SHALL keep the droid gesture envelope's internal dip, but the
+- **FR-58** `VOICE_V3` SHALL keep the droid gesture envelope's internal dip, but the
   dip SHALL NOT clamp the envelope to silence inside the voiced body.
-- **FR-59** The frozen `FORMAT_V3` contract SHALL be documented with phrase-continuity
-  acceptance, the surfaced `dootdoot FORMAT_V3` version string, and regenerated golden
+- **FR-59** The frozen `VOICE_V3` contract SHALL be documented with phrase-continuity
+  acceptance, the surfaced `dootdoot VOICE_V3` version string, and regenerated golden
+  WAV hashes.
+
+### 1.13 VOICE_V4 repeated-onset smoothing
+
+- **FR-60** `VOICE_V4` SHALL keep `VOICE_V3` connected phrase state while smoothing
+  connected syllable openings in repeated subword sequences.
+- **FR-61** `VOICE_V4` connected syllables SHALL NOT replay the explicit attack
+  transient used for phrase starts.
+- **FR-62** `VOICE_V4` connected syllable pitch and vowel openings SHALL blend from the
+  previous rendered state into the new token gesture.
+- **FR-63** `VOICE_V4` connected envelope starts SHALL ramp through the early body and
+  SHALL NOT replay the full attack peak at each connected token boundary.
+- **FR-64** The frozen `VOICE_V4` contract SHALL be documented with repeated-onset
+  acceptance, the surfaced `dootdoot VOICE_V4` version string, and regenerated golden
   WAV hashes.
 
 ---
@@ -223,9 +237,9 @@
 
 ### 2.1 Determinism
 
-- **NFR-1** For a fixed format version, identical input text SHALL produce
+- **NFR-1** For a fixed voice version, identical input text SHALL produce
   byte-identical audio output across repeated runs on the same machine.
-- **NFR-2** For a fixed format version, identical input text SHALL produce
+- **NFR-2** For a fixed voice version, identical input text SHALL produce
   byte-identical audio output across the **CI-verified platforms (macOS and Linux)**.
   The math is designed to be bit-exact on other platforms (incl. Windows), but such
   platforms are NOT guaranteed until added to the golden-hash CI matrix (NFR-17).
@@ -272,11 +286,11 @@
   baseline (FR-11), not `model2vec.encode()`; the property asserted is _relative_
   similarity ordering, which the model2vec-derived PCA-space pool preserves.
 - **NFR-16** Every output, regardless of input, SHALL remain within the fixed droid
-  parameter space, preserving a consistent BB-8-family identity. `FORMAT_V1` achieves
-  this by varying only the four bounded semantic axes; `FORMAT_V2` MAY additionally vary
-  deterministic, bounded phrase, affect, complexity, and archetype channels; `FORMAT_V3`
+  parameter space, preserving a consistent BB-8-family identity. `VOICE_V1` achieves
+  this by varying only the four bounded semantic axes; `VOICE_V2` MAY additionally vary
+  deterministic, bounded phrase, affect, complexity, and archetype channels; `VOICE_V3`
   MAY additionally smooth connected phrase rendering without changing the semantic
-  mapping core.
+  mapping core; `VOICE_V4` MAY additionally smooth repeated connected onsets.
 
 ### 2.5 Testing
 

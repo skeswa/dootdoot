@@ -1,6 +1,6 @@
 # Cross-platform Determinism
 
-The active format contract is verified on the platforms covered by the CI matrix: Linux
+The active voice contract is verified on the platforms covered by the CI matrix: Linux
 (`ubuntu-latest`) and macOS (`macos-latest`).
 
 The CI job runs `cargo test -p dootdoot-core --test golden_wav_hashes` on both

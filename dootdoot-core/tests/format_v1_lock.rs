@@ -1,6 +1,6 @@
-//! `FORMAT_V1` freeze contract tests.
+//! `VOICE_V1` freeze and `format_v1.bin` artifact contract tests.
 
-use dootdoot_core::{FORMAT_V1, FORMAT_VERSION_NUMBER, embedded_format_v1};
+use dootdoot_core::{FORMAT_ARTIFACT_V1, FORMAT_VERSION_NUMBER, VOICE_V1, embedded_format_v1};
 
 const FORMAT_DOC: &str = include_str!("../../docs/reference/format_v1.md");
 
@@ -8,13 +8,13 @@ const FORMAT_DOC: &str = include_str!("../../docs/reference/format_v1.md");
 fn format_v1_identifier_and_documentation_are_locked() {
     let format = embedded_format_v1().expect("embedded format should parse");
 
-    assert_eq!(FORMAT_V1, "FORMAT_V1");
+    assert_eq!(VOICE_V1, "VOICE_V1");
     assert_eq!(FORMAT_VERSION_NUMBER, 1);
-    assert_eq!(format.format_id(), FORMAT_V1);
+    assert_eq!(format.artifact_id(), FORMAT_ARTIFACT_V1);
 
     for expected in [
-        "`FORMAT_V1` is locked",
-        "FORMAT_V2",
+        "`VOICE_V1` is locked",
+        "VOICE_V2",
         "voice tuning accepted",
         "squash finalized",
         "learnability spread validated",

@@ -1,4 +1,4 @@
-//! `FORMAT_V1` squash finalization tests.
+//! `VOICE_V1` squash finalization tests.
 
 use dootdoot_core::{FormatSquashFunction, embedded_format_v1};
 
@@ -11,7 +11,7 @@ fn format_v1_squash_is_finalized_without_artifact_regeneration() {
     assert_eq!(format.squash_function(), FormatSquashFunction::TanhZScore);
 
     for expected in [
-        "Finalized for FORMAT_V1",
+        "Finalized for VOICE_V1",
         "tanh z-score",
         "T-52",
         "No artifact regeneration",

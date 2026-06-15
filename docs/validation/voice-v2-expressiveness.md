@@ -1,19 +1,19 @@
-# FORMAT_V2 expressiveness acceptance
+# VOICE_V2 expressiveness acceptance
 
-Status: **Accepted for FORMAT_V2**.
+Status: **Accepted for VOICE_V2**.
 
-`FORMAT_V2` freezes the deterministic phrase, affect, complexity, and archetype
+`VOICE_V2` freezes the deterministic phrase, affect, complexity, and archetype
 performance channels documented in
-[`reference/format_v2_scope.md`](../reference/format_v2_scope.md). The four semantic axes
+[`reference/voice_v2_scope.md`](../reference/voice_v2_scope.md). The four semantic axes
 remain the learnable core; the new channels only shape bounded performance around those
 axes.
 
-`FORMAT_V3` supersedes V2 as the active contract by smoothing connected phrase rendering;
-V2 remains the frozen expressiveness checkpoint.
+`VOICE_V3` superseded V2 by smoothing connected phrase rendering, and `VOICE_V4` is the
+active voice contract. V2 remains the frozen expressiveness checkpoint.
 
 ## Checks
 
-- `dootdoot --version` reports `dootdoot FORMAT_V2`.
+- `dootdoot --version` reports `dootdoot VOICE_V2`.
 - `scripts/bb8-metrics /Users/skeswa/repos/anddav87/bb8-sounds target/bb8-metrics-v2`
   renders the short BB-8 reference corpus and the contextual clips under `bb8-clips/`.
 - The contextual metrics report is written to `target/bb8-metrics-v2/contextual/` after

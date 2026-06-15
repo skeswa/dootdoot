@@ -1,4 +1,4 @@
-//! `FORMAT_V2` complexity scalar tests.
+//! `VOICE_V2` complexity scalar tests.
 
 use dootdoot_core::analyze_complexity_for_text;
 

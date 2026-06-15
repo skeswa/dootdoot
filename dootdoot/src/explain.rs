@@ -15,7 +15,7 @@ pub fn explain_table_for_empty_chirp() -> String {
 ///
 /// # Errors
 ///
-/// Returns an error if text cannot be tokenized or mapped with `FORMAT_V1`.
+/// Returns an error if text cannot be tokenized or mapped with `VOICE_V1`.
 pub fn explain_table_for_text(text: &str) -> Result<String, EngineError> {
     Ok(format_explain_rows(&explain_rows_for_text(text)?))
 }

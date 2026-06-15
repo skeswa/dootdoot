@@ -1,4 +1,4 @@
-//! `FORMAT_V2` gesture-archetype selection tests.
+//! `VOICE_V2` gesture-archetype selection tests.
 
 use dootdoot_core::{GestureArchetype, plan_gesture_archetypes, sequence_events_for_text};
 

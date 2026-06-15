@@ -1,6 +1,6 @@
 # Squash Function
 
-`FORMAT_V1` uses a tanh z-score squash for projected PCA values.
+`VOICE_V1` uses a tanh z-score squash for projected PCA values.
 
 For each retained PCA axis, `xtask` projects every token embedding, then records the
 population mean and population standard deviation of those projected values. Runtime code
@@ -13,8 +13,8 @@ outliers without a hard percentile cliff.
 
 ## T-52 validation
 
-**Finalized for FORMAT_V1.** After the integrated voice tuning pass, the tanh z-score
+**Finalized for VOICE_V1.** After the integrated voice tuning pass, the tanh z-score
 squash still lands the semantic axes inside the intended pitch/vowel/contour/warble
 ranges without making common tokens feel pinned to the extremes. No artifact regeneration
 was needed: the squash function and frozen header statistics from the committed
-`assets/format_v1.bin` remain the FORMAT_V1 contract.
+`assets/format_v1.bin` remain the VOICE_V1 contract.

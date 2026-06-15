@@ -1,4 +1,4 @@
-//! Deterministic `FORMAT_V2` lexical complexity analysis.
+//! Deterministic `VOICE_V2` lexical complexity analysis.
 
 use crate::{TokenizedToken, TokenizerError, embedded_tokenizer};
 

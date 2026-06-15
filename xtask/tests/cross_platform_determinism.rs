@@ -21,7 +21,7 @@ fn ci_verifies_golden_hashes_on_linux_and_macos() {
 #[test]
 fn docs_record_verified_platform_scope() {
     for expected in [
-        "active format contract",
+        "active voice contract",
         "macOS",
         "Linux",
         "golden_wav_hashes",

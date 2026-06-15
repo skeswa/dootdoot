@@ -1,6 +1,6 @@
 # Usage Guide
 
-`dootdoot` turns text into deterministic droid sound. The same text and format version
+`dootdoot` turns text into deterministic droid sound. The same text and voice version
 produce the same canonical 44.1 kHz, 16-bit, mono buffer used for both playback and WAV
 output.
 
@@ -70,12 +70,12 @@ punctuation and word boundaries affect timing.
 
 ## Version Contract
 
-`dootdoot --version` surfaces the active format identifier. The current binary reports
-`dootdoot FORMAT_V3`. `FORMAT_V1` is still the locked v1 contract, `FORMAT_V2` is the
-locked expressiveness contract, and `FORMAT_V3` is the active phrase-continuity contract.
-Any further rendered-sample change requires a new identifier and regenerated golden WAV
-hashes.
+`dootdoot --version` surfaces the active voice identifier. The current binary reports
+`dootdoot VOICE_V4`. `VOICE_V1` is still the locked v1 contract, `VOICE_V2` is the
+locked expressiveness contract, `VOICE_V3` is the locked phrase-continuity contract, and
+`VOICE_V4` is the active repeated-onset smoothing contract. Any further rendered-sample
+change requires a new voice identifier and regenerated golden WAV hashes.
 
-The `FORMAT_V*` identifier names the rendered-output contract, not the binary layout of
-the baked semantic mapping asset. The current `FORMAT_V3` renderer still embeds the
+The `VOICE_V*` identifier names the rendered-output contract, not the binary layout of
+the baked semantic mapping asset. The current `VOICE_V4` renderer still embeds the
 locked `assets/format_v1.bin` token-to-axis table.

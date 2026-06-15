@@ -22,7 +22,7 @@ pub use playback::{PlaybackError, play_buffer, playback_samples};
 #[derive(Debug, Clone, Parser, PartialEq, Eq)]
 #[command(
     name = "dootdoot",
-    version = dootdoot_core::ACTIVE_FORMAT,
+    version = dootdoot_core::ACTIVE_VOICE,
     about = "Deterministically turns text into BB-8-style droid sound."
 )]
 pub struct Cli {

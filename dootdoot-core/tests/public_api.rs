@@ -1,18 +1,19 @@
 //! Public facade tests for dootdoot-core.
 
 use dootdoot_core::{
-    ACTIVE_FORMAT, FORMAT_V1, FORMAT_V2, FORMAT_V3, Format, KNOB_BOUNDS, KNOB_MODULATION_DEPTHS,
-    KnobBounds, KnobSet, Mapping, MappingError, Mathx, SquashedVector, Synth, TokenVector,
-    TokenizedInput, TokenizedToken, Tokenizer, TokenizerError, WavWriter, assemble_knob_sequence,
-    assemble_knobs, embedded_mapping, embedded_tokenizer, pool_sequence,
+    ACTIVE_VOICE, Format, KNOB_BOUNDS, KNOB_MODULATION_DEPTHS, KnobBounds, KnobSet, Mapping,
+    MappingError, Mathx, SquashedVector, Synth, TokenVector, TokenizedInput, TokenizedToken,
+    Tokenizer, TokenizerError, VOICE_V1, VOICE_V2, VOICE_V3, VOICE_V4, WavWriter,
+    assemble_knob_sequence, assemble_knobs, embedded_mapping, embedded_tokenizer, pool_sequence,
 };
 
 #[test]
 fn public_api_exports_core_stubs() {
-    assert_eq!(FORMAT_V1, "FORMAT_V1");
-    assert_eq!(FORMAT_V2, "FORMAT_V2");
-    assert_eq!(FORMAT_V3, "FORMAT_V3");
-    assert_eq!(ACTIVE_FORMAT, FORMAT_V3);
+    assert_eq!(VOICE_V1, "VOICE_V1");
+    assert_eq!(VOICE_V2, "VOICE_V2");
+    assert_eq!(VOICE_V3, "VOICE_V3");
+    assert_eq!(VOICE_V4, "VOICE_V4");
+    assert_eq!(ACTIVE_VOICE, VOICE_V4);
     let embedded: fn() -> Result<Tokenizer, TokenizerError> = embedded_tokenizer;
     let mapping: fn() -> Result<Mapping<'static>, MappingError> = embedded_mapping;
     let pool: fn(&[TokenVector]) -> Result<dootdoot_core::PooledVector, MappingError> =

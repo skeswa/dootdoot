@@ -4,7 +4,7 @@ use std::{path::PathBuf, process::Command};
 
 use clap::Parser;
 use dootdoot::Cli;
-use dootdoot_core::ACTIVE_FORMAT;
+use dootdoot_core::ACTIVE_VOICE;
 
 #[test]
 fn cli_parses_text_output_play_and_explain_flags() {
@@ -33,7 +33,7 @@ fn binary_version_surfaces_active_format() {
     let stdout = String::from_utf8(output.stdout).expect("version output is utf8");
 
     assert!(output.status.success());
-    assert!(stdout.contains(ACTIVE_FORMAT));
+    assert!(stdout.contains(ACTIVE_VOICE));
 }
 
 #[test]

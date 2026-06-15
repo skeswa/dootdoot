@@ -18,7 +18,7 @@ fn final_semantic_and_audio_spread_keep_close_words_closer() {
 #[test]
 fn learnability_validation_note_records_final_cluster_spread() {
     for expected in [
-        "Finalized for FORMAT_V1",
+        "Finalized for VOICE_V1",
         "semantic clusters",
         "cat",
         "dog",

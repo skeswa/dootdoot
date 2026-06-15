@@ -1,4 +1,4 @@
-//! `FORMAT_V2` affect analysis tests.
+//! `VOICE_V2` affect analysis tests.
 
 use dootdoot_core::analyze_affect_for_text;
 

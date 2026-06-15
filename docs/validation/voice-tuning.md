@@ -1,6 +1,6 @@
-# FORMAT_V1 voice tuning acceptance
+# VOICE_V1 voice tuning acceptance
 
-Status: **Accepted for FORMAT_V1**.
+Status: **Accepted for VOICE_V1**.
 
 This note records the integrated Phase 7 tuning decision after T-46 through T-50 landed.
 The comparison workflow is `scripts/bb8-metrics /Users/skeswa/repos/anddav87/bb8-sounds

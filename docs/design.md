@@ -21,7 +21,7 @@ intuition for the "language."
 ### 1.1 Goals
 
 1. **Determinism.** Identical input text yields identical audio output, bit-for-bit,
-   forever (subject to an explicit, versioned format contract). The design targets every
+   forever (subject to an explicit, versioned voice contract). The design targets every
    platform; the v1 _guarantee_ covers the CI-verified ones, macOS and Linux (§8.1).
 2. **Semantic similarity → sonic similarity.** Semantically similar tokens _and_
    semantically similar token sequences sound similar. This is what makes the output
@@ -117,7 +117,7 @@ semantics therefore also fixes the tokenizer choice.
   explicit **drop filter** after tokenization, by token ID, against a fixed set:
   **`[PAD]`, `[CLS]`, `[SEP]`, `[MASK]`** (resolved from the embedded `tokenizer.json`'s
   registered specials). Filtered tokens are removed entirely — not voiced, not counted as
-  syllables — exactly like prosodic punctuation (§6.4). The set is frozen in `FORMAT_V1`
+  syllables — exactly like prosodic punctuation (§6.4). The set is frozen in `VOICE_V1`
   (§8.2).
 - **`[UNK]` is the deliberate exception** — it is **not** in the filter. WordPiece falls
   back to `[UNK]` for unrepresentable input; it has its own embedding, so it produces a
@@ -189,7 +189,7 @@ what lets us pool _after_ baking the projected vectors instead of shipping the 2
 table. The identity is exact **before quantization**; we store the projected vectors as
 int16, which introduces a small, bounded rounding error, so the precise runtime guarantee
 is: _the runtime pools the frozen quantized approximation, deterministically._ The
-quantization is part of the `FORMAT_V1` contract (§8.2), so the approximation is identical
+quantization is part of the `VOICE_V1` contract (§8.2), so the approximation is identical
 on every run and on every verified platform (§8.1).
 
 **The sequence baseline is dootdoot's own pooling, not `model2vec.encode()`.** The
@@ -218,7 +218,7 @@ pooling, which divides the weight-scaled sum by token count), _not_ `Σ_i w_i`. 
 deliberate, documented divergence: the baseline is a _dootdoot-specific, model2vec-derived_
 PCA-space pool. It preserves coarse semantic continuity for the "mood" baseline (goal 2,
 sequence half; verified by NFR-15) while keeping the runtime artifact tiny and tensor-free.
-The exact rule (denominator, the skipped L2 step) is part of `FORMAT_V1` (§8.2).
+The exact rule (denominator, the skipped L2 step) is part of `VOICE_V1` (§8.2).
 
 **Quantization scheme (deterministic, lossy by a bounded amount).** The scheme is
 **symmetric, signed, zero-point-free** — no min/max offset — so that the linear pooling of
@@ -241,7 +241,7 @@ non-negative, so in practice only `[0, 32767]` is populated; the rule is identic
 special unsigned encoding) to keep one code path. `s_w = max_t w_t / 32767`.
 
 All five scales (`s_1..s_4`, `s_w`) live in the file header as f32 and are part of
-`FORMAT_V1` (§8.2). The nonlinear "squash" (§5.3) is **never baked**; it is applied at
+`VOICE_V1` (§8.2). The nonlinear "squash" (§5.3) is **never baked**; it is applied at
 runtime after pooling (for the baseline) and after per-token lookup (for gestures), so it
 operates on the dequantized values and the linearity argument holds up to int16 rounding.
 
@@ -261,7 +261,7 @@ hash for provenance.
 
 **Source manifest (reproducible regeneration).** A mutable model _name_ is not a
 reproducible input: `minishlab/potion-base-8M` could be re-uploaded and silently change
-what `xtask` ingests. The `FORMAT_V1` model hash catches such drift _after_ generation
+what `xtask` ingests. The `VOICE_V1` model hash catches such drift _after_ generation
 (the baked output would no longer match the committed artifact), but it does nothing to
 make regeneration itself reproducible. So the source is pinned by a committed
 **`assets/source_manifest.toml`**, the immutable contract for what `xtask` consumes:
@@ -278,7 +278,7 @@ or writing anything** (matching revision, byte-hashes, and the structural fields
 aborts on any mismatch. This makes "regenerate the asset" deterministic and reviewable:
 two runs from the same manifest produce byte-identical `format_v1.bin`. The manifest is
 committed alongside the assets (§9.3); the model hash it pins is the same one recorded in
-`FORMAT_V1` (§8.2), so the build input and the runtime contract cannot silently diverge.
+`VOICE_V1` (§8.2), so the build input and the runtime contract cannot silently diverge.
 
 See §9 for the resulting runtime/build-time split.
 
@@ -339,10 +339,10 @@ The function (tanh vs percentile-clamp) determines which statistics the header m
 carry, so it cannot be deferred past the point where `format_v1.bin` is produced. The
 build pipeline reflects this: the squash function is selected when squash stats are
 computed (plan task T-15), and any later adjustment during voice tuning (T-46)
-**regenerates the artifact** before the `FORMAT_V1` freeze (T-48). Because the squash is
+**regenerates the artifact** before the `VOICE_V1` freeze (T-48). Because the squash is
 applied at runtime and is _not_ baked into the per-token vectors, a change touches only
 the header statistics, so regeneration is cheap. Whatever is frozen becomes part of
-`FORMAT_V1` (§8.2).
+`VOICE_V1` (§8.2).
 
 Squash is applied in two places, consistently, on the dequantized values:
 
@@ -373,16 +373,16 @@ knob_{i,k} = clamp( B_k + α_k · (T_{i,k} − B_k), lo_k, hi_k )
 - The per-token knob is treated as an **absolute** value; its contribution is the
   **delta** `(T_{i,k} − B_k)`, scaled by a fixed per-axis **modulation depth** `α_k`.
   `α_k = 0` yields a flat baseline-only reading; `α_k = 1` yields the pure per-token knob.
-- `α_k` is a frozen `FORMAT_V1` constant (one per axis). For `α_k ∈ [0, 1]` the result is
+- `α_k` is a frozen `VOICE_V1` constant (one per axis). For `α_k ∈ [0, 1]` the result is
   a convex combination of two in-range values and the `clamp` is a no-op; the `clamp` is
   retained so that any `α_k > 1` (gesture exaggeration) still cannot escape `[lo_k, hi_k]`,
   preserving the bounded droid parameter space (NFR-16) unconditionally.
 - A single-token utterance has `B_k = T_{0,k}`, so `knob = B_k` regardless of `α_k`.
 
 The `α_k` vector, the per-axis `[lo_k, hi_k]` bounds, and the final clamp are all part of
-`FORMAT_V1` (§8.2).
+`VOICE_V1` (§8.2).
 
-`FORMAT_V1` freezes `α = [0.85, 0.90, 1.10, 1.20]` in pitch/vowel/contour/warble order.
+`VOICE_V1` freezes `α = [0.85, 0.90, 1.10, 1.20]` in pitch/vowel/contour/warble order.
 All four squashed knob axes use bounds `[-1.0, 1.0]`.
 
 ---
@@ -460,7 +460,7 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
 ### 6.4 Decision: temporal / rhythmic structure
 
 - **One token = one syllable** — a single continuous formant-glide warble (not a
-  cluster of discrete beeps). `FORMAT_V1` ships a single **fixed** base duration
+  cluster of discrete beeps). `VOICE_V1` ships a single **fixed** base duration
   (~170 ms) as a V1 implementation choice for a regular, learnable rhythm — but this is
   **not** a hard requirement (the original FR-20 fixing it has been removed). Duration is
   _not_ a fifth **semantic** axis (it does not encode token meaning), yet deterministic,
@@ -471,10 +471,10 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
   word (detected via WordPiece `##` continuation marking) are connected by portamento
   with **no silence**, so a multi-token word sounds like one flowing multi-syllable
   utterance (`playing` = two glided syllables). Word length becomes audible.
-- **Between words, a short pause** (`FORMAT_V1`: ~110 ms) — the burst-like BB-8 cadence;
+- **Between words, a short pause** (`VOICE_V1`: ~110 ms) — the burst-like BB-8 cadence;
   lets the ear segment words. The pause need not be a single fixed constant (revised
   FR-22): deterministic variation by boundary strength (word vs clause vs sentence) is
-  permitted; `FORMAT_V1` uses one fixed value. `FORMAT_V3` keeps the deterministic word
+  permitted; `VOICE_V1` uses one fixed value. `VOICE_V3` keeps the deterministic word
   boundary duration but fills it with a quiet pitch/formant transition bridge so normal
   phrases flow instead of becoming hard-separated token bursts.
 - **Punctuation is control-only, not voiced.** A fixed set of prosodic punctuation
@@ -503,7 +503,7 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
 - **Utterance bounds** — short leading/trailing silence padding so files top-and-tail
   cleanly.
 
-**FORMAT_V1 synthesis constants.** Initial frozen values:
+**VOICE_V1 synthesis constants.** Initial frozen values:
 
 - base syllable = 170 ms (7,497 samples at 44.1 kHz); word pause = 110 ms; medium
   punctuation pause = 150 ms; long punctuation pause = 240 ms; leading/trailing silence =
@@ -528,7 +528,7 @@ Net effect: short words = quick single warbles; long words = flowing multi-sylla
 warbles; sentences = phrased bursts with intonation — recognizable "droid speech,"
 with the semantic _timbre_ (pitch/vowel/swoop/warble) as the learnable content.
 
-**FORMAT_V3 phrase-continuity smoothing.** V3 keeps the V2 phrase, affect, complexity,
+**VOICE_V3 phrase-continuity smoothing.** V3 keeps the V2 phrase, affect, complexity,
 and archetype channels, then changes how connected syllables are rendered:
 
 - syllables in the same connected phrase share oscillator phase, formant filter state,
@@ -542,9 +542,22 @@ and archetype channels, then changes how connected syllables are rendered:
 - the active sustain level is 34%, with connected edges held above the normal release
   floor inside connected phrases.
 
+The V3 acceptance note is
+[`voice-v3-smoothing.md`](./validation/voice-v3-smoothing.md). The committed golden WAV
+hashes are regenerated under `VOICE_V3`.
+
+**VOICE_V4 repeated-onset smoothing.** V4 keeps the V3 continuous phrase state, then
+removes the remaining connected-token onset roughness heard in repeated subword phrases:
+
+- connected syllables do not replay the high-frequency attack transient;
+- connected pitch and vowel openings blend from the previous rendered state rather than
+  jumping to the next token's reset micro-gesture;
+- connected envelope starts ramp through the early body instead of replaying the full
+  attack peak.
+
 The active acceptance note is
-[`format-v3-smoothing.md`](./validation/format-v3-smoothing.md). The committed golden WAV
-hashes are regenerated under `FORMAT_V3`.
+[`voice-v4-onset-smoothing.md`](./validation/voice-v4-onset-smoothing.md). The committed
+golden WAV hashes are regenerated under `VOICE_V4`.
 
 ---
 
@@ -607,7 +620,7 @@ Built with `clap` (derive).
 not derived from the (absent) text, so it stays deterministic. _(Chosen over erroring
 or silence for being playful and on-theme.)_
 
-**Standard:** `--version` (surfaces the active format identifier), `--help`; tasteful exit
+**Standard:** `--version` (surfaces the active voice identifier), `--help`; tasteful exit
 codes (0 ok, non-zero on error such as absurd-length input).
 
 **Deliberately omitted in v1:** `--seed` (meaningless — determinism comes from text +
@@ -649,8 +662,8 @@ macOS + Linux.
 ### 8.2 Decision: the versioned FORMAT contract
 
 Everything that can affect a single output sample is bundled under one identifier,
-**`FORMAT_V1`**. If a change can move one sample, it is in this list — and changing it
-requires a version bump (below). **`FORMAT_V1` includes:**
+**`VOICE_V1`**. If a change can move one sample, it is in this list — and changing it
+requires a version bump (below). **`VOICE_V1` includes:**
 
 _Mapping inputs_
 
@@ -687,19 +700,19 @@ _Serialization_
 - the **WAV serialization choices** (44.1 kHz, 16-bit signed PCM, mono, and the exact
   header bytes) — these define the file the golden hashes are taken over.
 
-The active format is surfaced by `--version`. **Any change that alters a single output sample
-bumps the identifier** (`V1` → `V2` → `V3`, etc.). This gives users the guarantee: _same text + same FORMAT version =
+The active voice is surfaced by `--version`. **Any change that alters a single output sample
+bumps the identifier** (`VOICE_V1` → `VOICE_V2` → `VOICE_V3` → `VOICE_V4`, etc.). This gives users the guarantee: _same text + same voice version =
 same sound, forever, on every verified platform (§8.1)_, while letting the voice evolve
 deliberately.
 
-The `FORMAT_V*` identifier is the rendered-output contract, not necessarily the on-disk
-layout version of the baked mapping artifact. `FORMAT_V3` still uses the locked
-`assets/format_v1.bin` token-to-axis table; V3 exists because phrase rendering changed
-the generated samples.
+The `VOICE_V*` identifier is the rendered-output contract, not the on-disk layout version
+of the baked mapping artifact. `VOICE_V4` still uses the locked `assets/format_v1.bin`
+token-to-axis table; V4 exists because connected-onset rendering changed the generated
+samples.
 
-### 8.3 Decision: `FORMAT_V2` broadens performance channels, not the semantic core
+### 8.3 Decision: `VOICE_V2` broadens performance channels, not the semantic core
 
-`FORMAT_V2` keeps the four PCA-derived semantic axes as the learnable core: pitch center,
+`VOICE_V2` keeps the four PCA-derived semantic axes as the learnable core: pitch center,
 vowel/formant position, contour/glide shape, and warble depth. New expressiveness is
 allowed only as deterministic, bounded **performance channels** around that core:
 
@@ -730,14 +743,14 @@ Where useful for learnability, `--explain` may add rows for phrase, mood, comple
 archetype decisions. These rows are still stderr-only control/performance rows; they do
 not affect output routing and are part of the versioned snapshot contract.
 
-`FORMAT_V2` is frozen by the acceptance note in
-[`docs/validation/format-v2-expressiveness.md`](validation/format-v2-expressiveness.md):
+`VOICE_V2` is frozen by the acceptance note in
+[`docs/validation/voice-v2-expressiveness.md`](validation/voice-v2-expressiveness.md):
 contextual BB-8 clips guide phrase-level listening checks, and the committed golden WAV
 hashes remain the byte-level contract.
 
-### 8.4 Decision: `FORMAT_V3` smooths connected phrase rendering
+### 8.4 Decision: `VOICE_V3` smooths connected phrase rendering
 
-`FORMAT_V3` is a sample-affecting renderer change prompted by the V2 staccato gap:
+`VOICE_V3` is a sample-affecting renderer change prompted by the V2 staccato gap:
 increased expression inside each token still left hard zero gaps and repeated
 attack/release gestures at token boundaries. V3 does not change the semantic mapping
 artifact or the V2 performance-channel decisions. It changes only connected phrase
@@ -745,9 +758,21 @@ rendering: synth state persists across connected syllables, word boundaries beco
 bridges, connected envelope edges keep a nonzero floor, and the internal envelope dip can
 no longer clamp to silence.
 
-The active CLI version string is `FORMAT_V3`. The frozen V2 contract remains documented,
-and the V3 acceptance note records the phrase-continuity check plus regenerated golden
-WAV hashes.
+The V3 CLI version string was `VOICE_V3`. The frozen V2 contract remains documented, and
+the V3 acceptance note records the phrase-continuity check plus regenerated golden WAV
+hashes.
+
+### 8.5 Decision: `VOICE_V4` smooths repeated connected onsets
+
+`VOICE_V4` is a sample-affecting renderer change prompted by repeated connected
+subwords such as `hahahahahahahahahahah`: V3 removed hard gaps, but connected syllables
+still replayed the local attack peak and reset pitch/vowel micro-gestures strongly enough
+to sound click-like. V4 keeps the V3 semantic and phrase-continuity design, but changes
+connected syllable openings so they inherit prior pitch/vowel state, skip the explicit
+attack transient, and ramp through the early body instead of firing a fresh attack peak.
+
+The active CLI version string is `VOICE_V4`. The V4 acceptance note records the repeated
+subword roughness check plus regenerated golden WAV hashes.
 
 ---
 
@@ -778,7 +803,7 @@ to build time. The resulting split:
   mapping (baked-table load + linear pooling + axis squash), synth (the §6.2 signal
   graph: control pitch model + oscillator/source → formant bank → ring-mod → envelope),
   the **owned math** module, WAV
-  serialization **to bytes / an `impl Write`**, and the `FORMAT_V1` constants. No
+  serialization **to bytes / an `impl Write`**, and the `VOICE_V1` constants. No
   filesystem or audio-device I/O (it hands back buffers/bytes; the binary performs the
   actual writes). Fully unit-testable and reusable.
 - **`dootdoot`** (binary): thin CLI shell — `clap` parsing, stdin handling, `rodio`
@@ -834,7 +859,7 @@ These do not change the architecture and are settled during implementation:
 
 - **Exact constant values** — formant frequencies and vowel locus, pitch/vowel ranges,
   glide time, warble rate, envelope shape, ring-mod frequency/mix, syllable duration,
-  pause lengths, register bias. Tuned **by ear**, then frozen into `FORMAT_V1`.
+  pause lengths, register bias. Tuned **by ear**, then frozen into `VOICE_V1`.
 - **Squash function** — tanh vs percentile-clamp. Note this is _not_ fully open-ended:
   it must be chosen when `format_v1.bin` is generated (T-15), and any later change
   regenerates the artifact before the freeze (§5.3, T-46).
@@ -848,7 +873,7 @@ These do not change the architecture and are settled during implementation:
 
 ## 12. How the design satisfies the goals (traceability)
 
-- **Determinism (goal 1):** frozen `FORMAT_V1` (§8.2) + bit-exact owned math (§8.1) +
+- **Determinism (goal 1):** frozen `VOICE_V1` (§8.2) + bit-exact owned math (§8.1) +
   buffer-as-source-of-truth (§7.1) + committed artifacts (§9.3).
 - **Semantic similarity → sonic similarity (goal 2):** model2vec semantics (§4) +
   linear PCA reduction with a dootdoot-specific PCA-space sequence pool (weight-scaled

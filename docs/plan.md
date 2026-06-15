@@ -111,7 +111,8 @@
 ## Phase 3 — Core mapping layer (`mapping`, `format`, `tokenizer`)
 
 - [x] **T-19 — `format` module: load embedded artifact.** `include_bytes!` the table;
-      parse header; expose PCA stats, squash stats, hashes, `FORMAT_V1` id.
+      parse header; expose PCA stats, squash stats, hashes, the `format_v1.bin` artifact
+      id, and voice contract ids.
       Deps: T-02, T-18 · Reqs: FR-9, FR-33, FR-38 · Est: 2h
 - [x] **T-20 — `tokenizer` wrapper.** Wrap HF `tokenizers` with embedded `tokenizer.json`;
       `add_special_tokens=false`; expose token IDs + `##` continuation flags. Apply the
@@ -191,7 +192,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 ## Phase 6 — CLI binary (`dootdoot`)
 
 - [x] **T-38 — `clap` argument model.** Positional `TEXT`, `-o/--output`, `--play`,
-      `--explain`, `--version` (shows `FORMAT_V1`), `--help`.
+      `--explain`, `--version` (shows `VOICE_V1`), `--help`.
       Deps: T-03 · Reqs: FR-1, FR-31, FR-33, FR-34 · Est: 1.5h
 - [x] **T-39 — Input resolution.** Arg vs piped stdin vs interactive TTY; empty/whitespace
       → chirp path.
@@ -268,12 +269,12 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-52 — Validate/finalize squash; regenerate artifact if changed.** Confirm the
       squash chosen at T-15 still lands tastefully after by-ear tuning; if it (or its stats)
       changes, **re-run `xtask` to regenerate `format_v1.bin`** (header stats only — baked
-      vectors are pre-squash) before the freeze. Lock into `FORMAT_V1`.
+      vectors are pre-squash) before the freeze. Lock into `VOICE_V1`.
       Deps: T-51, T-23, T-15 · Reqs: FR-12, FR-39 · Est: 1.5h
 - [x] **T-53 — Validate learnability spread.** Spot-check that distinct semantic clusters
       are audibly distinct and similar ones audibly similar; adjust axis ranges if needed.
       Deps: T-51 · Reqs: NFR-14, NFR-15, NFR-16 · Est: 2h
-- [x] **T-54 — Lock `FORMAT_V1`.** Finalize all constants/hashes; assert version surfaced
+- [x] **T-54 — Lock `VOICE_V1`.** Finalize all constants/hashes; assert version surfaced
       by `--version`; document that further output changes require `V2`.
       Deps: T-52, T-53 · Reqs: FR-38, FR-39 · Est: 1h
 
@@ -315,16 +316,16 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ---
 
-## Phase 10 — FORMAT_V2 expressiveness backlog
+## Phase 10 — VOICE_V2 expressiveness backlog
 
 > Derived from
 > [`bb8-expressiveness-gap-analysis.md`](./research/bb8-expressiveness-gap-analysis.md).
-> This is a post-`FORMAT_V1` backlog, not part of the v1 release path. The intended order
+> This is a post-`VOICE_V1` backlog, not part of the v1 release path. The intended order
 > follows the analysis: phrase prosody first, then licensing-safe affect, then complexity,
-> then gesture archetypes. Every sample-affecting task here requires `FORMAT_V2` and a new
+> then gesture archetypes. Every sample-affecting task here requires `VOICE_V2` and a new
 > golden fixture set.
 
-- [x] **T-64 — Decide FORMAT_V2 contract scope and NFR-16 broadening.** Update
+- [x] **T-64 — Decide VOICE_V2 contract scope and NFR-16 broadening.** Update
       `design.md`/`spec.md` so the v2 contract can include a fixed set of deterministic,
       bounded performance channels: semantic axes, phrase timing, affect, complexity, and
       a small archetype dimension. Keep the four semantic axes as the learnable core and
@@ -340,7 +341,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-66 — Integrate phrase prosody into sequencing and synthesis.** Apply the
       phrase plan to variable pauses, pre-boundary lengthening, phrase-level pitch offsets,
       and sparse emphasis. Update output-length estimation, input-limit tests, and
-      `FORMAT_V2` golden hashes once the constants are frozen.
+      `VOICE_V2` golden hashes once the constants are frozen.
       Deps: T-65 · Reqs: FR-20, FR-22, FR-24, FR-36, FR-37, FR-38, FR-39, NFR-16 · Est: 3h
 - [x] **T-67 — Add licensing-safe affect assets.** Bake VADER (MIT) valence and an
       owned arousal proxy from punctuation density, repeated markers, all-caps,
@@ -367,7 +368,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-71 — Render complexity as compound articulation.** Use the complexity scalar to
       choose internal sub-gesture count, articulation density, and optional deterministic
       duration scaling without changing the semantic meaning-timbre. Update synthesis,
-      output-length estimation, and golden hashes under `FORMAT_V2`.
+      output-length estimation, and golden hashes under `VOICE_V2`.
       Deps: T-70 · Reqs: FR-15, FR-20, FR-36, FR-37, FR-38, FR-39, NFR-16 · Est: 3h
 - [x] **T-72 — Define the bounded archetype palette and selection rule.** Specify the
       deterministic palette (`chatter`, `yelp`, `moan`, `stutter/burst`, `tremble`, plus
@@ -378,13 +379,13 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       moan, stutter/burst, and tremble render paths plus sparse servo/noise-tail texture.
       Keep all paths deterministic, finite, and inside the BB-8-family parameter space.
       Deps: T-72 · Reqs: FR-16, FR-17, FR-18, NFR-3, NFR-4, NFR-16 · Est: 3h
-- [x] **T-74 — Freeze FORMAT_V2 expressiveness and acceptance aids.** Extend the Phase 7
+- [x] **T-74 — Freeze VOICE_V2 expressiveness and acceptance aids.** Extend the Phase 7
       metrics workflow with contextual-clip directional checks from the expressiveness
       analysis, run by-ear acceptance, update `--version`, regenerate v2 golden WAV
       hashes, and document the final phrase/affect/complexity/archetype contract.
       Deps: T-69, T-71, T-73 · Reqs: FR-33, FR-38, FR-39, NFR-17, NFR-18, NFR-20 · Est: 3h
 
-## Phase 11 — FORMAT_V3 phrase continuity
+## Phase 11 — VOICE_V3 phrase continuity
 
 - [x] **T-75 — Smooth connected phrase rendering.** Remove hard zero holes from voiced
       phrase bodies by keeping synth state alive across connected syllables, replacing
@@ -393,6 +394,17 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       regenerating golden WAV hashes, and documenting the V3 acceptance check.
       Deps: T-74 · Reqs: FR-33, FR-39, FR-55, FR-56, FR-57, FR-58, FR-59, NFR-16, NFR-17,
       NFR-18 · Est: 3h
+
+## Phase 12 — VOICE_V4 repeated-onset smoothing
+
+- [x] **T-76 — Smooth repeated connected onsets.** Reduce click-like inflections in
+      repeated connected subword sequences by suppressing fresh attack transients on
+      connected syllables, blending connected pitch/vowel openings from prior rendered
+      state, replacing connected-start attack peaks with early-body ramps, updating
+      `--version`, regenerating golden WAV hashes, and documenting the V4 acceptance
+      check.
+      Deps: T-75 · Reqs: FR-33, FR-39, FR-60, FR-61, FR-62, FR-63, FR-64, NFR-16,
+      NFR-17, NFR-18 · Est: 2h
 
 ---
 
@@ -417,7 +429,7 @@ converge at T-33. Tuning now runs through the BB-8 comparison/tuning breakdown
 (T-45–T-50) before the final by-ear T-51 acceptance pass. Tuning must precede freezing
 (T-54), which gates all golden-file tests (Phase 8).
 
-The `FORMAT_V2` expressiveness branch is intentionally separate from v1 packaging:
+The `VOICE_V2` expressiveness branch is intentionally separate from v1 packaging:
 
 ```mermaid
 flowchart LR
@@ -425,14 +437,16 @@ flowchart LR
     T66 --> T67[T-67 safe affect assets] --> T68[T-68 mood pooling] --> T69[T-69 affect prosody]
     T69 --> T70[T-70 complexity scalar] --> T71[T-71 compound articulation]
     T71 --> T72[T-72 archetype palette] --> T73[T-73 archetype renderers]
-    T69 --> T74[T-74 FORMAT_V2 freeze]
+    T69 --> T74[T-74 VOICE_V2 freeze]
     T71 --> T74
     T73 --> T74
 ```
 
-The `FORMAT_V3` smoothing branch follows the frozen V2 expressiveness contract:
+The `VOICE_V3` smoothing branch follows the frozen V2 expressiveness contract, and
+`VOICE_V4` follows the connected phrase-continuity work:
 
 ```mermaid
 flowchart LR
-    T74[T-74 FORMAT_V2 freeze] --> T75[T-75 FORMAT_V3 phrase continuity]
+    T74[T-74 VOICE_V2 freeze] --> T75[T-75 VOICE_V3 phrase continuity]
+    T75 --> T76[T-76 VOICE_V4 repeated-onset smoothing]
 ```

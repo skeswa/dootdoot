@@ -34,7 +34,7 @@ The record count must equal the header vocab size.
 
 ## Freeze status
 
-`FORMAT_V1` is locked. The Phase 7 voice tuning accepted the final sample-affecting
+`VOICE_V1` is locked. The Phase 7 voice tuning accepted the final sample-affecting
 synthesis constants, T-52 squash finalized the tanh z-score mapping without regenerating
 the artifact, and T-53 learnability spread validated the final semantic/audio cluster
 separation.
@@ -42,4 +42,4 @@ separation.
 Any future change that alters one or more rendered output samples requires a new format
 identifier plus regenerated golden fixtures.
 
-`FORMAT_V2` was the first post-V1 sample-affecting contract bump.
+`VOICE_V2` was the first post-V1 sample-affecting contract bump.

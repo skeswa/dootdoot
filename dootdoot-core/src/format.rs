@@ -1,18 +1,24 @@
-//! Format contract identifiers for dootdoot outputs.
+//! Voice contract identifiers and baked mapping artifact layout constants.
 
 use thiserror::Error;
 
 /// Identifies the first frozen sample-affecting output contract.
-pub const FORMAT_V1: &str = "FORMAT_V1";
+pub const VOICE_V1: &str = "VOICE_V1";
 
 /// Identifies the second frozen sample-affecting output contract.
-pub const FORMAT_V2: &str = "FORMAT_V2";
+pub const VOICE_V2: &str = "VOICE_V2";
 
 /// Identifies the current phrase-continuous output contract.
-pub const FORMAT_V3: &str = "FORMAT_V3";
+pub const VOICE_V3: &str = "VOICE_V3";
+
+/// Identifies the current repeated-onset-smoothed output contract.
+pub const VOICE_V4: &str = "VOICE_V4";
 
 /// Identifies the active sample-affecting output contract.
-pub const ACTIVE_FORMAT: &str = FORMAT_V3;
+pub const ACTIVE_VOICE: &str = VOICE_V4;
+
+/// Identifies the baked semantic mapping artifact layout.
+pub const FORMAT_ARTIFACT_V1: &str = "format_v1.bin";
 
 /// Starts every `format_v1.bin` artifact.
 pub const FORMAT_MAGIC: [u8; 8] = *b"DOOTV1\0\0";
@@ -60,7 +66,7 @@ const MODEL_HASH_OFFSET: usize =
 const TOKENIZER_HASH_OFFSET: usize = MODEL_HASH_OFFSET + FORMAT_HASH_BYTES;
 const PCA_HASH_OFFSET: usize = TOKENIZER_HASH_OFFSET + FORMAT_HASH_BYTES;
 
-/// Marks the format contract module in the public facade.
+/// Marks the format artifact module in the public facade.
 #[derive(Debug)]
 pub struct Format;
 
@@ -87,7 +93,7 @@ pub struct SquashAxisStats {
 
 #[derive(Debug, Clone, PartialEq)]
 struct FormatHeader {
-    format_id: &'static str,
+    artifact_id: &'static str,
     header_byte_len: usize,
     token_count: usize,
     axis_scales: [f32; FORMAT_AXIS_COUNT],
@@ -112,7 +118,7 @@ impl FormatArtifact<'_> {
     /// # Errors
     ///
     /// Returns an error when the artifact is truncated, has an unexpected
-    /// magic/version, declares a layout inconsistent with `FORMAT_V1`, or
+    /// magic/version, declares a layout inconsistent with `format_v1.bin`, or
     /// contains invalid numeric fields.
     pub fn parse(bytes: &[u8]) -> Result<FormatArtifact<'_>, FormatError> {
         let header = parse_header(bytes)?;
@@ -138,9 +144,9 @@ impl FormatArtifact<'_> {
         })
     }
 
-    /// Returns the string identifier for this format contract.
-    pub fn format_id(&self) -> &'static str {
-        self.header.format_id
+    /// Returns the string identifier for this artifact layout.
+    pub fn artifact_id(&self) -> &'static str {
+        self.header.artifact_id
     }
 
     /// Returns the header byte length.
@@ -215,7 +221,7 @@ impl FormatError {
     }
 }
 
-/// Parses the embedded `FORMAT_V1` artifact.
+/// Parses the embedded `format_v1.bin` artifact.
 ///
 /// # Errors
 ///
@@ -279,7 +285,7 @@ fn parse_header(bytes: &[u8]) -> Result<FormatHeader, FormatError> {
     ];
 
     Ok(FormatHeader {
-        format_id: FORMAT_V1,
+        artifact_id: FORMAT_ARTIFACT_V1,
         header_byte_len,
         token_count: u32_to_usize(read_u32(bytes, TOKEN_COUNT_OFFSET)?)?,
         axis_scales,

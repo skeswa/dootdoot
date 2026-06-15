@@ -1,4 +1,4 @@
-//! Deterministic `FORMAT_V2` gesture-archetype selection.
+//! Deterministic `VOICE_V2` gesture-archetype selection.
 
 use crate::{ProsodicPunctuation, SequenceEvent, UtteranceMood};
 
@@ -10,7 +10,7 @@ const HIGH_AROUSAL_THRESHOLD: f64 = 0.55;
 const YELP_AROUSAL_THRESHOLD: f64 = 0.45;
 const TREMBLE_AROUSAL_THRESHOLD: f64 = 0.62;
 
-/// Gives the bounded `FORMAT_V2` gesture-archetype palette.
+/// Gives the bounded `VOICE_V2` gesture-archetype palette.
 pub const GESTURE_ARCHETYPE_PALETTE: [GestureArchetype; 5] = [
     GestureArchetype::Chatter,
     GestureArchetype::Yelp,

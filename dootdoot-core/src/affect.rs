@@ -1,4 +1,4 @@
-//! Deterministic affect analysis for `FORMAT_V2` mood planning.
+//! Deterministic affect analysis for `VOICE_V2` mood planning.
 
 use crate::{
     TokenizedToken, TokenizerError, complexity::analyze_complexity_for_tokens, embedded_tokenizer,

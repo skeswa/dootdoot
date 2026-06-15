@@ -7,7 +7,7 @@ use dootdoot_core::render_text_canonical_buffer;
 const GOLDEN_CORPUS: &str = include_str!("fixtures/golden_corpus.tsv");
 
 #[test]
-fn golden_corpus_covers_format_v1_contract_cases() {
+fn golden_corpus_covers_voice_v1_contract_cases() {
     let cases = golden_cases();
     let labels = cases.iter().map(|case| case.label).collect::<BTreeSet<_>>();
 

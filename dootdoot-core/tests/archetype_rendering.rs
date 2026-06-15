@@ -1,4 +1,4 @@
-//! `FORMAT_V2` archetype rendering integration tests.
+//! `VOICE_V2` archetype rendering integration tests.
 
 use dootdoot_core::{
     GestureArchetype, SequenceEvent, render_canonical_buffer, sequence_events_for_text,

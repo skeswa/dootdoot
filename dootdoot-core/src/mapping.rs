@@ -148,7 +148,7 @@ impl TokenVector {
         Self { axes, weight }
     }
 
-    /// Returns dequantized semantic axes in fixed `FORMAT_V1` order.
+    /// Returns dequantized semantic axes in fixed `VOICE_V1` order.
     pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
         self.axes
     }
@@ -160,7 +160,7 @@ impl TokenVector {
 }
 
 impl PooledVector {
-    /// Returns the pooled semantic axes in fixed `FORMAT_V1` order.
+    /// Returns the pooled semantic axes in fixed `VOICE_V1` order.
     pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
         self.axes
     }
@@ -172,7 +172,7 @@ impl SquashedVector {
         Self { axes }
     }
 
-    /// Returns the squashed axes in fixed `FORMAT_V1` order.
+    /// Returns the squashed axes in fixed `VOICE_V1` order.
     pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
         self.axes
     }
@@ -242,7 +242,7 @@ impl MappingError {
     }
 }
 
-/// Loads the embedded `FORMAT_V1` mapping table.
+/// Loads the embedded `VOICE_V1` mapping table.
 ///
 /// # Errors
 ///

@@ -1,4 +1,4 @@
-//! `FORMAT_V2` complexity articulation integration tests.
+//! `VOICE_V2` complexity articulation integration tests.
 
 use dootdoot_core::{
     SequenceEvent, analyze_complexity_for_text, estimate_utterance_sample_count,

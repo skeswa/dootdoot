@@ -1,4 +1,4 @@
-//! Pure phrase-prosody planning for `FORMAT_V2` performance metadata.
+//! Pure phrase-prosody planning for `VOICE_V2` performance metadata.
 
 use crate::{
     LONG_PUNCTUATION_PAUSE_SAMPLES, MEDIUM_PUNCTUATION_PAUSE_SAMPLES, ProsodicPunctuation,

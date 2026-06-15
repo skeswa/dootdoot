@@ -2,7 +2,7 @@
 
 `mathx` owns every transcendental used by the audio path. The implementation contract is
 `mathx-v1`; changing any table, coefficient, range-reduction rule, or saturation threshold
-is sample-affecting and therefore part of `FORMAT_V1`.
+is sample-affecting and therefore part of `VOICE_V1`.
 
 ## API
 

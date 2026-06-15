@@ -94,8 +94,9 @@ fn vowel_locus_and_formant_shape_are_pinned() {
 #[test]
 fn design_documents_the_frozen_synthesis_constants() {
     for expected in [
-        "FORMAT_V1 synthesis constants",
-        "FORMAT_V3 phrase-continuity smoothing",
+        "VOICE_V1 synthesis constants",
+        "VOICE_V3 phrase-continuity smoothing",
+        "VOICE_V4 repeated-onset smoothing",
         "base syllable = 170 ms",
         "word pause = 110 ms",
         "active sustain level is 34%",

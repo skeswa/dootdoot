@@ -1,6 +1,6 @@
-# FORMAT_V1 learnability spread validation
+# VOICE_V1 learnability spread validation
 
-Status: **Finalized for FORMAT_V1**.
+Status: **Finalized for VOICE_V1**.
 
 The final Phase 7 voice keeps the semantic axes audible enough for the v1 learnability
 goal. The fixed voice DNA stays consistent, but semantic clusters still occupy different

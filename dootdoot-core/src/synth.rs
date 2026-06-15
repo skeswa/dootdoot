@@ -155,6 +155,7 @@ pub const PHRASE_EMPHASIS_PITCH_SEMITONES: f64 = 0.35;
 pub const PHRASE_EMPHASIS_GAIN: f64 = 1.08;
 
 const TRANSITION_BRIDGE_GAIN: f64 = 0.180;
+const CONNECTED_PARAMETER_BLEND_SECONDS: f64 = 0.036;
 
 /// Marks the synthesis module in the public facade.
 #[derive(Debug)]
@@ -200,11 +201,20 @@ struct SyllableRenderControls {
     performance: SyllablePerformance,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct PerformanceSampleParameters {
+    pitch_hz: f64,
+    vowel_position: f64,
+    contour: f64,
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct SyllableRenderState {
     phase: f64,
     body_phase: f64,
     sparkle_phase: f64,
+    last_pitch_hz: Option<f64>,
+    last_vowel_position: Option<f64>,
     formants: FormantFilterBank,
 }
 
@@ -686,11 +696,13 @@ impl SyllableRenderState {
             phase: 0.0,
             body_phase: 0.0,
             sparkle_phase: 0.0,
+            last_pitch_hz: None,
+            last_vowel_position: None,
             formants: FormantFilterBank::new(),
         }
     }
 
-    fn advance(&mut self, pitch_hz: f64, warble_depth: f64, contour: f64) {
+    fn advance(&mut self, pitch_hz: f64, vowel_position: f64, warble_depth: f64, contour: f64) {
         self.phase = wrap_phase(self.phase + (pitch_hz / f64::from(SYNTH_SAMPLE_RATE_HZ)));
         self.body_phase = wrap_phase(
             self.body_phase + (body_layer_frequency_hz(pitch_hz) / f64::from(SYNTH_SAMPLE_RATE_HZ)),
@@ -700,6 +712,8 @@ impl SyllableRenderState {
                 + (upper_mid_sparkle_frequency_hz(warble_depth, contour)
                     / f64::from(SYNTH_SAMPLE_RATE_HZ)),
         );
+        self.last_pitch_hz = Some(pitch_hz);
+        self.last_vowel_position = Some(vowel_position);
     }
 }
 
@@ -798,7 +812,7 @@ pub(crate) fn render_transition_bridge(
             elapsed_seconds,
         );
 
-        state.advance(pitch_hz, warble_depth, contour);
+        state.advance(pitch_hz, vowel_position, warble_depth, contour);
         samples.push(sample);
     }
 }
@@ -809,6 +823,61 @@ fn render_performance_sample(
     state: &mut SyllableRenderState,
 ) -> f64 {
     let elapsed_seconds = f64::from(sample_index) / f64::from(SYNTH_SAMPLE_RATE_HZ);
+    let parameters = performance_sample_parameters(controls, state, elapsed_seconds);
+    let source = source_oscillator_sample(state.phase, parameters.pitch_hz);
+    let voiced = state
+        .formants
+        .process_sample(source, parameters.vowel_position);
+    let attack_transient = if controls.performance.starts_connected {
+        0.0
+    } else {
+        attack_transient_sample(elapsed_seconds, parameters.contour)
+    };
+    let layered = voiced
+        + body_layer_sample(state.body_phase, parameters.vowel_position)
+        + attack_transient
+        + (controls.brightness_gain
+            * upper_mid_sparkle_sample(
+                state.sparkle_phase,
+                elapsed_seconds * controls.subgesture_density,
+                controls.warble_depth,
+            ));
+    let layered = layered
+        + archetype_texture_sample(
+            controls.performance.archetype,
+            elapsed_seconds,
+            controls.duration_seconds,
+        );
+    let layered =
+        layered * archetype_amplitude_gain(controls.performance.archetype, elapsed_seconds);
+    let layered = if controls.performance.emphasized {
+        layered * PHRASE_EMPHASIS_GAIN
+    } else {
+        layered
+    };
+    let electronic = ring_modulate(layered, elapsed_seconds);
+
+    state.advance(
+        parameters.pitch_hz,
+        parameters.vowel_position,
+        controls.warble_depth,
+        parameters.contour,
+    );
+
+    apply_connected_amplitude_envelope(
+        electronic,
+        elapsed_seconds,
+        controls.duration_seconds,
+        controls.performance.starts_connected,
+        controls.performance.ends_connected,
+    )
+}
+
+fn performance_sample_parameters(
+    controls: SyllableRenderControls,
+    state: &SyllableRenderState,
+    elapsed_seconds: f64,
+) -> PerformanceSampleParameters {
     let articulation = complexity_articulation_offset(
         controls.performance.complexity,
         controls.subgesture_count,
@@ -861,41 +930,45 @@ fn render_performance_sample(
         elapsed_seconds,
         controls.duration_seconds,
     );
-    let source = source_oscillator_sample(state.phase, pitch_hz);
-    let voiced = state.formants.process_sample(source, vowel_position);
-    let layered = voiced
-        + body_layer_sample(state.body_phase, vowel_position)
-        + attack_transient_sample(elapsed_seconds, contour)
-        + (controls.brightness_gain
-            * upper_mid_sparkle_sample(
-                state.sparkle_phase,
-                elapsed_seconds * controls.subgesture_density,
-                controls.warble_depth,
-            ));
-    let layered = layered
-        + archetype_texture_sample(
-            controls.performance.archetype,
+
+    PerformanceSampleParameters {
+        pitch_hz: connected_parameter_value(
+            pitch_hz,
+            state.last_pitch_hz,
             elapsed_seconds,
-            controls.duration_seconds,
-        );
-    let layered =
-        layered * archetype_amplitude_gain(controls.performance.archetype, elapsed_seconds);
-    let layered = if controls.performance.emphasized {
-        layered * PHRASE_EMPHASIS_GAIN
-    } else {
-        layered
+            controls.performance.starts_connected,
+        ),
+        vowel_position: connected_parameter_value(
+            vowel_position,
+            state.last_vowel_position,
+            elapsed_seconds,
+            controls.performance.starts_connected,
+        ),
+        contour,
+    }
+}
+
+fn connected_parameter_value(
+    current: f64,
+    previous: Option<f64>,
+    elapsed_seconds: f64,
+    starts_connected: bool,
+) -> f64 {
+    let Some(previous) = previous else {
+        return current;
     };
-    let electronic = ring_modulate(layered, elapsed_seconds);
 
-    state.advance(pitch_hz, controls.warble_depth, contour);
+    if !starts_connected
+        || !elapsed_seconds.is_finite()
+        || elapsed_seconds >= CONNECTED_PARAMETER_BLEND_SECONDS
+    {
+        return current;
+    }
 
-    apply_connected_amplitude_envelope(
-        electronic,
-        elapsed_seconds,
-        controls.duration_seconds,
-        controls.performance.starts_connected,
-        controls.performance.ends_connected,
-    )
+    let linear = (elapsed_seconds / CONNECTED_PARAMETER_BLEND_SECONDS).clamp(0.0, 1.0);
+    let progress = linear * linear * (3.0 - (2.0 * linear));
+
+    previous + ((current - previous) * progress)
 }
 
 fn apply_connected_amplitude_envelope(
@@ -927,7 +1000,10 @@ fn connected_amplitude_envelope(
         .max(ENVELOPE_ATTACK_SECONDS + ENVELOPE_DECAY_SECONDS);
 
     if starts_connected && elapsed_seconds <= attack_connection_end {
-        return base.max(connection_floor);
+        let target = amplitude_envelope(attack_connection_end, duration_seconds);
+        let progress = smoothstep(elapsed_seconds / attack_connection_end);
+
+        return connection_floor + ((target - connection_floor) * progress);
     }
 
     if ends_connected && elapsed_seconds >= release_start {
@@ -1093,6 +1169,12 @@ fn bridge_progress(sample_index: u32, duration_samples: u32) -> f64 {
     let linear = (f64::from(sample_index) / denominator).clamp(0.0, 1.0);
 
     linear * linear * (3.0 - (2.0 * linear))
+}
+
+fn smoothstep(progress: f64) -> f64 {
+    let progress = progress.clamp(0.0, 1.0);
+
+    progress * progress * (3.0 - (2.0 * progress))
 }
 
 fn apply_internal_pitch_swoop_hz_for_duration(

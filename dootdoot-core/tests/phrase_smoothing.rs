@@ -1,6 +1,9 @@
 //! Phrase-continuity regression tests.
 
-use dootdoot_core::{SYNTH_SAMPLE_RATE_HZ, render_text_canonical_buffer};
+use dootdoot_core::{
+    LEADING_SILENCE_SAMPLES, SYNTH_SAMPLE_RATE_HZ, SequenceEvent, TRAILING_SILENCE_SAMPLES,
+    estimate_utterance_sample_count, render_text_canonical_buffer, sequence_events_for_text,
+};
 
 #[test]
 fn excited_phrase_has_no_hard_zero_holes_inside_the_voiced_body() {
@@ -26,6 +29,47 @@ fn excited_phrase_renders_as_phrase_level_active_islands() {
     assert!(
         islands <= 6,
         "excited phrase rendered as {islands} short active islands",
+    );
+}
+
+#[test]
+fn repeated_connected_subwords_do_not_fire_hard_onsets() {
+    let text = "hahahahahahahahahahah";
+    let buffer = render_text_canonical_buffer(text).expect("phrase should render");
+    let events = sequence_events_for_text(text).expect("phrase should sequence");
+    let boundaries = connected_syllable_starts(&events);
+
+    assert!(
+        boundaries.len() >= 8,
+        "repeated phrase should contain many connected starts",
+    );
+
+    let duration_samples = continuous_syllable_duration_samples(&events);
+    let leading = usize::try_from(LEADING_SILENCE_SAMPLES).expect("leading silence fits usize");
+    let onset_window =
+        usize::try_from((SYNTH_SAMPLE_RATE_HZ * 12) / 1_000).expect("onset window fits usize");
+    let body_offset =
+        usize::try_from((SYNTH_SAMPLE_RATE_HZ * 50) / 1_000).expect("body offset fits usize");
+    let mut roughness_ratios = Vec::new();
+
+    for syllable_index in boundaries {
+        let start = leading + (syllable_index * duration_samples);
+        let onset = &buffer[start..start + onset_window];
+        let body_start = start + body_offset;
+        let body = &buffer[body_start..body_start + onset_window];
+        let onset_roughness = derivative_rms(onset);
+        let body_roughness = derivative_rms(body);
+
+        roughness_ratios.push(onset_roughness / body_roughness.max(0.000_001));
+    }
+
+    roughness_ratios.sort_by(f64::total_cmp);
+
+    let median_ratio = roughness_ratios[roughness_ratios.len() / 2];
+
+    assert!(
+        median_ratio <= 2.40,
+        "connected starts are too click-like; median roughness ratio was {median_ratio:.2}",
     );
 }
 
@@ -143,4 +187,57 @@ fn longest_zero_run(samples: &[i16]) -> usize {
     }
 
     longest
+}
+
+fn connected_syllable_starts(events: &[SequenceEvent]) -> Vec<usize> {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            SequenceEvent::Syllable(syllable) => Some(syllable.is_continuation()),
+            SequenceEvent::Mood(_)
+            | SequenceEvent::Complexity(_)
+            | SequenceEvent::Archetype(_)
+            | SequenceEvent::Punctuation(_) => None,
+        })
+        .enumerate()
+        .filter_map(|(index, is_continuation)| is_continuation.then_some(index))
+        .collect()
+}
+
+fn continuous_syllable_duration_samples(events: &[SequenceEvent]) -> usize {
+    let syllable_count = events
+        .iter()
+        .filter(|event| matches!(event, SequenceEvent::Syllable(_)))
+        .count();
+    let leading = u64::from(LEADING_SILENCE_SAMPLES);
+    let trailing = u64::from(TRAILING_SILENCE_SAMPLES);
+    let estimated = estimate_utterance_sample_count(events);
+    let voiced_samples = estimated
+        .checked_sub(leading + trailing)
+        .expect("continuous phrase estimate includes fixed padding");
+    let syllable_count_u64 = u64::try_from(syllable_count).expect("syllable count fits u64");
+
+    assert_eq!(
+        voiced_samples % syllable_count_u64,
+        0,
+        "repeated test phrase should have uniform connected syllable durations",
+    );
+
+    usize::try_from(voiced_samples / syllable_count_u64).expect("syllable duration fits usize")
+}
+
+fn derivative_rms(samples: &[i16]) -> f64 {
+    let sum = samples
+        .windows(2)
+        .map(|window| {
+            let previous = f64::from(window[0]) / 32_768.0;
+            let next = f64::from(window[1]) / 32_768.0;
+            let delta = next - previous;
+
+            delta * delta
+        })
+        .sum::<f64>();
+    let count = u32::try_from(samples.len().saturating_sub(1)).expect("window length fits u32");
+
+    (sum / f64::from(count)).sqrt()
 }

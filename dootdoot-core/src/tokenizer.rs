@@ -44,7 +44,7 @@ impl Tokenizer {
     /// # Errors
     ///
     /// Returns an error if the committed tokenizer JSON is malformed or does
-    /// not contain the frozen special-token IDs required by `FORMAT_V1`.
+    /// not contain the frozen special-token IDs required by `VOICE_V1`.
     pub fn embedded() -> Result<Self, TokenizerError> {
         let inner = HfTokenizer::from_bytes(EMBEDDED_TOKENIZER_JSON).map_err(|error| {
             TokenizerError::new(format!("failed to load embedded tokenizer: {error}"))
@@ -73,7 +73,7 @@ impl Tokenizer {
     pub fn tokenize(&self, input: &str) -> Result<TokenizedInput, TokenizerError> {
         let encoding = self.inner.encode(input, false).map_err(|error| {
             TokenizerError::new(format!(
-                "failed to tokenize input with FORMAT_V1 tokenizer: {error}"
+                "failed to tokenize input with VOICE_V1 tokenizer: {error}"
             ))
         })?;
         let tokens = encoding
@@ -144,7 +144,7 @@ impl TokenizerError {
     }
 }
 
-/// Loads the embedded `FORMAT_V1` tokenizer.
+/// Loads the embedded `VOICE_V1` tokenizer.
 ///
 /// # Errors
 ///

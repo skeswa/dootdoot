@@ -1,6 +1,6 @@
-# `FORMAT_V2` Scope
+# `VOICE_V2` Scope
 
-`FORMAT_V2` broadens the performance contract without replacing the semantic core. The
+`VOICE_V2` broadens the performance contract without replacing the semantic core. The
 four PCA-derived knobs remain the learnable meaning layer:
 
 1. pitch center,
@@ -34,9 +34,9 @@ semantic rows remain first-class. Mood, phrase, complexity, or archetype rows ma
 added as control/performance rows, but they must go to stderr and must not change output
 routing.
 
-## Format Rule
+## Voice Rule
 
-Any V2 channel that can alter a rendered sample belongs to the format contract and
+Any V2 channel that can alter a rendered sample belongs to the voice contract and
 requires regenerated golden WAV hashes. V1 assets and constants remain locked.
 
 ## Implemented Phrase Prosody
@@ -51,7 +51,7 @@ The first V2 performance channel applies the pure phrase plan to synthesis:
 - consecutive punctuation keeps the first marker's glide/lengthening role while the
   longest single pause wins.
 
-The `FORMAT_V2` CLI version string was `FORMAT_V2`; the embedded semantic mapping
+The `VOICE_V2` CLI version string was `VOICE_V2`; the embedded semantic mapping
 artifact is still the locked `format_v1.bin` table.
 
 ## Implemented Affect Analysis
@@ -128,12 +128,12 @@ uses those rows to choose finite texture paths:
 
 ## Frozen Contract
 
-`FORMAT_V2` is frozen once the phrase, affect, complexity, and archetype channels above
+`VOICE_V2` is frozen once the phrase, affect, complexity, and archetype channels above
 are present together. The final acceptance note is
-[`validation/format-v2-expressiveness.md`](../validation/format-v2-expressiveness.md).
+[`validation/voice-v2-expressiveness.md`](../validation/voice-v2-expressiveness.md).
 The BB-8 contextual clip workflow is a directional aid for phrase-level listening checks;
-the committed golden WAV hashes remain the sample-level format contract.
+the committed golden WAV hashes remain the sample-level voice contract.
 
-`FORMAT_V3` supersedes V2 as the active CLI contract by smoothing connected phrase
-rendering. V2 remains the frozen expressiveness checkpoint; V3 keeps those performance
-channels and changes only the phrase-continuity renderer.
+`VOICE_V3` superseded V2 by smoothing connected phrase rendering. `VOICE_V4` is now the
+active CLI contract by smoothing repeated connected onsets. V2 remains the frozen
+expressiveness checkpoint; V3 and V4 keep those performance channels.
