@@ -100,3 +100,17 @@ that scalar to:
 
 The semantic four-knob meaning layer remains unchanged: complexity is a separate
 performance channel around the same token knobs.
+
+## Implemented Archetype Palette
+
+V2 archetype planning selects one bounded gesture family per voiced syllable:
+
+- `chatter`;
+- `yelp`;
+- `moan`;
+- `stutter/burst`;
+- `tremble`.
+
+The selector is pure and deterministic. It considers utterance mood, complexity scalar,
+attached punctuation, and phrase position, then emits sparse non-vocal seasoning flags
+without using randomness or hidden variation.

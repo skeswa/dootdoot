@@ -369,7 +369,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       duration scaling without changing the semantic meaning-timbre. Update synthesis,
       output-length estimation, and golden hashes under `FORMAT_V2`.
       Deps: T-70 · Reqs: FR-15, FR-20, FR-36, FR-37, FR-38, FR-39, NFR-16 · Est: 3h
-- [ ] **T-72 — Define the bounded archetype palette and selection rule.** Specify the
+- [x] **T-72 — Define the bounded archetype palette and selection rule.** Specify the
       deterministic palette (`chatter`, `yelp`, `moan`, `stutter/burst`, `tremble`, plus
       sparing non-vocal seasoning) and test that selection is a pure function of affect,
       complexity, punctuation, and phrase position rather than free variation.

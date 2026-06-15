@@ -191,6 +191,10 @@
 - **FR-51** `FORMAT_V2` synthesis SHALL map the complexity scalar to deterministic
   compound articulation by increasing bounded sub-gesture count, articulation density,
   and optional duration scaling without changing the semantic meaning-timbre axes.
+- **FR-52** `FORMAT_V2` gesture archetype selection SHALL use a fixed bounded palette
+  (`chatter`, `yelp`, `moan`, `stutter/burst`, `tremble`) plus sparse non-vocal seasoning
+  flags, and SHALL be a pure function of affect, complexity, punctuation, and phrase
+  position.
 
 ---
 

@@ -1,6 +1,7 @@
 //! Pure deterministic engine for dootdoot.
 
 mod affect;
+mod archetype;
 mod complexity;
 mod engine;
 mod format;
@@ -13,6 +14,9 @@ mod tokenizer;
 mod wav;
 
 pub use affect::{AffectAnalysis, AffectTokenScore, UtteranceMood, analyze_affect_for_text};
+pub use archetype::{
+    ArchetypeSelection, GESTURE_ARCHETYPE_PALETTE, GestureArchetype, plan_gesture_archetypes,
+};
 pub use complexity::{ComplexityAnalysis, analyze_complexity_for_text};
 pub use engine::{
     EngineError, ExplainMoodRow, ExplainPunctuationRow, ExplainRow, ExplainTokenRow,
