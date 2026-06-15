@@ -16,8 +16,5 @@ hound = "3.5.1"
 thiserror = { version = "2.0.17", default-features = false }
 tokenizers = { version = "0.21.4", default-features = false, features = ["fancy-regex"] }
 
-[dev-dependencies]
-sha2 = { version = "0.11.0", default-features = false }
-
 [lints]
 workspace = true

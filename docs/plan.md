@@ -295,7 +295,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       Deps: T-55 · Reqs: NFR-1, NFR-18 · Est: 1h
 - [x] **T-59 — `--explain` snapshot test.** Golden snapshot of the table for a fixed input.
       Deps: T-42 · Reqs: NFR-20 · Est: 1h
-- [ ] **T-60 — Cross-platform verification.** Confirm identical hashes on macOS and Linux
+- [x] **T-60 — Cross-platform verification.** Confirm identical hashes on macOS and Linux
       in CI; investigate/fix any divergence (math path).
       Deps: T-57 · Reqs: NFR-2, NFR-3, NFR-5 · Est: 2h
 
