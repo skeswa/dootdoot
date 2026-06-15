@@ -22,12 +22,12 @@ pub use asset::{
     DOOT_ASSET_SCALE_COUNT, DOOT_ASSET_SPEC_VERSION, DOOT_ASSET_SQUASH_STATS_PER_AXIS,
     DOOT_ASSET_TOKEN_RECORD_BYTES, DootAsset, DootAssetError, DootAssetHashes, DootAssetParts,
     DootAssetScales, DootAssetSpec, DootAssetSquashAxisStats, DootAssetSquashFunction, VOICE_V1,
-    VOICE_V2, VOICE_V3, VOICE_V4, VOICE_V5, VOICE_V6, embedded_doot_asset,
+    VOICE_V2, VOICE_V3, VOICE_V4, VOICE_V5, VOICE_V6, VOICE_V7, embedded_doot_asset,
 };
 pub use complexity::{ComplexityAnalysis, analyze_complexity_for_text};
 pub use engine::{
-    EngineError, ExplainMoodRow, ExplainPunctuationRow, ExplainRow, ExplainTokenRow,
-    explain_rows_for_text, render_text_canonical_buffer, sequence_events_for_text,
+    EngineError, ExplainHesitationRow, ExplainMoodRow, ExplainPunctuationRow, ExplainRow,
+    ExplainTokenRow, explain_rows_for_text, render_text_canonical_buffer, sequence_events_for_text,
 };
 pub use mapping::{
     KNOB_BOUNDS, KNOB_MODULATION_DEPTHS, KnobBounds, KnobSet, Mapping, MappingError, PooledVector,
@@ -41,11 +41,12 @@ pub use mathx::{
 };
 pub use phrase::{PhraseBoundaryStrength, PhrasePlan, PhraseSyllablePlan, plan_phrase_prosody};
 pub use sequence::{
-    EMPTY_CHIRP_CONTOUR, EMPTY_CHIRP_PITCH_CENTER, EMPTY_CHIRP_START_PITCH_CENTER,
-    EMPTY_CHIRP_VOWEL_POSITION, EMPTY_CHIRP_WARBLE_DEPTH, ProsodicPunctuation,
-    ROLE_LONG_PAUSE_MAX_SAMPLES, ROLE_LONG_PAUSE_MIN_SAMPLES, STAGED_REPLY_REST_MAX_SAMPLES,
-    STAGED_REPLY_REST_MIN_SAMPLES, SequenceEvent, SequencedUtterance, SyllableEvent,
-    SyllableTiming, estimate_utterance_sample_count, render_empty_chirp, role_long_pause_samples,
+    DASH_HESITATION_PAUSE_SAMPLES, ELLIPSIS_HESITATION_PAUSE_SAMPLES, EMPTY_CHIRP_CONTOUR,
+    EMPTY_CHIRP_PITCH_CENTER, EMPTY_CHIRP_START_PITCH_CENTER, EMPTY_CHIRP_VOWEL_POSITION,
+    EMPTY_CHIRP_WARBLE_DEPTH, HesitationMarker, ProsodicPunctuation, ROLE_LONG_PAUSE_MAX_SAMPLES,
+    ROLE_LONG_PAUSE_MIN_SAMPLES, STAGED_REPLY_REST_MAX_SAMPLES, STAGED_REPLY_REST_MIN_SAMPLES,
+    SequenceEvent, SequencedUtterance, SyllableEvent, SyllableTiming,
+    estimate_utterance_sample_count, render_empty_chirp, role_long_pause_samples,
     sequence_utterance, staged_reply_rest_samples,
 };
 pub use synth::{

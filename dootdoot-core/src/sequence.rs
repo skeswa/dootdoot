@@ -82,6 +82,51 @@ impl SyllableTiming {
     }
 }
 
+/// Gives the deterministic dash hesitation pause in samples (~340 ms).
+pub const DASH_HESITATION_PAUSE_SAMPLES: u32 = 14_994;
+
+/// Gives the deterministic ellipsis hesitation pause in samples (~500 ms).
+pub const ELLIPSIS_HESITATION_PAUSE_SAMPLES: u32 = 22_050;
+
+/// Gives a control-only `VOICE_V7` hesitation marker.
+///
+/// Standalone dashes and ellipses are not voiced semantic tokens; they shape
+/// the preceding syllable's timing with a quiet, deterministic hesitation rest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HesitationMarker {
+    /// `-`, `--`, en dash, or em dash.
+    Dash,
+    /// A single-character ellipsis.
+    Ellipsis,
+}
+
+impl HesitationMarker {
+    /// Parses a tokenizer text cell as a frozen hesitation marker.
+    pub fn from_text(text: &str) -> Option<Self> {
+        match text {
+            "-" | "--" | "—" | "–" => Some(Self::Dash),
+            "…" => Some(Self::Ellipsis),
+            _ => None,
+        }
+    }
+
+    /// Returns the deterministic hesitation pause this marker contributes.
+    pub fn pause_samples(self) -> u32 {
+        match self {
+            Self::Dash => DASH_HESITATION_PAUSE_SAMPLES,
+            Self::Ellipsis => ELLIPSIS_HESITATION_PAUSE_SAMPLES,
+        }
+    }
+
+    /// Returns the timing directive a hesitation marker imposes on the prior
+    /// syllable: a quiet, bridge-suppressed rest of the marker's pause length.
+    pub fn timing(self) -> SyllableTiming {
+        SyllableTiming::default()
+            .with_pause_override(self.pause_samples())
+            .suppress_bridge()
+    }
+}
+
 /// Maps a role amount to a bounded long turn pause in samples.
 pub fn role_long_pause_samples(amount: f64) -> u32 {
     let amount = if amount.is_finite() {

@@ -18,11 +18,14 @@ pub const VOICE_V4: &str = "VOICE_V4";
 /// Identifies the word-attack-smoothed output contract.
 pub const VOICE_V5: &str = "VOICE_V5";
 
-/// Identifies the current repeated-phrase-smoothed output contract.
+/// Identifies the repeated-phrase-smoothed output contract.
 pub const VOICE_V6: &str = "VOICE_V6";
 
+/// Identifies the contextual-performance output contract.
+pub const VOICE_V7: &str = "VOICE_V7";
+
 /// Identifies the active sample-affecting output contract.
-pub const ACTIVE_VOICE: &str = VOICE_V6;
+pub const ACTIVE_VOICE: &str = VOICE_V7;
 
 /// Identifies the first committed dootdoot asset spec file.
 pub const DOOT_ASSET_FILE_V1: &str = "dootdoot_asset_v1.doot";

@@ -3,10 +3,10 @@
 use thiserror::Error;
 
 use crate::{
-    KnobSet, MappingError, ProsodicPunctuation, SequenceEvent, TokenVector, TokenizerError,
-    UtteranceMood, analyze_affect_for_text, analyze_complexity_for_text, assemble_knobs,
-    embedded_mapping, embedded_tokenizer, plan_gesture_archetypes, pool_sequence,
-    render_canonical_buffer,
+    HesitationMarker, KnobSet, MappingError, ProsodicPunctuation, SequenceEvent, SyllableTiming,
+    TokenVector, TokenizerError, UtteranceMood, analyze_affect_for_text,
+    analyze_complexity_for_text, assemble_knobs, embedded_mapping, embedded_tokenizer,
+    plan_gesture_archetypes, pool_sequence, render_canonical_buffer,
 };
 
 /// Reports why text could not be rendered.
@@ -24,6 +24,7 @@ pub enum EngineError {
 enum EventTemplate {
     Voiced(usize),
     Punctuation(usize),
+    Hesitation(usize),
 }
 
 #[derive(Debug, Clone)]
@@ -31,12 +32,19 @@ struct VoicedToken {
     text: String,
     vector: TokenVector,
     continuation: bool,
+    timing: SyllableTiming,
 }
 
 #[derive(Debug, Clone)]
 struct PunctuationToken {
     text: String,
     punctuation: ProsodicPunctuation,
+}
+
+#[derive(Debug, Clone)]
+struct HesitationToken {
+    text: String,
+    marker: HesitationMarker,
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +62,8 @@ pub enum ExplainRow {
     Token(ExplainTokenRow),
     /// A control-only prosodic punctuation row.
     Punctuation(ExplainPunctuationRow),
+    /// A control-only hesitation marker row.
+    Hesitation(ExplainHesitationRow),
 }
 
 /// Gives one voiced token row in the `--explain` table.
@@ -75,6 +85,13 @@ pub struct ExplainPunctuationRow {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ExplainMoodRow {
     mood: UtteranceMood,
+}
+
+/// Gives one control-only hesitation marker row in the `--explain` table.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExplainHesitationRow {
+    token: String,
+    marker: HesitationMarker,
 }
 
 /// Converts text into sequencer events.
@@ -104,8 +121,10 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
     let complexity = analyze_complexity_for_text(text)?;
     let encoded_input = tokenizer.tokenize(text)?;
     let mut templates = Vec::new();
-    let mut voiced_tokens = Vec::new();
+    let mut voiced_tokens: Vec<VoicedToken> = Vec::new();
     let mut punctuation_tokens = Vec::new();
+    let mut hesitation_tokens = Vec::new();
+    let mut last_voiced_index: Option<usize> = None;
 
     for token in encoded_input.tokens() {
         if let Some(punctuation) = ProsodicPunctuation::from_text(token.text()) {
@@ -114,14 +133,27 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
                 text: token.text().to_owned(),
                 punctuation,
             });
+        } else if let Some(marker) = HesitationMarker::from_text(token.text()) {
+            templates.push(EventTemplate::Hesitation(hesitation_tokens.len()));
+            hesitation_tokens.push(HesitationToken {
+                text: token.text().to_owned(),
+                marker,
+            });
+
+            if let Some(index) = last_voiced_index {
+                voiced_tokens[index].timing =
+                    longer_hesitation(voiced_tokens[index].timing, marker.timing());
+            }
         } else {
             let token_vector = mapping.lookup(token.id())?;
 
+            last_voiced_index = Some(voiced_tokens.len());
             templates.push(EventTemplate::Voiced(voiced_tokens.len()));
             voiced_tokens.push(VoicedToken {
                 text: token.text().to_owned(),
                 vector: token_vector,
                 continuation: token.is_continuation(),
+                timing: SyllableTiming::default(),
             });
         }
     }
@@ -142,6 +174,14 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
                     explain_rows.push(ExplainRow::punctuation(
                         punctuation.text.clone(),
                         punctuation.punctuation,
+                    ));
+                }
+                EventTemplate::Hesitation(index) => {
+                    let hesitation = &hesitation_tokens[index];
+
+                    explain_rows.push(ExplainRow::hesitation(
+                        hesitation.text.clone(),
+                        hesitation.marker,
                     ));
                 }
                 EventTemplate::Voiced(_) => {}
@@ -181,11 +221,23 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
                     punctuation.punctuation,
                 ));
             }
+            EventTemplate::Hesitation(index) => {
+                let hesitation = &hesitation_tokens[index];
+
+                explain_rows.push(ExplainRow::hesitation(
+                    hesitation.text.clone(),
+                    hesitation.marker,
+                ));
+            }
             EventTemplate::Voiced(index) => {
                 let token = &voiced_tokens[index];
                 let knobs = assemble_knobs(baseline, squashed_tokens[index]);
 
-                events.push(SequenceEvent::syllable(knobs, token.continuation));
+                events.push(SequenceEvent::syllable_with_timing(
+                    knobs,
+                    token.continuation,
+                    token.timing,
+                ));
                 explain_rows.push(ExplainRow::token(
                     token.text.clone(),
                     knobs,
@@ -227,6 +279,33 @@ impl ExplainRow {
 
     fn punctuation(token: String, punctuation: ProsodicPunctuation) -> Self {
         Self::Punctuation(ExplainPunctuationRow { token, punctuation })
+    }
+
+    fn hesitation(token: String, marker: HesitationMarker) -> Self {
+        Self::Hesitation(ExplainHesitationRow { token, marker })
+    }
+}
+
+fn longer_hesitation(current: SyllableTiming, marker: SyllableTiming) -> SyllableTiming {
+    let current_pause = current.pause_override().unwrap_or(0);
+    let marker_pause = marker.pause_override().unwrap_or(0);
+
+    if marker_pause >= current_pause {
+        marker
+    } else {
+        current
+    }
+}
+
+impl ExplainHesitationRow {
+    /// Returns the tokenizer text for this hesitation row.
+    pub fn token(&self) -> &str {
+        &self.token
+    }
+
+    /// Returns the hesitation marker for this control row.
+    pub fn marker(&self) -> HesitationMarker {
+        self.marker
     }
 }
 

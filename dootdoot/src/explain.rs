@@ -2,7 +2,9 @@
 
 use std::fmt::Write as _;
 
-use dootdoot_core::{EngineError, ExplainRow, ProsodicPunctuation, explain_rows_for_text};
+use dootdoot_core::{
+    EngineError, ExplainRow, HesitationMarker, ProsodicPunctuation, explain_rows_for_text,
+};
 
 const EXPLAIN_HEADER: &str = "token │ pitch │ vowel │ contour │ warble\n";
 
@@ -59,10 +61,26 @@ fn format_explain_rows(rows: &[ExplainRow]) -> String {
                 )
                 .expect("writing to a String cannot fail");
             }
+            ExplainRow::Hesitation(hesitation) => {
+                writeln!(
+                    table,
+                    "{} │ control:{} │ - │ - │ -",
+                    hesitation.token(),
+                    hesitation_name(hesitation.marker()),
+                )
+                .expect("writing to a String cannot fail");
+            }
         }
     }
 
     table
+}
+
+fn hesitation_name(marker: HesitationMarker) -> &'static str {
+    match marker {
+        HesitationMarker::Dash => "hesitation-dash",
+        HesitationMarker::Ellipsis => "hesitation-ellipsis",
+    }
 }
 
 fn punctuation_name(punctuation: ProsodicPunctuation) -> &'static str {

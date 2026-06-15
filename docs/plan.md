@@ -492,7 +492,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       amplitude tails that occupy space without counting as a voiced syllable. Update
       output-length estimation and input-limit tests for the new timing.
       Deps: T-80, T-33, T-75 · Reqs: FR-80, FR-81, FR-36, FR-37, NFR-16 · Est: 2.5h
-- [ ] **T-84 — Dash/ellipsis hesitation prosody.** Treat standalone `-`, `--`, em dash, and
+- [x] **T-84 — Dash/ellipsis hesitation prosody.** Treat standalone `-`, `--`, em dash, and
       `...` as control-only hesitation markers with a deterministic pause, instead of
       voiced semantic tokens. Test that the standalone dash no longer appears with four-axis
       values in `--explain` and routes to a pause/quiet rounded connector.

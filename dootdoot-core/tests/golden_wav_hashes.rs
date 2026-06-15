@@ -88,6 +88,11 @@ const SHA256_ROUND_CONSTANTS: [u32; SHA256_WORD_COUNT] = [
 
 #[test]
 fn golden_corpus_wav_hashes_match_committed_fixture() {
+    if std::env::var_os("DOOTDOOT_REGEN_GOLDEN").is_some() {
+        regenerate_golden_hashes();
+        return;
+    }
+
     let hashes = golden_hashes();
 
     for case in golden_cases() {
@@ -105,6 +110,28 @@ fn golden_corpus_wav_hashes_match_committed_fixture() {
             case.label
         );
     }
+}
+
+fn regenerate_golden_hashes() {
+    use std::fmt::Write as _;
+
+    let mut output = format!("# {}\tlabel\tsha256\n", dootdoot_core::ACTIVE_VOICE);
+
+    for case in golden_cases() {
+        let buffer =
+            render_text_canonical_buffer(case.text).expect("golden corpus case should render");
+        let bytes = wav_bytes(&buffer).expect("golden corpus WAV should serialize");
+
+        writeln!(output, "{}\t{}", case.label, sha256_hex(&bytes))
+            .expect("writing to a String cannot fail");
+    }
+
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/golden_wav_hashes.tsv",
+    );
+
+    std::fs::write(path, output).expect("golden hash fixture should be writable");
 }
 
 #[derive(Debug, Clone, Copy)]
