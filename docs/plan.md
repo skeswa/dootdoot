@@ -265,7 +265,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       directionally improved body, upper-mid brightness, gesture motion, harmonicity, and phrase
       air, but accept/reject by listening for reliable BB-8-family identity.
       Deps: T-45, T-46, T-47, T-48, T-49, T-50 · Reqs: NFR-16 · Est: 3h
-- [ ] **T-52 — Validate/finalize squash; regenerate artifact if changed.** Confirm the
+- [x] **T-52 — Validate/finalize squash; regenerate artifact if changed.** Confirm the
       squash chosen at T-15 still lands tastefully after by-ear tuning; if it (or its stats)
       changes, **re-run `xtask` to regenerate `format_v1.bin`** (header stats only — baked
       vectors are pre-squash) before the freeze. Lock into `FORMAT_V1`.
