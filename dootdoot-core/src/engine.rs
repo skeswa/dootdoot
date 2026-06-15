@@ -5,7 +5,8 @@ use thiserror::Error;
 use crate::{
     KnobSet, MappingError, ProsodicPunctuation, SequenceEvent, TokenVector, TokenizerError,
     UtteranceMood, analyze_affect_for_text, analyze_complexity_for_text, assemble_knobs,
-    embedded_mapping, embedded_tokenizer, pool_sequence, render_canonical_buffer,
+    embedded_mapping, embedded_tokenizer, plan_gesture_archetypes, pool_sequence,
+    render_canonical_buffer,
 };
 
 /// Reports why text could not be rendered.
@@ -148,7 +149,7 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
         }
 
         return Ok(TextAnalysis {
-            events,
+            events: with_archetype_events(events),
             explain_rows,
         });
     }
@@ -195,7 +196,7 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
     }
 
     Ok(TextAnalysis {
-        events,
+        events: with_archetype_events(events),
         explain_rows,
     })
 }
@@ -227,6 +228,26 @@ impl ExplainRow {
     fn punctuation(token: String, punctuation: ProsodicPunctuation) -> Self {
         Self::Punctuation(ExplainPunctuationRow { token, punctuation })
     }
+}
+
+fn with_archetype_events(events: Vec<SequenceEvent>) -> Vec<SequenceEvent> {
+    let archetypes = plan_gesture_archetypes(&events);
+    let mut archetype_index = 0_usize;
+    let mut output = Vec::with_capacity(events.len() + archetypes.len());
+
+    for event in events {
+        if matches!(event, SequenceEvent::Syllable(_)) {
+            if let Some(archetype) = archetypes.get(archetype_index).copied() {
+                output.push(SequenceEvent::archetype(archetype));
+            }
+
+            archetype_index = archetype_index.saturating_add(1);
+        }
+
+        output.push(event);
+    }
+
+    output
 }
 
 impl ExplainMoodRow {

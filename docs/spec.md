@@ -195,6 +195,9 @@
   (`chatter`, `yelp`, `moan`, `stutter/burst`, `tremble`) plus sparse non-vocal seasoning
   flags, and SHALL be a pure function of affect, complexity, punctuation, and phrase
   position.
+- **FR-53** `FORMAT_V2` synthesis SHALL render selected gesture archetypes with bounded,
+  deterministic yelp, moan, stutter/burst, and tremble texture paths plus sparse servo
+  and noise-tail seasoning, all inside finite BB-8-family parameter bounds.
 
 ---
 

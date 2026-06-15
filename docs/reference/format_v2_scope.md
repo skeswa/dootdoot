@@ -114,3 +114,14 @@ V2 archetype planning selects one bounded gesture family per voiced syllable:
 The selector is pure and deterministic. It considers utterance mood, complexity scalar,
 attached punctuation, and phrase position, then emits sparse non-vocal seasoning flags
 without using randomness or hidden variation.
+
+## Implemented Archetype Rendering
+
+Text analysis inserts selected archetype control rows before voiced syllables. Synthesis
+uses those rows to choose finite texture paths:
+
+- `yelp` adds a bright upward pitch bias and short upper transient;
+- `moan` adds a lower, darker body texture;
+- `stutter/burst` adds deterministic gated pulses;
+- `tremble` adds bounded pitch and amplitude tremor;
+- servo and noise-tail seasoning use deterministic oscillators, never randomness.

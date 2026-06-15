@@ -83,6 +83,15 @@ pub fn plan_gesture_archetypes(events: &[SequenceEvent]) -> Vec<ArchetypeSelecti
 }
 
 impl ArchetypeSelection {
+    pub(crate) fn chatter(syllable_index: usize) -> Self {
+        Self {
+            syllable_index,
+            archetype: GestureArchetype::Chatter,
+            servo_seasoning: false,
+            noise_tail: false,
+        }
+    }
+
     /// Returns the voiced syllable index this selection belongs to.
     pub fn syllable_index(&self) -> usize {
         self.syllable_index
@@ -146,7 +155,8 @@ fn pending_syllables(events: &[SequenceEvent]) -> Vec<PendingSyllable> {
 
     for event in events {
         match event {
-            SequenceEvent::Mood(_) | SequenceEvent::Complexity(_) => {}
+            SequenceEvent::Mood(_) | SequenceEvent::Complexity(_) | SequenceEvent::Archetype(_) => {
+            }
             SequenceEvent::Syllable(_) => syllables.push(PendingSyllable { punctuation: None }),
             SequenceEvent::Punctuation(punctuation) => {
                 if let Some(syllable) = syllables.last_mut()
@@ -167,6 +177,7 @@ fn mood_from_events(events: &[SequenceEvent]) -> UtteranceMood {
         .find_map(|event| match event {
             SequenceEvent::Mood(mood) => Some(*mood),
             SequenceEvent::Complexity(_)
+            | SequenceEvent::Archetype(_)
             | SequenceEvent::Syllable(_)
             | SequenceEvent::Punctuation(_) => None,
         })
@@ -178,9 +189,10 @@ fn complexity_from_events(events: &[SequenceEvent]) -> f64 {
         .iter()
         .find_map(|event| match event {
             SequenceEvent::Complexity(complexity) => Some(complexity.scalar()),
-            SequenceEvent::Mood(_) | SequenceEvent::Syllable(_) | SequenceEvent::Punctuation(_) => {
-                None
-            }
+            SequenceEvent::Mood(_)
+            | SequenceEvent::Archetype(_)
+            | SequenceEvent::Syllable(_)
+            | SequenceEvent::Punctuation(_) => None,
         })
         .unwrap_or(0.0)
 }

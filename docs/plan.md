@@ -374,7 +374,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       sparing non-vocal seasoning) and test that selection is a pure function of affect,
       complexity, punctuation, and phrase position rather than free variation.
       Deps: T-71 · Reqs: FR-15, FR-16, FR-17, FR-18, FR-38, FR-39, NFR-16 · Est: 2.5h
-- [ ] **T-73 — Implement archetype renderers and texture seasoning.** Add bounded yelp,
+- [x] **T-73 — Implement archetype renderers and texture seasoning.** Add bounded yelp,
       moan, stutter/burst, and tremble render paths plus sparse servo/noise-tail texture.
       Keep all paths deterministic, finite, and inside the BB-8-family parameter space.
       Deps: T-72 · Reqs: FR-16, FR-17, FR-18, NFR-3, NFR-4, NFR-16 · Est: 3h

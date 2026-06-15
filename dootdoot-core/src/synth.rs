@@ -2,7 +2,7 @@
 
 use core::f64::consts::{LN_2, PI};
 
-use crate::{cos, exp, sin};
+use crate::{ArchetypeSelection, GestureArchetype, cos, exp, sin};
 
 /// Gives the synthesis sample rate in hertz.
 pub const SYNTH_SAMPLE_RATE_HZ: u32 = 44_100;
@@ -176,6 +176,7 @@ pub(crate) struct SyllablePerformance {
     mood_valence: f64,
     mood_arousal: f64,
     complexity: f64,
+    archetype: ArchetypeSelection,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -565,18 +566,16 @@ impl SyllablePerformance {
         pitch_offset_semitones: f64,
         final_lowering_semitones: f64,
         emphasized: bool,
-        mood_valence: f64,
-        mood_arousal: f64,
-        complexity: f64,
     ) -> Self {
         Self {
             duration_samples,
             pitch_offset_semitones,
             final_lowering_semitones,
             emphasized,
-            mood_valence: mood_valence.clamp(-1.0, 1.0),
-            mood_arousal: mood_arousal.clamp(0.0, 1.0),
-            complexity: complexity.clamp(0.0, 1.0),
+            mood_valence: 0.0,
+            mood_arousal: 0.0,
+            complexity: 0.0,
+            archetype: ArchetypeSelection::chatter(0),
         }
     }
 
@@ -589,6 +588,7 @@ impl SyllablePerformance {
             mood_valence: 0.0,
             mood_arousal: 0.0,
             complexity: 0.0,
+            archetype: ArchetypeSelection::chatter(0),
         }
     }
 
@@ -599,6 +599,21 @@ impl SyllablePerformance {
             } else {
                 0.0
             }
+    }
+
+    pub(crate) fn with_expression(
+        mut self,
+        mood_valence: f64,
+        mood_arousal: f64,
+        complexity: f64,
+        archetype: ArchetypeSelection,
+    ) -> Self {
+        self.mood_valence = mood_valence.clamp(-1.0, 1.0);
+        self.mood_arousal = mood_arousal.clamp(0.0, 1.0);
+        self.complexity = complexity.clamp(0.0, 1.0);
+        self.archetype = archetype;
+
+        self
     }
 }
 
@@ -761,6 +776,12 @@ fn render_performance_sample(
         elapsed_seconds,
         controls.warble_phase_offset,
     );
+    let pitch_hz = apply_archetype_pitch_hz(
+        pitch_hz,
+        controls.performance.archetype.archetype(),
+        elapsed_seconds,
+        controls.duration_seconds,
+    );
     let vowel_position = vowel_trajectory_position_for_duration(
         (controls.knobs.vowel_position() + controls.vowel_bias + (articulation * 0.65))
             .clamp(-1.0, 1.0),
@@ -779,6 +800,14 @@ fn render_performance_sample(
                 elapsed_seconds * controls.subgesture_density,
                 controls.warble_depth,
             ));
+    let layered = layered
+        + archetype_texture_sample(
+            controls.performance.archetype,
+            elapsed_seconds,
+            controls.duration_seconds,
+        );
+    let layered =
+        layered * archetype_amplitude_gain(controls.performance.archetype, elapsed_seconds);
     let layered = if controls.performance.emphasized {
         layered * PHRASE_EMPHASIS_GAIN
     } else {
@@ -789,6 +818,122 @@ fn render_performance_sample(
     state.advance(pitch_hz, controls.warble_depth, contour);
 
     apply_amplitude_envelope(electronic, elapsed_seconds, controls.duration_seconds)
+}
+
+fn apply_archetype_pitch_hz(
+    pitch_hz: f64,
+    archetype: GestureArchetype,
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+) -> f64 {
+    let progress = syllable_progress(elapsed_seconds, duration_seconds);
+    let semitones = match archetype {
+        GestureArchetype::Chatter => 0.0,
+        GestureArchetype::Yelp => 0.65 * progress,
+        GestureArchetype::Moan => -0.55 * (1.0 - (0.35 * progress)),
+        GestureArchetype::StutterBurst => 0.28 * stutter_pulse(progress),
+        GestureArchetype::Tremble => 0.18 * sin(2.0 * PI * 29.0 * elapsed_seconds),
+    };
+
+    pitch_hz * semitone_multiplier(semitones)
+}
+
+fn archetype_amplitude_gain(selection: ArchetypeSelection, elapsed_seconds: f64) -> f64 {
+    match selection.archetype() {
+        GestureArchetype::Chatter => 1.0,
+        GestureArchetype::Yelp => 1.08,
+        GestureArchetype::Moan => 0.92,
+        GestureArchetype::StutterBurst => {
+            let pulse = 0.82 + (0.28 * stutter_pulse(elapsed_seconds * 9.0));
+
+            pulse.clamp(0.74, 1.18)
+        }
+        GestureArchetype::Tremble => {
+            let tremolo = 1.0 + (0.08 * sin(2.0 * PI * 23.0 * elapsed_seconds));
+
+            tremolo.clamp(0.88, 1.12)
+        }
+    }
+}
+
+fn archetype_texture_sample(
+    selection: ArchetypeSelection,
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+) -> f64 {
+    let mut texture = match selection.archetype() {
+        GestureArchetype::Chatter => 0.0,
+        GestureArchetype::Yelp => yelp_texture(elapsed_seconds),
+        GestureArchetype::Moan => moan_texture(elapsed_seconds),
+        GestureArchetype::StutterBurst => stutter_texture(elapsed_seconds, duration_seconds),
+        GestureArchetype::Tremble => tremble_texture(elapsed_seconds),
+    };
+
+    if selection.servo_seasoning() {
+        texture += servo_texture(selection.syllable_index(), elapsed_seconds);
+    }
+
+    if selection.noise_tail() {
+        texture += noise_tail_texture(
+            selection.syllable_index(),
+            elapsed_seconds,
+            duration_seconds,
+        );
+    }
+
+    texture.clamp(-0.16, 0.16)
+}
+
+fn yelp_texture(elapsed_seconds: f64) -> f64 {
+    0.030
+        * triangle_window(elapsed_seconds, 0.018, 0.014)
+        * sin(2.0 * PI * 3_880.0 * elapsed_seconds)
+}
+
+fn moan_texture(elapsed_seconds: f64) -> f64 {
+    0.026 * sin(2.0 * PI * 410.0 * elapsed_seconds)
+}
+
+fn stutter_texture(elapsed_seconds: f64, duration_seconds: f64) -> f64 {
+    let progress = syllable_progress(elapsed_seconds, duration_seconds);
+    let pulse = stutter_pulse(progress);
+
+    0.045 * pulse * sin(2.0 * PI * 2_940.0 * elapsed_seconds)
+}
+
+fn tremble_texture(elapsed_seconds: f64) -> f64 {
+    0.024 * sin(2.0 * PI * 31.0 * elapsed_seconds) * sin(2.0 * PI * 3_520.0 * elapsed_seconds)
+}
+
+fn servo_texture(syllable_index: usize, elapsed_seconds: f64) -> f64 {
+    let index = u32::try_from(syllable_index).unwrap_or(u32::MAX);
+    let frequency_hz = 980.0 + (37.0 * f64::from(index % 7));
+
+    0.024
+        * triangle_window(elapsed_seconds, 0.032, 0.020)
+        * sin(2.0 * PI * frequency_hz * elapsed_seconds)
+}
+
+fn noise_tail_texture(syllable_index: usize, elapsed_seconds: f64, duration_seconds: f64) -> f64 {
+    let index = u32::try_from(syllable_index).unwrap_or(u32::MAX);
+    let release_start = (duration_seconds - ENVELOPE_RELEASE_SECONDS).max(0.0);
+
+    if elapsed_seconds < release_start {
+        return 0.0;
+    }
+
+    let progress = ((elapsed_seconds - release_start) / ENVELOPE_RELEASE_SECONDS).clamp(0.0, 1.0);
+    let envelope = (1.0 - progress) * (1.0 - progress);
+    let modulator = sin(2.0 * PI * (173.0 + f64::from(index % 5)) * elapsed_seconds);
+    let carrier = sin((2.0 * PI * 4_650.0 * elapsed_seconds) + (0.65 * modulator));
+
+    0.018 * envelope * carrier
+}
+
+fn stutter_pulse(progress: f64) -> f64 {
+    let phase = (progress * 4.0) % 1.0;
+
+    triangle_window(phase, 0.18, 0.18)
 }
 
 fn complexity_subgesture_count(complexity: f64) -> u32 {

@@ -691,7 +691,9 @@ allowed only as deterministic, bounded **performance channels** around that core
   around the unchanged semantic knobs.
 - **Archetype** — a small fixed gesture palette (`chatter`, `yelp`, `moan`,
   `stutter/burst`, `tremble`, plus sparse non-vocal seasoning) selected by a pure rule
-  from affect, complexity, punctuation, and phrase position.
+  from affect, complexity, punctuation, and phrase position. Renderers add bounded
+  yelp/moan/stutter/tremble texture and deterministic servo/noise seasoning without
+  introducing free variation.
 
 Every V2 channel is a pure function of the input token/control-event stream. No runtime
 randomness, clock, seed, external service, or platform-dependent state is permitted.

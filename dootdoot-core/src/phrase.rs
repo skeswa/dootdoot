@@ -151,7 +151,8 @@ fn pending_syllables(events: &[SequenceEvent]) -> Vec<PendingSyllable> {
 
     for event in events {
         match event {
-            SequenceEvent::Mood(_) | SequenceEvent::Complexity(_) => {}
+            SequenceEvent::Mood(_) | SequenceEvent::Complexity(_) | SequenceEvent::Archetype(_) => {
+            }
             SequenceEvent::Syllable(syllable) => syllables.push(PendingSyllable {
                 event: *syllable,
                 punctuation: None,

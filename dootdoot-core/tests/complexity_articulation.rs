@@ -15,9 +15,10 @@ fn text_events_carry_complexity_for_synthesis() {
         .iter()
         .find_map(|event| match event {
             SequenceEvent::Complexity(complexity) => Some(*complexity),
-            SequenceEvent::Mood(_) | SequenceEvent::Syllable(_) | SequenceEvent::Punctuation(_) => {
-                None
-            }
+            SequenceEvent::Mood(_)
+            | SequenceEvent::Archetype(_)
+            | SequenceEvent::Syllable(_)
+            | SequenceEvent::Punctuation(_) => None,
         })
         .expect("text analysis should emit complexity");
 

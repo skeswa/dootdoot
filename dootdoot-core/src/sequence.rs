@@ -3,10 +3,10 @@
 use core::f64::consts::LN_2;
 
 use crate::{
-    CLAUSE_SYLLABLE_SAMPLES, ComplexityAnalysis, KnobSet, LEADING_SILENCE_SAMPLES,
-    LONG_PUNCTUATION_PAUSE_SAMPLES, MEDIUM_PUNCTUATION_PAUSE_SAMPLES, PhraseBoundaryStrength,
-    PhraseSyllablePlan, SENTENCE_SYLLABLE_SAMPLES, TRAILING_SILENCE_SAMPLES, UtteranceMood, exp,
-    pitch_center_hz, plan_phrase_prosody,
+    ArchetypeSelection, CLAUSE_SYLLABLE_SAMPLES, ComplexityAnalysis, KnobSet,
+    LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES, MEDIUM_PUNCTUATION_PAUSE_SAMPLES,
+    PhraseBoundaryStrength, PhraseSyllablePlan, SENTENCE_SYLLABLE_SAMPLES,
+    TRAILING_SILENCE_SAMPLES, UtteranceMood, exp, pitch_center_hz, plan_phrase_prosody,
     synth::{
         BASE_SYLLABLE_SAMPLES, SyllableFinalGlide, SyllablePerformance,
         render_syllable_with_final_glide, render_syllable_with_performance,
@@ -36,6 +36,8 @@ pub enum SequenceEvent {
     Mood(UtteranceMood),
     /// A whole-utterance complexity control event.
     Complexity(ComplexityAnalysis),
+    /// A selected gesture archetype for the following voiced syllable.
+    Archetype(ArchetypeSelection),
     /// A voiced syllable with semantic knobs.
     Syllable(SyllableEvent),
     /// A control-only prosodic punctuation marker.
@@ -78,6 +80,7 @@ pub enum SequencedUtterance {
 #[derive(Debug, Clone, Copy)]
 struct SyllablePlan {
     event: SyllableEvent,
+    archetype: ArchetypeSelection,
     final_glide: SyllableFinalGlide,
     punctuation_seen: bool,
 }
@@ -103,6 +106,11 @@ impl SequenceEvent {
     /// Builds a whole-utterance complexity event.
     pub fn complexity(complexity: ComplexityAnalysis) -> Self {
         Self::Complexity(complexity)
+    }
+
+    /// Builds a selected gesture archetype event.
+    pub fn archetype(archetype: ArchetypeSelection) -> Self {
+        Self::Archetype(archetype)
     }
 
     /// Builds a voiced syllable event.
@@ -266,9 +274,12 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
                 pitch_offset_semitones,
                 phrase_syllable.final_lowering_semitones(),
                 phrase_syllable.is_emphasized(),
+            )
+            .with_expression(
                 mood.valence(),
                 mood.arousal(),
                 complexity.scalar(),
+                plan.archetype,
             ),
         ));
         pending_reset_semitones = phrase_syllable.pitch_reset_semitones();
@@ -323,6 +334,7 @@ fn mood_from_events(events: &[SequenceEvent]) -> SequencerMood {
         .find_map(|event| match event {
             SequenceEvent::Mood(mood) => Some(*mood),
             SequenceEvent::Complexity(_)
+            | SequenceEvent::Archetype(_)
             | SequenceEvent::Syllable(_)
             | SequenceEvent::Punctuation(_) => None,
         })
@@ -334,9 +346,10 @@ fn complexity_from_events(events: &[SequenceEvent]) -> SequencerComplexity {
         .iter()
         .find_map(|event| match event {
             SequenceEvent::Complexity(complexity) => Some(*complexity),
-            SequenceEvent::Mood(_) | SequenceEvent::Syllable(_) | SequenceEvent::Punctuation(_) => {
-                None
-            }
+            SequenceEvent::Mood(_)
+            | SequenceEvent::Archetype(_)
+            | SequenceEvent::Syllable(_)
+            | SequenceEvent::Punctuation(_) => None,
         })
         .map_or_else(SequencerComplexity::absent, SequencerComplexity::explicit)
 }
@@ -376,11 +389,19 @@ fn round_f64_to_u32(value: f64) -> u32 {
 
 fn syllable_plans(events: &[SequenceEvent]) -> Vec<SyllablePlan> {
     let mut plans = Vec::new();
+    let mut pending_archetype = None;
 
     for event in events {
         match event {
             SequenceEvent::Mood(_) | SequenceEvent::Complexity(_) => {}
-            SequenceEvent::Syllable(syllable) => plans.push(SyllablePlan::new(*syllable)),
+            SequenceEvent::Archetype(archetype) => pending_archetype = Some(*archetype),
+            SequenceEvent::Syllable(syllable) => {
+                let archetype = pending_archetype
+                    .take()
+                    .unwrap_or_else(|| ArchetypeSelection::chatter(plans.len()));
+
+                plans.push(SyllablePlan::new(*syllable, archetype));
+            }
             SequenceEvent::Punctuation(punctuation) => {
                 if let Some(plan) = plans.last_mut() {
                     plan.attach_punctuation(*punctuation);
@@ -405,9 +426,10 @@ fn append_silence(samples: &mut Vec<f64>, count: u32) {
 }
 
 impl SyllablePlan {
-    fn new(event: SyllableEvent) -> Self {
+    fn new(event: SyllableEvent, archetype: ArchetypeSelection) -> Self {
         Self {
             event,
+            archetype,
             final_glide: SyllableFinalGlide::Neutral,
             punctuation_seen: false,
         }
