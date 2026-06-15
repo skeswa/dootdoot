@@ -6,17 +6,51 @@ use std::{
 };
 
 use crate::{
-    Result, SourceFiles, SourceManifest, SourceManifestError, compute_pca_projection,
+    Result, SourceFiles, SourceManifest, SourceManifestError, bb8_metrics, compute_pca_projection,
     compute_squash_stats, load_source_model, serialize_format_artifact,
 };
 
-/// Runs the current xtask source validation step.
+/// Runs the selected xtask command from process arguments.
 ///
 /// # Errors
 ///
-/// Returns an error when the source manifest cannot be read, the source cache
-/// is missing, or any cached source file does not match the manifest.
-pub fn run() -> Result<()> {
+/// Returns an error when the selected xtask command cannot complete.
+pub fn run() -> Result<String> {
+    run_with_args(std::env::args().skip(1))
+}
+
+/// Runs the selected xtask command from explicit arguments.
+///
+/// With no arguments, this runs the asset-generation workflow. The
+/// `bb8-metrics` subcommand renders the local Phase 7 comparison report.
+///
+/// # Errors
+///
+/// Returns an error when the selected xtask command cannot complete.
+pub fn run_with_args<I, S>(args: I) -> Result<String>
+where
+    I: IntoIterator<Item = S>,
+    S: Into<String>,
+{
+    let mut args = args.into_iter().map(Into::into).collect::<Vec<_>>();
+
+    if args.is_empty() {
+        generate_format_artifact()?;
+
+        return Ok(String::new());
+    }
+
+    let command = args.remove(0);
+
+    match command.as_str() {
+        "bb8-metrics" => bb8_metrics::run(&args),
+        unknown => Err(SourceManifestError::new(format!(
+            "unknown xtask command: {unknown}",
+        ))),
+    }
+}
+
+fn generate_format_artifact() -> Result<()> {
     let workspace = workspace_root()?;
     let manifest_path = workspace.join("assets/source_manifest.toml");
     let manifest_text = fs::read_to_string(&manifest_path).map_err(|error| {

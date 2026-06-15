@@ -40,7 +40,8 @@ re-run. **Band-power shares are computed on the power spectrum.** Two metrics â€
 active fraction and active-island duration â€” depend on the exact gate threshold
 and should be read as directional (BB-8 is sparser, with roughly 2x longer
 islands), not as hard targets; the other metrics reproduce to within rounding
-across reasonable settings.
+across reasonable settings. BB-8 brightness mainly lives in the 2-5 kHz upper-mid
+region, not above 6 kHz.
 
 ## Executive Summary
 

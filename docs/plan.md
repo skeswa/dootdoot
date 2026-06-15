@@ -222,7 +222,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 > while keeping completed task IDs stable. Metrics are directional aids only; by-ear review
 > remains the final acceptance gate for T-51.
 
-- [ ] **T-45 — Establish BB-8 comparison corpus + metrics harness.** Keep a small local
+- [x] **T-45 — Establish BB-8 comparison corpus + metrics harness.** Keep a small local
       reference/dootdoot comparison workflow for Phase 7 tuning: decode the downloaded BB-8 clips to
       mono 44.1 kHz, render a fixed dootdoot phrase corpus, and report the directional metrics
       from the analysis doc (active fraction/islands, magnitude-spectrum centroid/85% rolloff,

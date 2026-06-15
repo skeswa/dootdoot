@@ -1,8 +1,12 @@
 //! Build-time tooling for dootdoot.
 
 fn main() {
-    if let Err(error) = xtask::run() {
-        eprintln!("error: {error}");
-        std::process::exit(1);
+    match xtask::run() {
+        Ok(output) if output.is_empty() => {}
+        Ok(output) => print!("{output}"),
+        Err(error) => {
+            eprintln!("error: {error}");
+            std::process::exit(1);
+        }
     }
 }

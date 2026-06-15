@@ -1,5 +1,6 @@
 //! Build-time support library for dootdoot asset generation.
 
+mod bb8_metrics;
 mod format_artifact;
 mod pca_projection;
 mod run;
@@ -11,7 +12,7 @@ mod squash_stats;
 
 pub use format_artifact::{dequantize_i16, quantize_symmetric_i16, serialize_format_artifact};
 pub use pca_projection::{PcaProjection, compute_pca_projection};
-pub use run::run;
+pub use run::{run, run_with_args};
 pub use source_files::SourceFiles;
 pub use source_manifest::SourceManifest;
 pub use source_manifest_error::{Result, SourceManifestError};

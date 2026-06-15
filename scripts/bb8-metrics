@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+reference_dir="${1:-/Users/skeswa/repos/anddav87/bb8-sounds}"
+output_dir="${2:-target/bb8-metrics}"
+decoded_dir="${output_dir}/reference-wav"
+
+if ! command -v ffmpeg >/dev/null 2>&1; then
+  echo "error: ffmpeg is required to decode BB-8 MP3 clips" >&2
+  exit 1
+fi
+
+mkdir -p "${decoded_dir}"
+
+while IFS= read -r -d '' source_file; do
+  file_name="$(basename "${source_file%.*}").wav"
+  ffmpeg -hide_banner -loglevel error -y \
+    -i "${source_file}" \
+    -ac 1 \
+    -ar 44100 \
+    "${decoded_dir}/${file_name}"
+done < <(find "${reference_dir}" -maxdepth 1 -type f -name '*.mp3' -print0 | sort -z)
+
+cargo run -p xtask -- bb8-metrics \
+  --reference-wav-dir "${decoded_dir}" \
+  --output-dir "${output_dir}"
