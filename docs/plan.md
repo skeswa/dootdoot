@@ -505,7 +505,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       subtle and droid-like (not TTS). Add tests for determinism, bounded/finite output, and
       that the stage is off by default until driven by the planner.
       Deps: T-80, T-28, T-82 · Reqs: FR-83, NFR-3, NFR-4, NFR-16 · Est: 3h
-- [ ] **T-86 — Deterministic discourse-performance planner.** Add a pure planner that runs
+- [x] **T-86 — Deterministic discourse-performance planner.** Add a pure planner that runs
       after tokenization and before synthesis, assigning local phrase roles (`probe`,
       `chatty_reply`, `hesitation`, `terminal_flourish`, `aside`) and continuous
       performance curves (pitch center/velocity, formant target/velocity, brightness

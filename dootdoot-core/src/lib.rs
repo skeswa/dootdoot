@@ -7,6 +7,7 @@ mod complexity;
 mod engine;
 mod mapping;
 mod mathx;
+mod performance;
 mod phrase;
 mod sequence;
 mod synth;
@@ -38,6 +39,9 @@ pub use mathx::{
     EXP_POLYNOMIAL_DEGREE, EXP_TABLE_BITS, EXP_TABLE_LEN, MATHX_VERSION, Mathx,
     SIN_COS_POLYNOMIAL_DEGREE, SIN_COS_TABLE_BITS, SIN_COS_TABLE_LEN, TANH_EXP_CLAMP, cos, exp,
     sin, tanh,
+};
+pub use performance::{
+    PerformanceCurves, PerformancePlan, PerformanceSyllable, PhraseRole, plan_discourse_performance,
 };
 pub use phrase::{PhraseBoundaryStrength, PhrasePlan, PhraseSyllablePlan, plan_phrase_prosody};
 pub use sequence::{
