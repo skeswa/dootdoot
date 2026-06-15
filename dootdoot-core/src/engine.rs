@@ -4,8 +4,8 @@ use thiserror::Error;
 
 use crate::{
     KnobSet, MappingError, ProsodicPunctuation, SequenceEvent, TokenVector, TokenizerError,
-    UtteranceMood, analyze_affect_for_text, assemble_knobs, embedded_mapping, embedded_tokenizer,
-    pool_sequence, render_canonical_buffer,
+    UtteranceMood, analyze_affect_for_text, analyze_complexity_for_text, assemble_knobs,
+    embedded_mapping, embedded_tokenizer, pool_sequence, render_canonical_buffer,
 };
 
 /// Reports why text could not be rendered.
@@ -100,6 +100,7 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
     let tokenizer = embedded_tokenizer()?;
     let mapping = embedded_mapping()?;
     let mood = analyze_affect_for_text(text)?.mood();
+    let complexity = analyze_complexity_for_text(text)?;
     let encoded_input = tokenizer.tokenize(text)?;
     let mut templates = Vec::new();
     let mut voiced_tokens = Vec::new();
@@ -125,7 +126,10 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
     }
 
     if voiced_tokens.is_empty() {
-        let mut events = vec![SequenceEvent::mood(mood)];
+        let mut events = vec![
+            SequenceEvent::mood(mood),
+            SequenceEvent::complexity(complexity),
+        ];
         let mut explain_rows = vec![ExplainRow::mood(mood)];
 
         for template in templates {
@@ -159,7 +163,10 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
         .copied()
         .map(|token_vector| mapping.squash_token(token_vector))
         .collect::<Vec<_>>();
-    let mut events = vec![SequenceEvent::mood(mood)];
+    let mut events = vec![
+        SequenceEvent::mood(mood),
+        SequenceEvent::complexity(complexity),
+    ];
     let mut explain_rows = vec![ExplainRow::mood(mood)];
 
     for template in templates {

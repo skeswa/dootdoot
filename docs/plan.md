@@ -364,7 +364,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       Add tests showing common short words remain simple while longer/rarer shapes score
       higher.
       Deps: T-69 · Reqs: FR-8, FR-15, FR-38, FR-39, NFR-16 · Est: 2h
-- [ ] **T-71 — Render complexity as compound articulation.** Use the complexity scalar to
+- [x] **T-71 — Render complexity as compound articulation.** Use the complexity scalar to
       choose internal sub-gesture count, articulation density, and optional deterministic
       duration scaling without changing the semantic meaning-timbre. Update synthesis,
       output-length estimation, and golden hashes under `FORMAT_V2`.

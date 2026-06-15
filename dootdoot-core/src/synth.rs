@@ -175,6 +175,32 @@ pub(crate) struct SyllablePerformance {
     emphasized: bool,
     mood_valence: f64,
     mood_arousal: f64,
+    complexity: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SyllableRenderControls {
+    knobs: crate::KnobSet,
+    start_pitch_hz: f64,
+    target_pitch_hz: f64,
+    duration_seconds: f64,
+    contour: f64,
+    vowel_bias: f64,
+    warble_depth: f64,
+    brightness_gain: f64,
+    subgesture_density: f64,
+    subgesture_count: u32,
+    final_glide: SyllableFinalGlide,
+    warble_phase_offset: f64,
+    performance: SyllablePerformance,
+}
+
+#[derive(Debug, Clone)]
+struct SyllableRenderState {
+    phase: f64,
+    body_phase: f64,
+    sparkle_phase: f64,
+    formants: FormantFilterBank,
 }
 
 /// Filters samples through the fixed formant bank.
@@ -541,6 +567,7 @@ impl SyllablePerformance {
         emphasized: bool,
         mood_valence: f64,
         mood_arousal: f64,
+        complexity: f64,
     ) -> Self {
         Self {
             duration_samples,
@@ -549,6 +576,7 @@ impl SyllablePerformance {
             emphasized,
             mood_valence: mood_valence.clamp(-1.0, 1.0),
             mood_arousal: mood_arousal.clamp(0.0, 1.0),
+            complexity: complexity.clamp(0.0, 1.0),
         }
     }
 
@@ -560,7 +588,86 @@ impl SyllablePerformance {
             emphasized: false,
             mood_valence: 0.0,
             mood_arousal: 0.0,
+            complexity: 0.0,
         }
+    }
+
+    fn pitch_offset_with_emphasis(self) -> f64 {
+        self.pitch_offset_semitones
+            + if self.emphasized {
+                PHRASE_EMPHASIS_PITCH_SEMITONES
+            } else {
+                0.0
+            }
+    }
+}
+
+impl SyllableRenderControls {
+    fn new(
+        knobs: crate::KnobSet,
+        start_pitch_hz: f64,
+        final_glide: SyllableFinalGlide,
+        warble_phase_offset: f64,
+        performance: SyllablePerformance,
+        duration_samples: u32,
+    ) -> Self {
+        let duration_seconds = f64::from(duration_samples) / f64::from(SYNTH_SAMPLE_RATE_HZ);
+        let contour = (knobs.contour() + (performance.mood_valence * 0.35)).clamp(-1.0, 1.0);
+        let vowel_bias = (performance.mood_valence * 0.16) + (performance.mood_arousal * 0.10);
+        let warble_depth =
+            (knobs.warble_depth() + (performance.mood_arousal * 0.35)).clamp(-1.0, 1.0);
+        let brightness_gain =
+            (1.0 + (performance.mood_arousal * 0.45) + (performance.mood_valence * 0.12))
+                .clamp(0.78, 1.55);
+        let subgesture_density =
+            1.0 + (performance.mood_arousal * 0.80) + (performance.complexity * 1.20);
+        let subgesture_count = complexity_subgesture_count(performance.complexity);
+        let target_pitch_hz = pitch_center_hz(knobs.pitch_center())
+            * semitone_multiplier(performance.pitch_offset_with_emphasis());
+        let start_pitch_hz = if start_pitch_hz.is_finite() && start_pitch_hz > 0.0 {
+            start_pitch_hz
+        } else {
+            target_pitch_hz
+        };
+
+        Self {
+            knobs,
+            start_pitch_hz,
+            target_pitch_hz,
+            duration_seconds,
+            contour,
+            vowel_bias,
+            warble_depth,
+            brightness_gain,
+            subgesture_density,
+            subgesture_count,
+            final_glide,
+            warble_phase_offset,
+            performance,
+        }
+    }
+}
+
+impl SyllableRenderState {
+    fn new() -> Self {
+        Self {
+            phase: 0.0,
+            body_phase: 0.0,
+            sparkle_phase: 0.0,
+            formants: FormantFilterBank::new(),
+        }
+    }
+
+    fn advance(&mut self, pitch_hz: f64, warble_depth: f64, contour: f64) {
+        self.phase = wrap_phase(self.phase + (pitch_hz / f64::from(SYNTH_SAMPLE_RATE_HZ)));
+        self.body_phase = wrap_phase(
+            self.body_phase + (body_layer_frequency_hz(pitch_hz) / f64::from(SYNTH_SAMPLE_RATE_HZ)),
+        );
+        self.sparkle_phase = wrap_phase(
+            self.sparkle_phase
+                + (upper_mid_sparkle_frequency_hz(warble_depth, contour)
+                    / f64::from(SYNTH_SAMPLE_RATE_HZ)),
+        );
     }
 }
 
@@ -587,105 +694,132 @@ pub(crate) fn render_syllable_with_performance(
     performance: SyllablePerformance,
 ) -> Vec<f64> {
     let duration_samples = performance.duration_samples.max(1);
-    let duration_seconds = f64::from(duration_samples) / f64::from(SYNTH_SAMPLE_RATE_HZ);
-    let contour = (knobs.contour() + (performance.mood_valence * 0.35)).clamp(-1.0, 1.0);
-    let vowel_bias = (performance.mood_valence * 0.16) + (performance.mood_arousal * 0.10);
-    let warble_depth = (knobs.warble_depth() + (performance.mood_arousal * 0.35)).clamp(-1.0, 1.0);
-    let brightness_gain =
-        (1.0 + (performance.mood_arousal * 0.45) + (performance.mood_valence * 0.12))
-            .clamp(0.78, 1.55);
-    let subgesture_density = 1.0 + (performance.mood_arousal * 0.80);
-    let pitch_offset_semitones = performance.pitch_offset_semitones
-        + if performance.emphasized {
-            PHRASE_EMPHASIS_PITCH_SEMITONES
-        } else {
-            0.0
-        };
-    let target_pitch_hz =
-        pitch_center_hz(knobs.pitch_center()) * semitone_multiplier(pitch_offset_semitones);
-    let start_pitch_hz = if start_pitch_hz.is_finite() && start_pitch_hz > 0.0 {
-        start_pitch_hz
-    } else {
-        target_pitch_hz
-    };
-    let mut phase = 0.0;
-    let mut body_phase = 0.0;
-    let mut sparkle_phase = 0.0;
-    let mut formants = FormantFilterBank::new();
+    let controls = SyllableRenderControls::new(
+        knobs,
+        start_pitch_hz,
+        final_glide,
+        warble_phase_offset,
+        performance,
+        duration_samples,
+    );
+    let mut state = SyllableRenderState::new();
     let mut samples = Vec::new();
 
     for sample_index in 0..duration_samples {
-        let elapsed_seconds = f64::from(sample_index) / f64::from(SYNTH_SAMPLE_RATE_HZ);
-        let glided_pitch_hz =
-            portamento_pitch_hz(start_pitch_hz, target_pitch_hz, contour, elapsed_seconds);
-        let final_glide_pitch_hz = apply_final_glide_hz(
-            glided_pitch_hz,
-            target_pitch_hz,
-            final_glide,
-            elapsed_seconds,
-            duration_seconds,
-        );
-        let phrase_final_pitch_hz = apply_phrase_final_shift_hz(
-            final_glide_pitch_hz,
-            target_pitch_hz,
-            performance.final_lowering_semitones,
-            elapsed_seconds,
-            duration_seconds,
-        );
-        let internal_pitch_hz = apply_internal_pitch_swoop_hz_for_duration(
-            phrase_final_pitch_hz,
-            contour,
-            elapsed_seconds,
-            duration_seconds,
-        );
-        let pitch_hz = apply_warble_hz_with_phase(
-            internal_pitch_hz,
-            warble_depth,
-            elapsed_seconds,
-            warble_phase_offset,
-        );
-        let source = source_oscillator_sample(phase, pitch_hz);
-        let vowel_position = vowel_trajectory_position_for_duration(
-            (knobs.vowel_position() + vowel_bias).clamp(-1.0, 1.0),
-            contour,
-            elapsed_seconds,
-            duration_seconds,
-        );
-        let voiced = formants.process_sample(source, vowel_position);
-        let layered = voiced
-            + body_layer_sample(body_phase, vowel_position)
-            + attack_transient_sample(elapsed_seconds, contour)
-            + (brightness_gain
-                * upper_mid_sparkle_sample(
-                    sparkle_phase,
-                    elapsed_seconds * subgesture_density,
-                    warble_depth,
-                ));
-        let layered = if performance.emphasized {
-            layered * PHRASE_EMPHASIS_GAIN
-        } else {
-            layered
-        };
-        let electronic = ring_modulate(layered, elapsed_seconds);
-
-        samples.push(apply_amplitude_envelope(
-            electronic,
-            elapsed_seconds,
-            duration_seconds,
+        samples.push(render_performance_sample(
+            sample_index,
+            controls,
+            &mut state,
         ));
-
-        phase = wrap_phase(phase + (pitch_hz / f64::from(SYNTH_SAMPLE_RATE_HZ)));
-        body_phase = wrap_phase(
-            body_phase + (body_layer_frequency_hz(pitch_hz) / f64::from(SYNTH_SAMPLE_RATE_HZ)),
-        );
-        sparkle_phase = wrap_phase(
-            sparkle_phase
-                + (upper_mid_sparkle_frequency_hz(warble_depth, contour)
-                    / f64::from(SYNTH_SAMPLE_RATE_HZ)),
-        );
     }
 
     samples
+}
+
+fn render_performance_sample(
+    sample_index: u32,
+    controls: SyllableRenderControls,
+    state: &mut SyllableRenderState,
+) -> f64 {
+    let elapsed_seconds = f64::from(sample_index) / f64::from(SYNTH_SAMPLE_RATE_HZ);
+    let articulation = complexity_articulation_offset(
+        controls.performance.complexity,
+        controls.subgesture_count,
+        elapsed_seconds,
+        controls.duration_seconds,
+    );
+    let contour = (controls.contour + articulation).clamp(-1.0, 1.0);
+    let glided_pitch_hz = portamento_pitch_hz(
+        controls.start_pitch_hz,
+        controls.target_pitch_hz,
+        contour,
+        elapsed_seconds,
+    );
+    let final_glide_pitch_hz = apply_final_glide_hz(
+        glided_pitch_hz,
+        controls.target_pitch_hz,
+        controls.final_glide,
+        elapsed_seconds,
+        controls.duration_seconds,
+    );
+    let phrase_final_pitch_hz = apply_phrase_final_shift_hz(
+        final_glide_pitch_hz,
+        controls.target_pitch_hz,
+        controls.performance.final_lowering_semitones,
+        elapsed_seconds,
+        controls.duration_seconds,
+    );
+    let internal_pitch_hz = apply_internal_pitch_swoop_hz_for_duration(
+        phrase_final_pitch_hz,
+        contour,
+        elapsed_seconds,
+        controls.duration_seconds,
+    );
+    let pitch_hz = apply_warble_hz_with_phase(
+        internal_pitch_hz,
+        controls.warble_depth,
+        elapsed_seconds,
+        controls.warble_phase_offset,
+    );
+    let vowel_position = vowel_trajectory_position_for_duration(
+        (controls.knobs.vowel_position() + controls.vowel_bias + (articulation * 0.65))
+            .clamp(-1.0, 1.0),
+        contour,
+        elapsed_seconds,
+        controls.duration_seconds,
+    );
+    let source = source_oscillator_sample(state.phase, pitch_hz);
+    let voiced = state.formants.process_sample(source, vowel_position);
+    let layered = voiced
+        + body_layer_sample(state.body_phase, vowel_position)
+        + attack_transient_sample(elapsed_seconds, contour)
+        + (controls.brightness_gain
+            * upper_mid_sparkle_sample(
+                state.sparkle_phase,
+                elapsed_seconds * controls.subgesture_density,
+                controls.warble_depth,
+            ));
+    let layered = if controls.performance.emphasized {
+        layered * PHRASE_EMPHASIS_GAIN
+    } else {
+        layered
+    };
+    let electronic = ring_modulate(layered, elapsed_seconds);
+
+    state.advance(pitch_hz, controls.warble_depth, contour);
+
+    apply_amplitude_envelope(electronic, elapsed_seconds, controls.duration_seconds)
+}
+
+fn complexity_subgesture_count(complexity: f64) -> u32 {
+    if complexity <= 0.0 {
+        1
+    } else if complexity < 0.34 {
+        2
+    } else if complexity < 0.67 {
+        3
+    } else {
+        4
+    }
+}
+
+fn complexity_articulation_offset(
+    complexity: f64,
+    subgesture_count: u32,
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+) -> f64 {
+    if complexity <= 0.0 || !elapsed_seconds.is_finite() {
+        return 0.0;
+    }
+
+    let progress = syllable_progress(elapsed_seconds, duration_seconds);
+    let phase = f64::from(subgesture_count) * progress;
+    let primary = sin(2.0 * PI * phase);
+    let secondary = sin(2.0 * PI * ((phase * 2.0) + 0.17));
+
+    (complexity.clamp(0.0, 1.0) * 0.105 * ((0.72 * primary) + (0.28 * secondary)))
+        .clamp(-0.14, 0.14)
 }
 
 fn apply_internal_pitch_swoop_hz_for_duration(

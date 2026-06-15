@@ -15,6 +15,14 @@ pub struct ComplexityAnalysis {
 }
 
 impl ComplexityAnalysis {
+    pub(crate) fn zero() -> Self {
+        Self {
+            wordpiece_subtoken_count: 0,
+            character_count: 0,
+            scalar: 0.0,
+        }
+    }
+
     /// Returns continuation `WordPiece` subtokens beyond each word's first
     /// piece.
     pub fn wordpiece_subtoken_count(&self) -> usize {

@@ -88,3 +88,15 @@ owns:
 The scalar intentionally does not use Zipf/frequency, iconicity, or third-party VAD-style
 tables. Those can be considered only after the same explicit asset-license policy that
 governs affect assets admits them.
+
+## Implemented Complexity Articulation
+
+Text analysis prepends a complexity control event to the sequencer stream. Synthesis uses
+that scalar to:
+
+- lengthen voiced syllables by a bounded deterministic amount;
+- increase sub-gesture count from one to four internal movements;
+- increase articulation density for internal pitch, vowel, and sparkle motion.
+
+The semantic four-knob meaning layer remains unchanged: complexity is a separate
+performance channel around the same token knobs.

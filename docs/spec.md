@@ -188,6 +188,9 @@
   from owned inputs only: non-whitespace character count and continuation `WordPiece`
   subtoken count. Frequency, Zipf, iconicity, or other third-party psycholinguistic
   assets SHALL remain excluded until an explicit asset-license policy admits them.
+- **FR-51** `FORMAT_V2` synthesis SHALL map the complexity scalar to deterministic
+  compound articulation by increasing bounded sub-gesture count, articulation density,
+  and optional duration scaling without changing the semantic meaning-timbre axes.
 
 ---
 

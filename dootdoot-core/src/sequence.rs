@@ -3,10 +3,10 @@
 use core::f64::consts::LN_2;
 
 use crate::{
-    CLAUSE_SYLLABLE_SAMPLES, KnobSet, LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES,
-    MEDIUM_PUNCTUATION_PAUSE_SAMPLES, PhraseBoundaryStrength, PhraseSyllablePlan,
-    SENTENCE_SYLLABLE_SAMPLES, TRAILING_SILENCE_SAMPLES, UtteranceMood, exp, pitch_center_hz,
-    plan_phrase_prosody,
+    CLAUSE_SYLLABLE_SAMPLES, ComplexityAnalysis, KnobSet, LEADING_SILENCE_SAMPLES,
+    LONG_PUNCTUATION_PAUSE_SAMPLES, MEDIUM_PUNCTUATION_PAUSE_SAMPLES, PhraseBoundaryStrength,
+    PhraseSyllablePlan, SENTENCE_SYLLABLE_SAMPLES, TRAILING_SILENCE_SAMPLES, UtteranceMood, exp,
+    pitch_center_hz, plan_phrase_prosody,
     synth::{
         BASE_SYLLABLE_SAMPLES, SyllableFinalGlide, SyllablePerformance,
         render_syllable_with_final_glide, render_syllable_with_performance,
@@ -34,6 +34,8 @@ pub const EMPTY_CHIRP_WARBLE_DEPTH: f64 = 0.85;
 pub enum SequenceEvent {
     /// A whole-utterance mood control event.
     Mood(UtteranceMood),
+    /// A whole-utterance complexity control event.
+    Complexity(ComplexityAnalysis),
     /// A voiced syllable with semantic knobs.
     Syllable(SyllableEvent),
     /// A control-only prosodic punctuation marker.
@@ -86,10 +88,21 @@ struct SequencerMood {
     explicit: bool,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct SequencerComplexity {
+    analysis: ComplexityAnalysis,
+    explicit: bool,
+}
+
 impl SequenceEvent {
     /// Builds a whole-utterance mood event.
     pub fn mood(mood: UtteranceMood) -> Self {
         Self::Mood(mood)
+    }
+
+    /// Builds a whole-utterance complexity event.
+    pub fn complexity(complexity: ComplexityAnalysis) -> Self {
+        Self::Complexity(complexity)
     }
 
     /// Builds a voiced syllable event.
@@ -200,9 +213,10 @@ pub fn estimate_utterance_sample_count(events: &[SequenceEvent]) -> u64 {
 
     let mut sample_count = u64::from(LEADING_SILENCE_SAMPLES) + u64::from(TRAILING_SILENCE_SAMPLES);
     let mood = mood_from_events(events);
+    let complexity = complexity_from_events(events);
 
     for phrase_syllable in plan_phrase_prosody(events).syllables() {
-        sample_count += u64::from(phrase_syllable_samples(*phrase_syllable, mood));
+        sample_count += u64::from(phrase_syllable_samples(*phrase_syllable, mood, complexity));
         sample_count += u64::from(phrase_syllable.pause_samples());
     }
 
@@ -214,6 +228,7 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
     let plans = syllable_plans(events);
     let phrase_plan = plan_phrase_prosody(events);
     let mood = mood_from_events(events);
+    let complexity = complexity_from_events(events);
 
     if plans.is_empty() {
         return SequencedUtterance::EmptyChirp(render_empty_chirp());
@@ -247,12 +262,13 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
             plan.final_glide,
             warble_phase_offset_for_syllable(index),
             SyllablePerformance::new(
-                phrase_syllable_samples(phrase_syllable, mood),
+                phrase_syllable_samples(phrase_syllable, mood, complexity),
                 pitch_offset_semitones,
                 phrase_syllable.final_lowering_semitones(),
                 phrase_syllable.is_emphasized(),
                 mood.valence(),
                 mood.arousal(),
+                complexity.scalar(),
             ),
         ));
         pending_reset_semitones = phrase_syllable.pitch_reset_semitones();
@@ -272,7 +288,11 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
     SequencedUtterance::Samples(samples)
 }
 
-fn phrase_syllable_samples(phrase_syllable: PhraseSyllablePlan, mood: SequencerMood) -> u32 {
+fn phrase_syllable_samples(
+    phrase_syllable: PhraseSyllablePlan,
+    mood: SequencerMood,
+    complexity: SequencerComplexity,
+) -> u32 {
     let base_samples = match phrase_syllable.boundary_strength() {
         PhraseBoundaryStrength::None | PhraseBoundaryStrength::Word => BASE_SYLLABLE_SAMPLES,
         PhraseBoundaryStrength::Clause => CLAUSE_SYLLABLE_SAMPLES,
@@ -284,7 +304,13 @@ fn phrase_syllable_samples(phrase_syllable: PhraseSyllablePlan, mood: SequencerM
         1.0
     };
 
-    round_f64_to_u32(f64::from(base_samples) * duration_scale)
+    let complexity_scale = if complexity.explicit {
+        1.0 + (0.12 * complexity.scalar())
+    } else {
+        1.0
+    };
+
+    round_f64_to_u32(f64::from(base_samples) * duration_scale * complexity_scale)
 }
 
 fn pitch_with_offset(knobs: KnobSet, offset_semitones: f64) -> f64 {
@@ -296,9 +322,23 @@ fn mood_from_events(events: &[SequenceEvent]) -> SequencerMood {
         .iter()
         .find_map(|event| match event {
             SequenceEvent::Mood(mood) => Some(*mood),
-            SequenceEvent::Syllable(_) | SequenceEvent::Punctuation(_) => None,
+            SequenceEvent::Complexity(_)
+            | SequenceEvent::Syllable(_)
+            | SequenceEvent::Punctuation(_) => None,
         })
         .map_or_else(SequencerMood::absent, SequencerMood::explicit)
+}
+
+fn complexity_from_events(events: &[SequenceEvent]) -> SequencerComplexity {
+    events
+        .iter()
+        .find_map(|event| match event {
+            SequenceEvent::Complexity(complexity) => Some(*complexity),
+            SequenceEvent::Mood(_) | SequenceEvent::Syllable(_) | SequenceEvent::Punctuation(_) => {
+                None
+            }
+        })
+        .map_or_else(SequencerComplexity::absent, SequencerComplexity::explicit)
 }
 
 fn mood_pitch_offset_semitones(mood: SequencerMood) -> f64 {
@@ -339,7 +379,7 @@ fn syllable_plans(events: &[SequenceEvent]) -> Vec<SyllablePlan> {
 
     for event in events {
         match event {
-            SequenceEvent::Mood(_) => {}
+            SequenceEvent::Mood(_) | SequenceEvent::Complexity(_) => {}
             SequenceEvent::Syllable(syllable) => plans.push(SyllablePlan::new(*syllable)),
             SequenceEvent::Punctuation(punctuation) => {
                 if let Some(plan) = plans.last_mut() {
@@ -402,5 +442,25 @@ impl SequencerMood {
 
     fn arousal(self) -> f64 {
         self.mood.arousal()
+    }
+}
+
+impl SequencerComplexity {
+    fn explicit(analysis: ComplexityAnalysis) -> Self {
+        Self {
+            analysis,
+            explicit: true,
+        }
+    }
+
+    fn absent() -> Self {
+        Self {
+            analysis: ComplexityAnalysis::zero(),
+            explicit: false,
+        }
+    }
+
+    fn scalar(self) -> f64 {
+        self.analysis.scalar()
     }
 }

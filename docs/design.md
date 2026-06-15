@@ -686,7 +686,9 @@ allowed only as deterministic, bounded **performance channels** around that core
   drive articulation density without changing meaning-timbre. The first-pass scalar uses
   only non-whitespace character count and continuation `WordPiece` subtoken count; Zipf,
   frequency, iconicity, or similar third-party tables stay out of the format until an
-  explicit asset-license policy admits them.
+  explicit asset-license policy admits them. In synthesis it remains a separate
+  performance channel that can lengthen syllables and add bounded internal sub-gestures
+  around the unchanged semantic knobs.
 - **Archetype** — a small fixed gesture palette (`chatter`, `yelp`, `moan`,
   `stutter/burst`, `tremble`, plus sparse non-vocal seasoning) selected by a pure rule.
 
