@@ -474,7 +474,9 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
 - **Between words, a short pause** (`FORMAT_V1`: ~110 ms) — the burst-like BB-8 cadence;
   lets the ear segment words. The pause need not be a single fixed constant (revised
   FR-22): deterministic variation by boundary strength (word vs clause vs sentence) is
-  permitted; `FORMAT_V1` uses one fixed value.
+  permitted; `FORMAT_V1` uses one fixed value. `FORMAT_V3` keeps the deterministic word
+  boundary duration but fills it with a quiet pitch/formant transition bridge so normal
+  phrases flow instead of becoming hard-separated token bursts.
 - **Punctuation is control-only, not voiced.** A fixed set of prosodic punctuation
   tokens (`.` `!` `?` `,` `;` `:`) is recognized and treated as control markers: they do
   **not** produce their own syllable. Instead each shapes the **preceding** syllable's
@@ -525,6 +527,24 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
 Net effect: short words = quick single warbles; long words = flowing multi-syllable
 warbles; sentences = phrased bursts with intonation — recognizable "droid speech,"
 with the semantic _timbre_ (pitch/vowel/swoop/warble) as the learnable content.
+
+**FORMAT_V3 phrase-continuity smoothing.** V3 keeps the V2 phrase, affect, complexity,
+and archetype channels, then changes how connected syllables are rendered:
+
+- syllables in the same connected phrase share oscillator phase, formant filter state,
+  and body/sparkle phase instead of starting a fresh synth state per token;
+- word boundaries render quiet deterministic transition bridges rather than zero-filled
+  gaps, while clause/sentence punctuation can still create real phrase breaks;
+- connected syllable starts and ends use a nonzero envelope floor so token boundaries no
+  longer restart every syllable from silence;
+- the internal envelope dip remains, but it no longer clamps to zero inside the voiced
+  body;
+- the active sustain level is 34%, with connected edges held above the normal release
+  floor inside connected phrases.
+
+The active acceptance note is
+[`format-v3-smoothing.md`](./validation/format-v3-smoothing.md). The committed golden WAV
+hashes are regenerated under `FORMAT_V3`.
 
 ---
 
@@ -587,7 +607,7 @@ Built with `clap` (derive).
 not derived from the (absent) text, so it stays deterministic. _(Chosen over erroring
 or silence for being playful and on-theme.)_
 
-**Standard:** `--version` (surfaces the `FORMAT_V1` identifier), `--help`; tasteful exit
+**Standard:** `--version` (surfaces the active format identifier), `--help`; tasteful exit
 codes (0 ok, non-zero on error such as absurd-length input).
 
 **Deliberately omitted in v1:** `--seed` (meaningless — determinism comes from text +
@@ -667,10 +687,15 @@ _Serialization_
 - the **WAV serialization choices** (44.1 kHz, 16-bit signed PCM, mono, and the exact
   header bytes) — these define the file the golden hashes are taken over.
 
-`FORMAT_V1` is surfaced by `--version`. **Any change that alters a single output sample
-bumps it to `V2`.** This gives users the guarantee: _same text + same FORMAT version =
+The active format is surfaced by `--version`. **Any change that alters a single output sample
+bumps the identifier** (`V1` → `V2` → `V3`, etc.). This gives users the guarantee: _same text + same FORMAT version =
 same sound, forever, on every verified platform (§8.1)_, while letting the voice evolve
 deliberately.
+
+The `FORMAT_V*` identifier is the rendered-output contract, not necessarily the on-disk
+layout version of the baked mapping artifact. `FORMAT_V3` still uses the locked
+`assets/format_v1.bin` token-to-axis table; V3 exists because phrase rendering changed
+the generated samples.
 
 ### 8.3 Decision: `FORMAT_V2` broadens performance channels, not the semantic core
 
@@ -709,6 +734,20 @@ not affect output routing and are part of the versioned snapshot contract.
 [`docs/validation/format-v2-expressiveness.md`](validation/format-v2-expressiveness.md):
 contextual BB-8 clips guide phrase-level listening checks, and the committed golden WAV
 hashes remain the byte-level contract.
+
+### 8.4 Decision: `FORMAT_V3` smooths connected phrase rendering
+
+`FORMAT_V3` is a sample-affecting renderer change prompted by the V2 staccato gap:
+increased expression inside each token still left hard zero gaps and repeated
+attack/release gestures at token boundaries. V3 does not change the semantic mapping
+artifact or the V2 performance-channel decisions. It changes only connected phrase
+rendering: synth state persists across connected syllables, word boundaries become quiet
+bridges, connected envelope edges keep a nonzero floor, and the internal envelope dip can
+no longer clamp to silence.
+
+The active CLI version string is `FORMAT_V3`. The frozen V2 contract remains documented,
+and the V3 acceptance note records the phrase-continuity check plus regenerated golden
+WAV hashes.
 
 ---
 

@@ -72,7 +72,7 @@ fn sequencer_wraps_one_syllable_with_fixed_padding() {
 }
 
 #[test]
-fn sequencer_inserts_word_pause_between_non_continuation_syllables() {
+fn sequencer_renders_word_bridge_between_non_continuation_syllables() {
     let output = sequence_utterance(&[
         SequenceEvent::syllable(neutral_knobs(), false),
         SequenceEvent::syllable(shifted_knobs(), false),
@@ -92,7 +92,7 @@ fn sequencer_inserts_word_pause_between_non_continuation_syllables() {
     assert!(
         samples[pause_start..pause_end]
             .iter()
-            .all(|sample| *sample == 0.0)
+            .any(|sample| *sample != 0.0)
     );
 }
 

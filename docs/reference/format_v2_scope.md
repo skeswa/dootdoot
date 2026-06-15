@@ -51,8 +51,8 @@ The first V2 performance channel applies the pure phrase plan to synthesis:
 - consecutive punctuation keeps the first marker's glide/lengthening role while the
   longest single pause wins.
 
-The active CLI version string is `FORMAT_V2`; the embedded semantic mapping artifact is
-still the locked `format_v1.bin` table.
+The `FORMAT_V2` CLI version string was `FORMAT_V2`; the embedded semantic mapping
+artifact is still the locked `format_v1.bin` table.
 
 ## Implemented Affect Analysis
 
@@ -133,3 +133,7 @@ are present together. The final acceptance note is
 [`validation/format-v2-expressiveness.md`](../validation/format-v2-expressiveness.md).
 The BB-8 contextual clip workflow is a directional aid for phrase-level listening checks;
 the committed golden WAV hashes remain the sample-level format contract.
+
+`FORMAT_V3` supersedes V2 as the active CLI contract by smoothing connected phrase
+rendering. V2 remains the frozen expressiveness checkpoint; V3 keeps those performance
+channels and changes only the phrase-continuity renderer.

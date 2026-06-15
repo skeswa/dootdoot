@@ -41,7 +41,7 @@ cache.
 `FORMAT_V1` is locked. Any change that alters one rendered sample requires a new format
 identifier, new reference documentation, and regenerated golden WAV hashes.
 
-Examples that require `FORMAT_V2`:
+Examples that require a new format identifier (`FORMAT_V2`, `FORMAT_V3`, etc.):
 
 - A different source model, tokenizer, source revision, PCA projection, axis count, or
   quantization rule.

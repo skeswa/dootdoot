@@ -71,6 +71,11 @@ punctuation and word boundaries affect timing.
 ## Version Contract
 
 `dootdoot --version` surfaces the active format identifier. The current binary reports
-`dootdoot FORMAT_V2`. `FORMAT_V1` is still the locked v1 contract, and `FORMAT_V2` is the
-locked expressiveness contract; any further rendered-sample change requires a new
-identifier and regenerated golden WAV hashes.
+`dootdoot FORMAT_V3`. `FORMAT_V1` is still the locked v1 contract, `FORMAT_V2` is the
+locked expressiveness contract, and `FORMAT_V3` is the active phrase-continuity contract.
+Any further rendered-sample change requires a new identifier and regenerated golden WAV
+hashes.
+
+The `FORMAT_V*` identifier names the rendered-output contract, not the binary layout of
+the baked semantic mapping asset. The current `FORMAT_V3` renderer still embeds the
+locked `assets/format_v1.bin` token-to-axis table.

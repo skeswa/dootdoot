@@ -384,6 +384,16 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       hashes, and document the final phrase/affect/complexity/archetype contract.
       Deps: T-69, T-71, T-73 · Reqs: FR-33, FR-38, FR-39, NFR-17, NFR-18, NFR-20 · Est: 3h
 
+## Phase 11 — FORMAT_V3 phrase continuity
+
+- [x] **T-75 — Smooth connected phrase rendering.** Remove hard zero holes from voiced
+      phrase bodies by keeping synth state alive across connected syllables, replacing
+      word-boundary silence with deterministic transition bridges, adding connected
+      envelope edge floors, preserving punctuation phrase breaks, updating `--version`,
+      regenerating golden WAV hashes, and documenting the V3 acceptance check.
+      Deps: T-74 · Reqs: FR-33, FR-39, FR-55, FR-56, FR-57, FR-58, FR-59, NFR-16, NFR-17,
+      NFR-18 · Est: 3h
+
 ---
 
 ## Critical paths
@@ -418,4 +428,11 @@ flowchart LR
     T69 --> T74[T-74 FORMAT_V2 freeze]
     T71 --> T74
     T73 --> T74
+```
+
+The `FORMAT_V3` smoothing branch follows the frozen V2 expressiveness contract:
+
+```mermaid
+flowchart LR
+    T74[T-74 FORMAT_V2 freeze] --> T75[T-75 FORMAT_V3 phrase continuity]
 ```

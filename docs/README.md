@@ -35,8 +35,8 @@ Evidence and proposals that informed the sound design.
 - [`research/bb8-sound-signature-analysis.md`](research/bb8-sound-signature-analysis.md)
   — Phase 7 timbre-gap analysis against the local BB-8 reference corpus.
 - [`research/bb8-expressiveness-gap-analysis.md`](research/bb8-expressiveness-gap-analysis.md)
-  — phrase, affect, word-complexity, and gesture-palette gaps for future `FORMAT_V2`
-  work.
+  — phrase, affect, word-complexity, and gesture-palette gaps that informed
+  `FORMAT_V2` work.
 
 ## Validation
 
@@ -46,6 +46,8 @@ Short acceptance notes for decisions that were finalized during format freezes.
   acceptance.
 - [`validation/format-v2-expressiveness.md`](validation/format-v2-expressiveness.md) —
   final `FORMAT_V2` phrase/affect/complexity/archetype acceptance.
+- [`validation/format-v3-smoothing.md`](validation/format-v3-smoothing.md) — final
+  `FORMAT_V3` phrase-continuity acceptance.
 - [`validation/learnability-spread.md`](validation/learnability-spread.md) — final
   semantic cluster spread check.
 - [`validation/squash.md`](validation/squash.md) — finalized tanh z-score squash choice.

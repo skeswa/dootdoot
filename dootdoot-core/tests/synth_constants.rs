@@ -19,7 +19,7 @@ use dootdoot_core::{
 const DESIGN: &str = include_str!("../../docs/design.md");
 
 #[test]
-fn format_v1_synthesis_constants_are_pinned() {
+fn active_synthesis_constants_are_pinned() {
     assert_eq!(runtime(SYNTH_SAMPLE_RATE_HZ), 44_100);
     assert_eq!(runtime(FORMANT_COUNT), 3);
     assert_eq!(runtime(VOWEL_LOCUS_COUNT), 3);
@@ -50,7 +50,7 @@ fn format_v1_synthesis_constants_are_pinned() {
     assert_eq!(bits(runtime(ENVELOPE_ATTACK_SECONDS)), bits(0.006));
     assert_eq!(bits(runtime(ENVELOPE_DECAY_SECONDS)), bits(0.050));
     assert_eq!(bits(runtime(ENVELOPE_RELEASE_SECONDS)), bits(0.060));
-    assert_eq!(bits(runtime(ENVELOPE_SUSTAIN_LEVEL)), bits(0.24));
+    assert_eq!(bits(runtime(ENVELOPE_SUSTAIN_LEVEL)), bits(0.34));
     assert_eq!(bits(runtime(PITCH_REGISTER_BIAS_HZ)), bits(760.0));
     assert_eq!(bits(runtime(PITCH_SEMITONE_SPAN)), bits(10.0));
     assert_eq!(bits(runtime(EMPTY_CHIRP_START_PITCH_CENTER)), bits(-0.35));
@@ -95,8 +95,10 @@ fn vowel_locus_and_formant_shape_are_pinned() {
 fn design_documents_the_frozen_synthesis_constants() {
     for expected in [
         "FORMAT_V1 synthesis constants",
+        "FORMAT_V3 phrase-continuity smoothing",
         "base syllable = 170 ms",
         "word pause = 110 ms",
+        "active sustain level is 34%",
         "compound warble\n  rates = 3.1/8.5/15.7 Hz",
         "ring-mod = 72 Hz at 8% mix",
     ] {

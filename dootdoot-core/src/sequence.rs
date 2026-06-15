@@ -8,9 +8,9 @@ use crate::{
     PhraseBoundaryStrength, PhraseSyllablePlan, SENTENCE_SYLLABLE_SAMPLES,
     TRAILING_SILENCE_SAMPLES, UtteranceMood, exp, pitch_center_hz, plan_phrase_prosody,
     synth::{
-        BASE_SYLLABLE_SAMPLES, SyllableFinalGlide, SyllablePerformance,
-        render_syllable_with_final_glide, render_syllable_with_performance,
-        warble_phase_offset_for_syllable,
+        BASE_SYLLABLE_SAMPLES, SyllableFinalGlide, SyllablePerformance, SyllableRenderState,
+        render_syllable_with_final_glide, render_syllable_with_performance_into,
+        render_transition_bridge, warble_phase_offset_for_syllable,
     },
 };
 
@@ -243,6 +243,7 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
     }
 
     let mut samples = Vec::new();
+    let mut synth_state = SyllableRenderState::new();
     let mut previous_pitch_hz = None;
     let mut pending_reset_semitones = 0.0;
 
@@ -263,8 +264,14 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
             Some(previous_pitch_hz) => previous_pitch_hz,
             None => target_pitch_hz,
         };
+        let starts_connected = index > 0
+            && phrase_plan
+                .syllables()
+                .get(index - 1)
+                .is_some_and(|previous| boundary_connects_to_next(*previous));
+        let ends_connected = index + 1 < plans.len() && boundary_connects_to_next(phrase_syllable);
 
-        samples.extend(render_syllable_with_performance(
+        render_syllable_with_performance_into(
             syllable.knobs(),
             start_pitch_hz,
             plan.final_glide,
@@ -275,13 +282,16 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
                 phrase_syllable.final_lowering_semitones(),
                 phrase_syllable.is_emphasized(),
             )
+            .with_connections(starts_connected, ends_connected)
             .with_expression(
                 mood.valence(),
                 mood.arousal(),
                 complexity.scalar(),
                 plan.archetype,
             ),
-        ));
+            &mut synth_state,
+            &mut samples,
+        );
         pending_reset_semitones = phrase_syllable.pitch_reset_semitones();
         previous_pitch_hz = if pending_reset_semitones > 0.0 {
             None
@@ -290,7 +300,29 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
         };
 
         if phrase_syllable.pause_samples() > 0 {
-            append_silence(&mut samples, phrase_syllable.pause_samples());
+            if phrase_syllable.boundary_strength() == PhraseBoundaryStrength::Word {
+                let bridge_target_pitch_hz = next_target_pitch_hz(
+                    index,
+                    &plans,
+                    phrase_plan.syllables(),
+                    mood,
+                    pending_reset_semitones,
+                )
+                .unwrap_or(target_pitch_hz);
+
+                render_transition_bridge(
+                    syllable.knobs(),
+                    previous_pitch_hz.unwrap_or(target_pitch_hz),
+                    bridge_target_pitch_hz,
+                    phrase_syllable.pause_samples(),
+                    &mut synth_state,
+                    &mut samples,
+                );
+                previous_pitch_hz = Some(bridge_target_pitch_hz);
+            } else {
+                append_silence(&mut samples, phrase_syllable.pause_samples());
+                synth_state = SyllableRenderState::new();
+            }
         }
     }
 
@@ -326,6 +358,33 @@ fn phrase_syllable_samples(
 
 fn pitch_with_offset(knobs: KnobSet, offset_semitones: f64) -> f64 {
     pitch_center_hz(knobs.pitch_center()) * exp((LN_2 * offset_semitones) / 12.0)
+}
+
+fn boundary_connects_to_next(phrase_syllable: PhraseSyllablePlan) -> bool {
+    matches!(
+        phrase_syllable.boundary_strength(),
+        PhraseBoundaryStrength::None | PhraseBoundaryStrength::Word
+    )
+}
+
+fn next_target_pitch_hz(
+    index: usize,
+    plans: &[SyllablePlan],
+    phrase_syllables: &[PhraseSyllablePlan],
+    mood: SequencerMood,
+    pending_reset_semitones: f64,
+) -> Option<f64> {
+    let next_index = index.checked_add(1)?;
+    let next_plan = plans.get(next_index)?;
+    let next_phrase_syllable = phrase_syllables.get(next_index)?;
+    let pitch_offset_semitones = next_phrase_syllable.declination_offset_semitones()
+        + pending_reset_semitones
+        + mood_pitch_offset_semitones(mood);
+
+    Some(pitch_with_offset(
+        next_plan.event.knobs(),
+        pitch_offset_semitones,
+    ))
 }
 
 fn mood_from_events(events: &[SequenceEvent]) -> SequencerMood {

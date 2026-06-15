@@ -101,7 +101,7 @@ pub const ENVELOPE_DECAY_SECONDS: f64 = 0.050;
 pub const ENVELOPE_RELEASE_SECONDS: f64 = 0.060;
 
 /// Gives the fixed envelope sustain level after decay.
-pub const ENVELOPE_SUSTAIN_LEVEL: f64 = 0.24;
+pub const ENVELOPE_SUSTAIN_LEVEL: f64 = 0.34;
 
 /// Gives the high-register pitch bias in hertz.
 pub const PITCH_REGISTER_BIAS_HZ: f64 = 760.0;
@@ -154,6 +154,8 @@ pub const PHRASE_EMPHASIS_PITCH_SEMITONES: f64 = 0.35;
 /// Gives the fixed amplitude lift for sparse phrase emphasis.
 pub const PHRASE_EMPHASIS_GAIN: f64 = 1.08;
 
+const TRANSITION_BRIDGE_GAIN: f64 = 0.180;
+
 /// Marks the synthesis module in the public facade.
 #[derive(Debug)]
 pub struct Synth;
@@ -177,6 +179,8 @@ pub(crate) struct SyllablePerformance {
     mood_arousal: f64,
     complexity: f64,
     archetype: ArchetypeSelection,
+    starts_connected: bool,
+    ends_connected: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -197,7 +201,7 @@ struct SyllableRenderControls {
 }
 
 #[derive(Debug, Clone)]
-struct SyllableRenderState {
+pub(crate) struct SyllableRenderState {
     phase: f64,
     body_phase: f64,
     sparkle_phase: f64,
@@ -472,7 +476,9 @@ pub fn amplitude_envelope(elapsed_seconds: f64, duration_seconds: f64) -> f64 {
             0.020,
         );
 
-    (body + pulse - dip).clamp(0.0, 1.0)
+    let minimum_body = ENVELOPE_SUSTAIN_LEVEL * 0.70;
+
+    (body + pulse - dip).clamp(minimum_body, 1.0)
 }
 
 /// Applies the fixed per-syllable amplitude envelope to a sample.
@@ -576,6 +582,8 @@ impl SyllablePerformance {
             mood_arousal: 0.0,
             complexity: 0.0,
             archetype: ArchetypeSelection::chatter(0),
+            starts_connected: false,
+            ends_connected: false,
         }
     }
 
@@ -589,6 +597,8 @@ impl SyllablePerformance {
             mood_arousal: 0.0,
             complexity: 0.0,
             archetype: ArchetypeSelection::chatter(0),
+            starts_connected: false,
+            ends_connected: false,
         }
     }
 
@@ -612,6 +622,13 @@ impl SyllablePerformance {
         self.mood_arousal = mood_arousal.clamp(0.0, 1.0);
         self.complexity = complexity.clamp(0.0, 1.0);
         self.archetype = archetype;
+
+        self
+    }
+
+    pub(crate) fn with_connections(mut self, starts_connected: bool, ends_connected: bool) -> Self {
+        self.starts_connected = starts_connected;
+        self.ends_connected = ends_connected;
 
         self
     }
@@ -664,7 +681,7 @@ impl SyllableRenderControls {
 }
 
 impl SyllableRenderState {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             phase: 0.0,
             body_phase: 0.0,
@@ -708,6 +725,31 @@ pub(crate) fn render_syllable_with_performance(
     warble_phase_offset: f64,
     performance: SyllablePerformance,
 ) -> Vec<f64> {
+    let mut state = SyllableRenderState::new();
+    let mut samples = Vec::new();
+
+    render_syllable_with_performance_into(
+        knobs,
+        start_pitch_hz,
+        final_glide,
+        warble_phase_offset,
+        performance,
+        &mut state,
+        &mut samples,
+    );
+
+    samples
+}
+
+pub(crate) fn render_syllable_with_performance_into(
+    knobs: crate::KnobSet,
+    start_pitch_hz: f64,
+    final_glide: SyllableFinalGlide,
+    warble_phase_offset: f64,
+    performance: SyllablePerformance,
+    state: &mut SyllableRenderState,
+    samples: &mut Vec<f64>,
+) {
     let duration_samples = performance.duration_samples.max(1);
     let controls = SyllableRenderControls::new(
         knobs,
@@ -717,18 +759,48 @@ pub(crate) fn render_syllable_with_performance(
         performance,
         duration_samples,
     );
-    let mut state = SyllableRenderState::new();
-    let mut samples = Vec::new();
 
     for sample_index in 0..duration_samples {
-        samples.push(render_performance_sample(
-            sample_index,
-            controls,
-            &mut state,
-        ));
+        samples.push(render_performance_sample(sample_index, controls, state));
+    }
+}
+
+pub(crate) fn render_transition_bridge(
+    knobs: crate::KnobSet,
+    start_pitch_hz: f64,
+    target_pitch_hz: f64,
+    duration_samples: u32,
+    state: &mut SyllableRenderState,
+    samples: &mut Vec<f64>,
+) {
+    if duration_samples == 0 {
+        return;
     }
 
-    samples
+    let contour = knobs.contour().clamp(-1.0, 1.0);
+    let vowel_position = knobs.vowel_position().clamp(-1.0, 1.0);
+    let warble_depth = (knobs.warble_depth() * 0.55).clamp(-1.0, 1.0);
+
+    for sample_index in 0..duration_samples {
+        let elapsed_seconds = f64::from(sample_index) / f64::from(SYNTH_SAMPLE_RATE_HZ);
+        let progress = bridge_progress(sample_index, duration_samples);
+        let pitch_hz = start_pitch_hz + ((target_pitch_hz - start_pitch_hz) * progress);
+        let pitch_hz = apply_warble_hz_with_phase(pitch_hz, warble_depth, elapsed_seconds, 0.25);
+        let source = source_oscillator_sample(state.phase, pitch_hz);
+        let voiced = state.formants.process_sample(source, vowel_position);
+        let layer = voiced
+            + (0.35 * source)
+            + (0.35 * body_layer_sample(state.body_phase, vowel_position))
+            + (0.25 * upper_mid_sparkle_sample(state.sparkle_phase, elapsed_seconds, warble_depth));
+        let bridge_envelope = 0.35 + (0.65 * sin(PI * progress));
+        let sample = ring_modulate(
+            layer * TRANSITION_BRIDGE_GAIN * bridge_envelope,
+            elapsed_seconds,
+        );
+
+        state.advance(pitch_hz, warble_depth, contour);
+        samples.push(sample);
+    }
 }
 
 fn render_performance_sample(
@@ -817,7 +889,52 @@ fn render_performance_sample(
 
     state.advance(pitch_hz, controls.warble_depth, contour);
 
-    apply_amplitude_envelope(electronic, elapsed_seconds, controls.duration_seconds)
+    apply_connected_amplitude_envelope(
+        electronic,
+        elapsed_seconds,
+        controls.duration_seconds,
+        controls.performance.starts_connected,
+        controls.performance.ends_connected,
+    )
+}
+
+fn apply_connected_amplitude_envelope(
+    sample: f64,
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+    starts_connected: bool,
+    ends_connected: bool,
+) -> f64 {
+    sample
+        * connected_amplitude_envelope(
+            elapsed_seconds,
+            duration_seconds,
+            starts_connected,
+            ends_connected,
+        )
+}
+
+fn connected_amplitude_envelope(
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+    starts_connected: bool,
+    ends_connected: bool,
+) -> f64 {
+    let base = amplitude_envelope(elapsed_seconds, duration_seconds);
+    let connection_floor = ENVELOPE_SUSTAIN_LEVEL * 0.95;
+    let attack_connection_end = ENVELOPE_ATTACK_SECONDS + 0.018;
+    let release_start = (duration_seconds - ENVELOPE_RELEASE_SECONDS)
+        .max(ENVELOPE_ATTACK_SECONDS + ENVELOPE_DECAY_SECONDS);
+
+    if starts_connected && elapsed_seconds <= attack_connection_end {
+        return base.max(connection_floor);
+    }
+
+    if ends_connected && elapsed_seconds >= release_start {
+        return base.max(connection_floor);
+    }
+
+    base
 }
 
 fn apply_archetype_pitch_hz(
@@ -965,6 +1082,17 @@ fn complexity_articulation_offset(
 
     (complexity.clamp(0.0, 1.0) * 0.105 * ((0.72 * primary) + (0.28 * secondary)))
         .clamp(-0.14, 0.14)
+}
+
+fn bridge_progress(sample_index: u32, duration_samples: u32) -> f64 {
+    if duration_samples <= 1 {
+        return 1.0;
+    }
+
+    let denominator = f64::from(duration_samples - 1);
+    let linear = (f64::from(sample_index) / denominator).clamp(0.0, 1.0);
+
+    linear * linear * (3.0 - (2.0 * linear))
 }
 
 fn apply_internal_pitch_swoop_hz_for_duration(

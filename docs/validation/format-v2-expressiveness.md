@@ -8,6 +8,9 @@ performance channels documented in
 remain the learnable core; the new channels only shape bounded performance around those
 axes.
 
+`FORMAT_V3` supersedes V2 as the active contract by smoothing connected phrase rendering;
+V2 remains the frozen expressiveness checkpoint.
+
 ## Checks
 
 - `dootdoot --version` reports `dootdoot FORMAT_V2`.

@@ -5,11 +5,14 @@ use thiserror::Error;
 /// Identifies the first frozen sample-affecting output contract.
 pub const FORMAT_V1: &str = "FORMAT_V1";
 
-/// Identifies the current `FORMAT_V2` output contract.
+/// Identifies the second frozen sample-affecting output contract.
 pub const FORMAT_V2: &str = "FORMAT_V2";
 
+/// Identifies the current phrase-continuous output contract.
+pub const FORMAT_V3: &str = "FORMAT_V3";
+
 /// Identifies the active sample-affecting output contract.
-pub const ACTIVE_FORMAT: &str = FORMAT_V2;
+pub const ACTIVE_FORMAT: &str = FORMAT_V3;
 
 /// Starts every `format_v1.bin` artifact.
 pub const FORMAT_MAGIC: [u8; 8] = *b"DOOTV1\0\0";

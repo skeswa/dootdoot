@@ -112,7 +112,7 @@
 - **FR-32** `--explain` output SHALL go to stderr only and SHALL NOT appear in any
   piped audio or file output.
 - **FR-33** The tool SHALL provide `--version`, which SHALL surface the active format
-  identifier (`FORMAT_V1`).
+  identifier.
 - **FR-34** The tool SHALL provide `--help`.
 - **FR-35** The tool SHALL return exit code 0 on success and a non-zero code on error.
 
@@ -144,7 +144,7 @@
   float→i16 rounding rule; the WAV serialization choices (sample rate, bit depth,
   channels, header bytes); and the owned-math implementation version.
 - **FR-39** Any change that alters one or more output samples SHALL require bumping the
-  format identifier (e.g. `FORMAT_V1` → `FORMAT_V2`).
+  format identifier (e.g. `FORMAT_V1` → `FORMAT_V2` → `FORMAT_V3`).
 
 ### 1.10 Build-time generation (xtask)
 
@@ -201,6 +201,21 @@
 - **FR-54** The frozen `FORMAT_V2` contract SHALL be documented with final
   phrase/affect/complexity/archetype acceptance, contextual-clip directional checks,
   the surfaced `dootdoot FORMAT_V2` version string, and regenerated golden WAV hashes.
+
+### 1.12 FORMAT_V3 phrase continuity
+
+- **FR-55** `FORMAT_V3` SHALL render connected token sequences with phrase-continuous
+  oscillator/filter state across syllables, except after punctuation boundaries that
+  intentionally reset the phrase.
+- **FR-56** `FORMAT_V3` word boundaries SHALL keep deterministic boundary duration but
+  SHALL render quiet transition bridges instead of hard zero-filled inter-word gaps.
+- **FR-57** `FORMAT_V3` connected syllable edges SHALL use a deterministic nonzero
+  envelope floor so token boundaries do not restart every syllable from silence.
+- **FR-58** `FORMAT_V3` SHALL keep the droid gesture envelope's internal dip, but the
+  dip SHALL NOT clamp the envelope to silence inside the voiced body.
+- **FR-59** The frozen `FORMAT_V3` contract SHALL be documented with phrase-continuity
+  acceptance, the surfaced `dootdoot FORMAT_V3` version string, and regenerated golden
+  WAV hashes.
 
 ---
 
@@ -259,7 +274,9 @@
 - **NFR-16** Every output, regardless of input, SHALL remain within the fixed droid
   parameter space, preserving a consistent BB-8-family identity. `FORMAT_V1` achieves
   this by varying only the four bounded semantic axes; `FORMAT_V2` MAY additionally vary
-  deterministic, bounded phrase, affect, complexity, and archetype channels.
+  deterministic, bounded phrase, affect, complexity, and archetype channels; `FORMAT_V3`
+  MAY additionally smooth connected phrase rendering without changing the semantic
+  mapping core.
 
 ### 2.5 Testing
 

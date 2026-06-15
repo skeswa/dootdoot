@@ -2,6 +2,7 @@
 
 const TUNING: &str = include_str!("../../docs/validation/voice-tuning.md");
 const FORMAT_V2: &str = include_str!("../../docs/validation/format-v2-expressiveness.md");
+const FORMAT_V3: &str = include_str!("../../docs/validation/format-v3-smoothing.md");
 
 #[test]
 fn integrated_tuning_acceptance_records_phase_seven_decision() {
@@ -41,6 +42,25 @@ fn format_v2_expressiveness_acceptance_records_freeze_decision() {
         assert!(
             FORMAT_V2.contains(expected),
             "FORMAT_V2 acceptance note should mention {expected}",
+        );
+    }
+}
+
+#[test]
+fn format_v3_smoothing_acceptance_records_phrase_continuity_decision() {
+    for expected in [
+        "Accepted for FORMAT_V3",
+        "dootdoot FORMAT_V3",
+        "phrase-continuity",
+        "transition bridges",
+        "connected envelope",
+        "hard zero runs",
+        "active islands",
+        "golden WAV hashes",
+    ] {
+        assert!(
+            FORMAT_V3.contains(expected),
+            "FORMAT_V3 acceptance note should mention {expected}",
         );
     }
 }

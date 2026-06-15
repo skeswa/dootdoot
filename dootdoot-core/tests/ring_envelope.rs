@@ -50,6 +50,7 @@ fn amplitude_envelope_has_droid_gesture_pulse_dip_and_tail() {
     );
 
     assert!(pulse > recovery);
+    assert!(dip > 0.0);
     assert!(dip < recovery);
     assert!(tail > 0.0);
     assert!(tail < ENVELOPE_SUSTAIN_LEVEL);

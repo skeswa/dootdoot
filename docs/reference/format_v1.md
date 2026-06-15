@@ -39,5 +39,7 @@ synthesis constants, T-52 squash finalized the tanh z-score mapping without rege
 the artifact, and T-53 learnability spread validated the final semantic/audio cluster
 separation.
 
-Any future change that alters one or more rendered output samples requires a new
-identifier, `FORMAT_V2`, plus regenerated golden fixtures.
+Any future change that alters one or more rendered output samples requires a new format
+identifier plus regenerated golden fixtures.
+
+`FORMAT_V2` was the first post-V1 sample-affecting contract bump.
