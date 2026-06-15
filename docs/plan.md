@@ -543,6 +543,22 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       the v7 golden WAV hashes.
       Deps: T-81, T-82, T-83, T-84, T-85, T-86, T-87, T-88 · Reqs: FR-33, FR-39, FR-89,
       NFR-16, NFR-17, NFR-18, NFR-20 · Est: 3h
+- [ ] **T-90 — Fully revise `design.md` for the VOICE_V7 architecture.** After the V7
+      changes are complete and frozen (T-89), bring `design.md` into full sync with what was
+      actually built — not just an appended decision note. Update the end-to-end pipeline
+      (§2) to include the discourse-performance planner stage between tokenization and
+      synthesis; revise the synthesis section (§6) and its fixed/variable split (§6.3) to
+      cover the swept-oscillator whistle/chirp gesture, wider per-gesture pitch span,
+      noise/breath excitation, event-based sparkle/seasoning, and the optional code-talkbox
+      mouth stage; revise the temporal/rhythmic structure (§6.4) for role-gated long pauses,
+      suppressible bridging, and phrase-final lengthening; update the tokenizer
+      configuration (§3.3) for dash/ellipsis control markers; note the planner's performance
+      curves and localized affect/archetype where the meaning/performance layers are
+      described (§5.4); and add a `VOICE_V7` decision subsection under §8 mirroring the
+      existing V2–V6 entries. Reconcile the non-goals (§1.2) and the goal-traceability table
+      (§12) with the new channels. Cross-check every change against `spec.md` FR-77…FR-89 and
+      the frozen constants so the source-of-truth docs agree.
+      Deps: T-89 · Reqs: FR-89, NFR-16 · Est: 2.5h
 
 ---
 
@@ -612,4 +628,5 @@ flowchart LR
     T86 --> T87
     T87 --> T88[T-88 event mechanisms + imperfection]
     T88 --> T89[T-89 VOICE_V7 freeze]
+    T89 --> T90[T-90 revise design.md]
 ```
