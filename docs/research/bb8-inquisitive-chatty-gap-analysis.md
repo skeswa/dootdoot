@@ -8,6 +8,14 @@
 > It does not change the voice contract. Every recommendation below is
 > sample-affecting and would require a new voice version plus regenerated golden WAV
 > hashes.
+>
+> Revision note: the original draft of this document framed the gap as primarily a
+> performance-planning problem. A second pass independently reproduced every clip-level
+> measurement (within rounding) and traced each cause to source. That pass changed the
+> conclusion's weighting: two of the reference's three largest signatures are things the
+> current synthesis instrument **physically cannot produce**, regardless of how a planner
+> schedules them. The claims and the suggested implementation order below reflect that
+> reweighting.
 
 ## Summary
 
@@ -15,27 +23,38 @@
 longer a single clean beep, word starts are smoother, and repeated phrase bridges no
 longer dominate the syllable body. The remaining difference is higher level. The
 reference sounds like a performed exchange: one inquisitive gesture, a long conversational
-gap, then a compact chatty answer made of varied mini-gestures. The dootdoot render still
-sounds like a deterministic token sequence: every voiced token goes through a similar
-high-arousal treatment, with short bridged word gaps and only punctuation creating true
-phrase resets.
+gap, then a compact chatty answer made of varied mini-gestures that climb into a
+whistle. The dootdoot render sounds like a deterministic token sequence: every voiced
+token goes through a similar high-arousal treatment, in a narrow low pitch band, with
+short bridged word gaps and only punctuation creating true phrase resets.
 
-The main causes are:
+The gap is **three co-primary problems**, not one. In rough order of how much each
+separates the two clips:
 
-1. Pacing is planned per token and punctuation boundary, not as a phrase-level
-   discourse arc.
-2. Affect and archetype selection are mostly utterance-global for this input, so the
-   phrase saturates into one high-energy mode.
-3. Timbre variation exists, but the selected texture path is shallow and too uniform
-   across adjacent syllables.
-4. The "organic" quality in the reference comes from performed, irregular vocal-formant
-   motion and changing periodicity; dootdoot is still a very stable oscillator/formant
-   instrument with deterministic LFO motion.
+1. **Tonal pitch range and glide (synthesis limit).** The reference's dominant spectral
+   peak sweeps across ~4.5 octaves and ends on a ~4.3 kHz whistle. dootdoot's fundamental
+   is mathematically confined to ~0.5–1.1 kHz and moves ~2.6 semitones within a syllable.
+   dootdoot cannot whistle, ever. This is the **largest** ratio in the measurement table
+   (8.3×) and is fixed by named constants, not by planning.
+2. **Timing — two independent failures.** (a) The reference has a ~1.1 s question-to-answer
+   pause; dootdoot's largest possible pause is a ~240 ms constant. (b) dootdoot fills 0.63
+   of the file with sound vs the reference's 0.44, because it **bridges word gaps with
+   tone** instead of leaving rests.
+3. **Excitation roughness (synthesis limit).** The reference swings between cleanly
+   pitched and rough/smeared frames (harmonicity IQR 0.23). dootdoot's excitation is
+   always a strictly periodic oscillator (IQR 0.05); there is no aperiodic/noise source in
+   the baseline path.
 
-The highest-leverage next step is not "make it brighter" or "add randomness." For this
-clip, dootdoot is already brighter and more constant in the upper-mid band than the
-reference. The next step should be a deterministic performance planner that varies phrase
-roles, local arousal, gesture archetypes, duration, amplitude, and texture over time.
+A fourth, enabling problem sits on top of these: affect and archetype are computed once
+per utterance and applied globally, so the whole phrase saturates into one
+high-arousal Yelp identity. This is real, but it is the layer that should _deploy_ the
+gestures above — it is not where the missing identity comes from.
+
+The most important correction to earlier intuition: **do not "make it brighter."** This
+render already has a higher spectral centroid than the reference. The brightness it has is
+the wrong _kind_ (see §"Cause Analysis 1"). The next step is to give the synthesis
+instrument the dynamic range it lacks — pitch sweep, true silence, and roughness — and
+then a deterministic performance planner to schedule those into discourse roles.
 
 ## Method
 
@@ -68,7 +87,9 @@ The clip-level measurements below use:
 These are directional diagnostics, not acceptance constants. The reference clip is a
 sound-effect clip, not a lab-isolated phonetic sample, and simple F0 tracking can be
 fooled by formant-heavy droid audio. The measurements are still useful because the
-largest differences are structural and large.
+largest differences are structural and large. They were also independently reproduced
+with a separate numpy/scipy pipeline (same frame/hop/gate), which agreed with the table
+below within rounding and to the millisecond on the island sequences.
 
 ## Observations
 
@@ -80,127 +101,200 @@ mood │ valence:+0.475 │ arousal:+1.000 │ - │ -
 ```
 
 That matters. The input's punctuation, length, and positive terms saturate arousal to
-`1.000`, so the current high-energy path is applied broadly rather than staged.
+`1.000`, so the current high-energy path is applied broadly rather than staged. The
+standalone `-` also appears as a voiced token with its own four-axis values, not as a
+control marker.
 
 Direct comparison:
 
-| Measurement                 | Reference clip | dootdoot render | Read                                                               |
-| --------------------------- | -------------: | --------------: | ------------------------------------------------------------------ |
-| Duration                    |         3.00 s |          3.32 s | Similar overall span.                                              |
-| Active frame fraction       |           0.44 |            0.63 | dootdoot fills more of the file with active sound.                 |
-| Active islands              |              6 |               9 | reference has fewer, more staged events.                           |
-| Median active island        |         197 ms |          209 ms | median event size is similar; event ordering is the bigger gap.    |
-| Max internal gap            |        1103 ms |          232 ms | reference has a true question-to-answer pause; dootdoot does not.  |
-| Fixed-threshold max silence |        1151 ms |          269 ms | same conclusion under a separate `-36 dB` silence detector.        |
-| Dominant peak range         |        4264 Hz |          517 Hz | reference has much larger spectral/pitch-region movement.          |
-| Autocorr pitch proxy IQR    |         199 Hz |           79 Hz | dootdoot's periodic pitch region is much steadier.                 |
-| Harmonicity median          |          0.904 |           0.937 | dootdoot is more cleanly periodic.                                 |
-| Harmonicity IQR             |          0.207 |           0.050 | reference varies between cleaner and rougher frames more strongly. |
-| Spectral centroid median    |         984 Hz |         2214 Hz | this dootdoot render is brighter overall, not darker.              |
-| 2-5 kHz power share, median |         ~0.000 |           0.104 | dootdoot keeps upper-mid energy present more constantly.           |
-| 2-5 kHz power share, max    |          0.834 |           0.366 | reference has rarer but more extreme upper-mid bursts.             |
+| Measurement                 | Reference clip | dootdoot render | Read                                                                 |
+| --------------------------- | -------------: | --------------: | -------------------------------------------------------------------- |
+| Duration                    |         3.00 s |          3.32 s | Similar overall span.                                                |
+| Active frame fraction       |           0.44 |            0.63 | dootdoot fills more of the file with active sound.                   |
+| Active islands              |              6 |               9 | reference has fewer, more staged events.                             |
+| Median active island        |         197 ms |          209 ms | median event size is similar; event ordering is the bigger gap.      |
+| Max internal gap            |        1103 ms |          232 ms | reference has a true question-to-answer pause; dootdoot does not.    |
+| Fixed-threshold max silence |        1151 ms |          269 ms | same conclusion under a separate `-36 dB` silence detector.          |
+| Dominant peak range         |        4264 Hz |          517 Hz | **largest ratio in the table**: reference sweeps, dootdoot is stuck. |
+| Autocorr pitch proxy IQR    |         199 Hz |           79 Hz | dootdoot's periodic pitch region is much steadier.                   |
+| Harmonicity median          |          0.904 |           0.937 | dootdoot is more cleanly periodic.                                   |
+| Harmonicity IQR             |          0.207 |           0.050 | reference varies between cleaner and rougher frames more strongly.   |
+| Spectral centroid median    |         984 Hz |         2214 Hz | this dootdoot render is brighter overall, not darker.                |
+| 2-5 kHz power share, median |         ~0.000 |           0.104 | dootdoot keeps upper-mid energy present more constantly.             |
+| 2-5 kHz power share, max    |          0.834 |           0.366 | reference has rarer but more extreme upper-mid bursts.               |
 
-The most important shape difference is visible in active islands. The reference starts
-with a roughly 557 ms opening event, leaves about 1.1 s of space, then answers with
-shorter bursts around 244, 151, 151, 104, and 313 ms. The dootdoot render produces nine
-more evenly connected islands: about 209, 197, 569, 360, 209, 197, 186, 244, and 209 ms,
-with no internal gap over roughly 232 ms.
+Two shapes carry the "inquisitive then chatty" identity, and both are visible in the data.
 
-The reference's "inquisitive then chatty" identity is therefore not just timbre. It is a
-macro-shape: opener, wait, answer. Dootdoot's current phrase planner cannot infer that
-kind of turn-like structure from the input, and the standalone `-` is voiced as a normal
-token rather than treated as a prosodic dash.
+**Macro-timing.** The reference starts with a ~557 ms opening event, leaves ~1.1 s of
+space, then answers with shorter bursts around 244, 151, 151, 104, and 313 ms. The
+dootdoot render produces nine more evenly connected islands — about 209, 197, 569, 360,
+209, 197, 186, 244, and 209 ms — with no internal gap over ~232 ms.
+
+**Pitch trajectory.** Tracking the median dominant spectral peak in ~250 ms windows
+exposes the second shape directly:
+
+```text
+REFERENCE: 732 754 409 409 ──── ──── ──── 366 775 689 1593 452 4328   (Hz)
+DOOTDOOT : 560 409 345 624 452 388 398 431 409 388  301  323  323     (Hz)
+```
+
+The reference opens around 740 Hz (the inquisitive tone), drops, goes silent for ~750 ms,
+then answers and **ends on a 4.3 kHz whistle**. 18% of its active frames sit above
+dootdoot's hard pitch ceiling of ~1135 Hz. The dootdoot render wanders inside a 280–797 Hz
+band for the entire clip, never exceeds 1135 Hz (0% of frames), and never goes silent
+mid-clip.
+
+So the reference's identity is not just timbre, and not just timing. It is a macro-shape
+(opener, wait, answer) **carried by a tonal voice that can dive dark and leap to a
+whistle**. dootdoot's current planner cannot infer the turn structure, its synthesis
+cannot produce the whistle, and the standalone `-` is voiced as a normal token rather than
+acting as a prosodic dash.
 
 ## Cause Analysis
 
-### 1. Pacing: the current planner lacks phrase roles
+### 1. Brightness is the wrong _kind_, and the synth tonal range is capped
 
-`VOICE_V6` has phrase prosody, but it is still boundary-driven. It sees words,
-WordPiece continuations, and punctuation; it does not assign discourse roles such as
-opening probe, reply burst, aside, hesitation, or terminal flourish.
+This is the correction that reframes everything else. The measurement table looks
+contradictory: dootdoot has a **narrower** dominant peak range (517 vs 4264 Hz) yet a
+**higher** spectral centroid (2214 vs 984 Hz). Both are true, and the reconciliation is
+the key insight for this clip.
 
-For this prompt, the reference behaves like:
+In dootdoot, the tonal peak and the centroid are effectively the same object — median
+~409 Hz. The high centroid comes entirely from an **always-present diffuse layer**: 48
+saw/pulse harmonics plus a fixed upper-mid sparkle (`UPPER_MID_SPARKLE_MIX = 0.045`,
+clamped to 2–5 kHz) mixed under every active syllable. So dootdoot's brightness is _fixed
+hash sprinkled over a stuck-low tone_.
 
-1. Inquisitive opener.
-2. Long conversational gap.
-3. Dense chatty response.
+In the reference, the tonal body is usually dark (median tonal peak ~538 Hz) but the
+**dominant peak itself leaps into whistle range in bursts** (up to 4457 Hz), while median
+2–5 kHz share is ~0.000. So the reference's brightness is _the fundamental gliding up_ — a
+gesture, not a layer.
 
-The dootdoot phrase behaves more like:
+This is why a global brightness increase moves in the wrong direction, and why the fix is
+not "more sparkle." dootdoot's fundamental is confined by two constants:
 
-1. A continuous high-arousal statement until the period.
-2. A normal sentence reset.
-3. A high-arousal question ending.
+- `PITCH_REGISTER_BIAS_HZ = 760.0` and `PITCH_SEMITONE_SPAN = 10.0` bound the fundamental
+  to roughly **506–1135 Hz across all possible inputs** (~2 octaves total).
+- `INTERNAL_PITCH_SWEEP_CENTS = 220.0` plus `INTERNAL_PITCH_ARCH_CENTS = 90.0` cap
+  within-syllable motion at **~2.6 semitones**. There is no rising-chirp gesture that
+  sweeps the oscillator upward.
 
-The period adds a deterministic sentence pause, but the clip's defining pause is much
-larger than dootdoot's current sentence/word timing. Also, the ASCII hyphen in the prompt
-is a voiced token in `--explain`, so it consumes time and timbre as a semantic syllable
-instead of acting as a hesitation or phrase separator.
+The reference spans ~194–4457 Hz (~4.5 octaves). dootdoot cannot reach whistle register,
+so it cannot produce the clip's most salient accents. This is a synthesis-capability
+limit, fixed by named constants — not a planning gap.
 
-### 2. Timbre: the palette exists but is selected too uniformly
+### 2. Timing: a hard pause ceiling _and_ gap-filling bridges
 
-The current engine has archetypes (`chatter`, `yelp`, `moan`, `stutter/burst`,
-`tremble`) and texture seasoning. For this input, however, the utterance mood is
-positive and fully aroused. In `archetype.rs`, positive high-arousal mood selects the
-`Yelp` path before complexity can select `StutterBurst`. The result is that many
-syllables share the same broad gesture family.
+Two independent timing problems combine to flatten the macro-shape.
 
-That explains the subjective gap: the implementation has a palette, but the selection
-rule collapses this whole utterance into one high-energy color. BB-8's clip is more like
-a palette performance: a longer questioning tone, then smaller chatter elements, then
-little spectral and amplitude accents.
+First, **the pause ceiling**. `VOICE_V6` timing is boundary-driven, and its largest pause
+constant is `LONG_PUNCTUATION_PAUSE_SAMPLES = 10_584` (~240 ms). Multiple punctuation
+marks take a `.max()` rather than summing, so there is no path to the reference's ~1.1 s
+question-to-answer gap. The measured dootdoot max gap of 232 ms is exactly this ceiling
+minus envelope tails.
 
-### 3. Timbre: dootdoot is constantly bright, while BB-8 is burst-bright
+Second, **gap-filling**. dootdoot's active fraction is 0.63 vs the reference's 0.44, and it
+produces nine connected islands vs six staged ones. The cause is the word-boundary
+behavior: dootdoot can choose a harmonic _transition bridge_ — tone connecting one word's
+pitch to the next — instead of an inter-word rest. That fills silence that the BB-8
+aesthetic wants left empty. Even if a planner inserts one large pause, the reply phrase
+would still read as over-connected unless bridging can be suppressed.
 
-Earlier aggregate research correctly found that many BB-8 references need upper-mid
-energy. This specific clip shows a subtler lesson: dootdoot keeps 2-5 kHz sparkle
-present in most active frames, while the reference is usually lower/darker but sometimes
-spikes hard into the upper-mid region.
+Also, the ASCII hyphen in the prompt is a voiced token (it appears with four-axis values
+in `--explain`), so it consumes time and timbre as a semantic syllable instead of acting
+as a hesitation or phrase separator. `.`, `?`, and `!` are already control-only.
 
-So a simple brightness increase would move in the wrong direction. The better target is
-spectral burstiness:
+### 3. Excitation is always periodic; there is no roughness source
 
-- darker or rounder bodies for ordinary connective syllables;
-- short, high-contrast chirp or yelp accents for selected events;
-- high-frequency content that appears as gestures, not as a constant layer.
+The reference has lower median harmonicity and much wider harmonicity variation (IQR 0.23
+vs 0.05). That matches the listening impression of something partly vocal and performed:
+some frames lock into a pitched tone, some smear, roughen, or shift formant emphasis.
 
-### 4. Organic-ness: dootdoot is still too periodic and too regular
+dootdoot's excitation is a strictly periodic saw/pulse source (48 harmonics) modulated by
+deterministic multi-LFO warble (±45 cents vibrato across fixed 3.1/8.5/15.7 Hz rates).
+There is **no aperiodic/noise excitation in the baseline path** — only optional servo and
+noise-tail textures gated by archetype, which the default Chatter path does not trigger.
+With nothing to break periodicity, harmonicity cannot swing the way the reference's does.
+This is deterministic by design, and good for it, but it can sound like a synth patch
+rather than something almost mammalian. The fix is authored irregularity — a noise/breath
+excitation blend and per-gesture roughness — not runtime randomness.
 
-The reference has lower median harmonicity and much wider harmonicity variation. That
-matches the listening impression of something partly vocal and performed: some frames
-lock into a pitched tone, some smear, roughen, or shift formant emphasis.
+### 4. Affect and archetype are global, so the utterance saturates into one mode
 
-Dootdoot is deterministic and smoothed, but its motion is still composed of clean,
-bounded functions: oscillator phase, formant filters, compound LFO, envelope, and small
-additive textures. That is good for determinism and learnability, but it can sound like a
-synth patch. The "almost mammalian" quality likely requires a second layer of
-vocal-tract-like behavior, not just more oscillators:
+This is the enabling problem that makes the limits above more obvious. Affect is computed
+once for the whole utterance: `pooled_arousal` sums eight contributions and clamps to
+`[0, 1]`, which for this input pins arousal at `1.000`. That single mood drives every
+syllable.
 
-- a talkbox-like secondary formant or mouth filter after the current formant bank;
-- breathy/noisy excitation mixed under the tonal source for selected gestures;
-- subtle deterministic roughness that changes over a gesture rather than a steady LFO;
-- more asymmetric amplitude shapes, including swells, sigh-like decays, and glottal-ish
-  soft onsets.
+Archetype selection compounds it. In `archetype.rs`, the Yelp branch
+(`valence > 0.30 && arousal >= 0.45`) is tested _before_ the StutterBurst branch
+(`complexity >= 0.58`). With `valence:+0.475 / arousal:+1.000`, **every voiced syllable
+resolves to Yelp**, and because the archetype reads the single global mood event, there is
+no per-phrase variety by construction. BB-8's clip is a palette performance: a longer
+questioning tone, then smaller chatter elements, then little spectral and amplitude
+accents. dootdoot collapses the whole utterance into one color.
 
-This can remain deterministic. The target is authored irregularity, not runtime
-randomness.
+Note the dependency: making affect and archetype local will diversify _which_ gestures
+fire, but the gestures it would rotate through (whistle, rough chatter, true rests) do not
+yet exist. That is why this is the deploying layer, not the root.
 
 ### 5. Semantic mapping is not the bottleneck
 
 The semantic knobs move across tokens, and `VOICE_V6` already carries phrase, mood,
 complexity, archetype, and continuity channels. The gap is not that text fails to affect
-sound. The gap is that the performance channels are still too global and too shallow for
-this kind of clip.
+sound. The gap is that the synthesis instrument lacks the dynamic range to express the
+reference's gestures, and the performance channels that would stage them are still global.
 
 The semantic PCA layer should remain the learnable core. The next work should sit above
-and around it as a performance layer.
+and around it: new synthesis primitives, and a performance layer that schedules them.
 
 ## Recommendations
 
-### 1. Add a deterministic discourse-performance planner
+### 1. Expand the synthesis instrument's dynamic range first
 
-Introduce a planner that runs after tokenization and before synthesis, assigning local
-phrase roles. It should be a pure function of the event stream, punctuation, word count,
-and simple control tokens.
+A planner can only schedule gestures that exist. Before adding discourse roles, give the
+synth the range the reference uses:
+
+- a dedicated rising-chirp/whistle gesture that sweeps the **oscillator** (not just the
+  sparkle layer) toward the 2–4 kHz region, so the tonal peak itself can climb;
+- a wider per-gesture pitch span so selected events can leave the current ~0.5–1.1 kHz
+  band;
+- a noise/breath excitation blend mixed under the tonal source for selected gestures, so
+  harmonicity can swing clean→rough within a gesture rather than staying pinned near 0.94.
+
+These are bounded, deterministic additions. They are the most direct path to both the
+"whistle accent" and the "almost mammalian" qualities.
+
+### 2. Fix timing in two places, not one
+
+- Raise the pause ceiling: allow strong hesitation/turn gaps in the 600–1200 ms range for
+  explicit dash/ellipsis or selected question-to-answer arcs. This is a constant change,
+  but it must be gated by role (see #4) so simple sentences do not become sluggish.
+- Make word-boundary bridging suppressible, so the reply phrase can use 30–80 ms internal
+  rests and the opener-gap-answer shape can actually open up. The active fraction should be
+  able to fall toward the reference's ~0.44 for staged inputs.
+- Allow phrase-final lengthening and amplitude tails that occupy space without counting as
+  another voiced syllable.
+
+### 3. Make upper-mid texture event-based, and stop treating brightness as a level
+
+The constant sparkle layer is the wrong kind of brightness. Revise it into a gesture
+resource:
+
+- lower the default upper-mid mix for ordinary word-connected syllables;
+- reserve short, high-contrast brightness for chirps, terminal flourishes, and selected
+  chatter notes, ideally carried by the swept oscillator from #1 rather than added hash;
+- give each bright gesture an attack and decay so brightness has shape;
+- keep >6 kHz modest, consistent with previous research and this clip.
+
+Success should sound less like "constant gleam" and more like "small bright droid
+articulations, including the occasional whistle, inside a rounder voice."
+
+### 4. Add a deterministic discourse-performance planner to deploy the new primitives
+
+Once the primitives exist, add a planner that runs after tokenization and before
+synthesis, assigning local phrase roles as a pure function of the event stream,
+punctuation, word count, and simple control tokens. Surface its decisions in `--explain`.
 
 Initial roles worth supporting:
 
@@ -209,109 +303,90 @@ Initial roles worth supporting:
 | `probe`             | question mark, leading short phrase, "what/why/how" | longer rising gesture, less chatter density            |
 | `chatty_reply`      | phrase after a strong pause or sentence reset       | shorter events, denser burst, alternating archetypes   |
 | `hesitation`        | standalone dash, ellipsis, repeated punctuation     | real pause or quiet rounded connector, no voiced token |
-| `terminal_flourish` | final `?!`, `!`, or `?`                             | one accented yelp/chirp, not all syllables yelped      |
+| `terminal_flourish` | final `?!`, `!`, or `?`                             | one accented whistle/yelp, not all syllables yelped    |
 | `aside`             | comma/colon-delimited short segment                 | lower volume, rounder/darker body, shorter pitch span  |
 
-For this exact phrase, the standalone `-` should probably become a hesitation control
-marker instead of a voiced semantic token. That alone would make the prompt's intended
-pacing more legible.
+The planner should also localize affect and archetype: keep the utterance-level mood row,
+but compute per-phrase and per-syllable curves (arousal attack/hold/release, final-marker
+accent isolated near `?!`, local valence from nearby tokens). The current
+`valence:+0.475 / arousal:+1.000` should not make every syllable share the same Yelp
+identity — reserve the whistle/yelp for the opener and ending accent and let the middle
+rotate chatter/stutter/tremble variants.
 
-### 2. Make affect and archetype local, not only utterance-global
+### 5. Treat the standalone dash as a control marker
 
-Keep the utterance-level mood row, but compute per-phrase and per-syllable performance
-curves:
+For this exact phrase, the standalone `-` should become a hesitation control marker
+(`--`, em dash, and `...` likewise) with a deterministic pause, instead of a voiced
+semantic token. That alone makes the prompt's intended pacing more legible and is a small,
+self-contained change.
 
-- arousal attack, hold, and release over a phrase;
-- final-marker accent isolated near `?!`;
-- local valence from nearby tokens rather than one pooled score for every syllable;
-- archetype rotation or contrast rules inside high-arousal phrases.
-
-The current `valence:+0.475 / arousal:+1.000` should not make every syllable share the
-same high-energy yelp identity. A better performance would reserve the yelp for the
-opening or ending accent and let the middle use chatter/stutter/tremble variants.
-
-### 3. Add phrase-scale timing contrast
-
-Add bounded timing mechanisms that can create the reference's macro-shape:
-
-- strong hesitation gaps in the 600-1200 ms range for explicit dash/ellipsis or selected
-  question-to-answer arcs;
-- denser follow-up clusters with 30-80 ms internal rests;
-- phrase-final lengthening that can go beyond the current sentence lengthening when a
-  phrase role asks for a held inquisitive gesture;
-- amplitude tails that can occupy space without counting as another token syllable.
-
-This should be handled by the planner, not by increasing every punctuation pause.
-Uniformly longer pauses would make simple sentences sluggish without creating the
-opener-gap-answer shape.
-
-### 4. Make upper-mid texture event-based
-
-Revise the upper-mid sparkle layer from a mostly present layer into a gesture resource:
-
-- lower default upper-mid mix for ordinary word-connected syllables;
-- short chirp bursts for yelps, terminal flourishes, and selected chatter notes;
-- per-gesture spectral envelopes so brightness has attack and decay;
-- keep >6 kHz modest, consistent with previous research and this clip.
-
-Success should sound less like "constant gleam" and more like "small bright droid
-articulations inside a rounder voice."
-
-### 5. Add a second vocal-formant stage for mammalian warmth
+### 6. Add a second vocal-formant stage for mammalian warmth
 
 The design already identifies BB-8's production chain as formant synth plus talkbox-like
-vocal shaping. Dootdoot currently has one formant bank and additive texture. A future
-voice could add a lightweight second stage:
+vocal shaping. A future voice could add a lightweight second stage after the existing
+formant bank:
 
-- a broad, moving mouth filter after the existing formant bank;
-- a deterministic open-close envelope per gesture;
-- optional breath/noise excitation into that stage for moans and inquisitive holds;
+- a broad, moving mouth filter with a deterministic open-close envelope per gesture;
+- optional breath/noise excitation into that stage for moans and inquisitive holds
+  (overlaps with #1's roughness work);
 - mild saturation or soft clipping before the final envelope to reduce pure periodicity.
 
-This is likely the most direct path to the "almost mammalian" quality. It should be
-bounded and subtle so the output stays droid-like rather than becoming TTS-like.
+This should be bounded and subtle so the output stays droid-like rather than becoming
+TTS-like.
 
-### 6. Track contextual-clip acceptance separately from golden determinism
+### 7. Track contextual-clip acceptance separately from golden determinism
 
 The golden WAV hashes should remain the sample-level contract. Separately, add a
-directional acceptance note for this clip and phrase, similar to the V5/V6 forensic
-notes. Useful directional metrics:
+directional acceptance note for this clip and phrase, similar to the V5/V6 forensic notes.
+Useful directional metrics:
 
 - max internal gap and active-island sequence shape;
-- dominant peak range;
+- **dominant peak range and the fraction of active frames above ~1.1 kHz** (today 0%;
+  the reference is 18%);
+- active frame fraction (today 0.63; reference 0.44);
 - harmonicity median and IQR;
 - 2-5 kHz burstiness, especially p90/max compared with median;
-- whether standalone dash is control-only;
+- whether the standalone dash is control-only;
 - by-ear check for "opener, wait, answer" staging.
 
-These metrics should not become hard CI thresholds. They are tuning instruments that
-keep the work pointed at the desired perception.
+These metrics should not become hard CI thresholds. They are tuning instruments that keep
+the work pointed at the desired perception.
 
 ## Suggested Implementation Order
 
+The ordering is deliberately primitives-before-orchestration: the planner has nothing
+dramatic to schedule until the synth can whistle, go silent, and roughen.
+
 1. **VOICE_V7 scope note:** document that the next voice version targets contextual
-   performance, not another cleanup of word-boundary smoothing.
-2. **Dash/ellipsis prosody:** treat standalone `-`, `--`, em dash, and `...` as
+   performance _and_ expanded synthesis dynamic range, not another cleanup of
+   word-boundary smoothing.
+2. **Synthesis dynamic range:** add a swept-oscillator chirp/whistle gesture, a wider
+   per-gesture pitch span, and a noise/breath excitation blend so harmonicity can swing.
+3. **Timing primitives:** raise the pause ceiling for selected arcs and make word-boundary
+   bridging suppressible.
+4. **Dash/ellipsis prosody:** treat standalone `-`, `--`, em dash, and `...` as
    control-only hesitation markers with deterministic pauses.
-3. **Local performance planner:** add phrase roles and local arousal/archetype curves,
-   with `--explain` rows for role decisions.
-4. **Archetype contrast:** prevent high positive arousal from selecting `Yelp` for an
-   entire utterance; reserve yelps for accents and rotate chatty/stutter gestures inside
-   dense segments.
-5. **Event-based sparkle:** reduce constant sparkle and add brighter short chirp
-   accents.
-6. **Second vocal stage:** prototype a subtle mouth-filter/noise/saturation layer for
+5. **Local performance planner:** add phrase roles and local arousal/archetype curves,
+   with `--explain` rows for role decisions, deploying the gestures from steps 2–3.
+6. **Archetype contrast + event-based sparkle:** prevent high positive arousal from
+   selecting `Yelp` for an entire utterance; reserve whistle/yelp for accents; reduce
+   constant sparkle and carry brightness with the swept oscillator.
+7. **Second vocal stage:** prototype a subtle mouth-filter/noise/saturation layer for
    held inquisitive and moan-like gestures.
-7. **Contextual acceptance doc:** regenerate the exact comparison and write a V7
+8. **Contextual acceptance doc:** regenerate the exact comparison and write a V7
    acceptance note before freezing hashes.
 
 ## Non-Recommendations
 
 - Do not raise global brightness. This render is already brighter than the reference in
-  median centroid and constant 2-5 kHz energy.
+  median centroid and constant 2-5 kHz energy. The reference's brightness is a swept tonal
+  peak, not a higher noise floor.
 - Do not add nondeterministic randomness. Authored deterministic variation is enough and
   preserves the core promise.
 - Do not change the semantic PCA mapping for this problem. The missing quality is in
-  performance planning and synthesis texture.
+  synthesis dynamic range and performance planning.
 - Do not make all punctuation pauses much longer. The reference needs contrastive
   staging, not uniformly slower speech.
+- Do not treat the performance planner as the whole fix. It is necessary, but it can only
+  schedule gestures the synthesis instrument is able to produce; two of this clip's three
+  defining signatures need new primitives first.
