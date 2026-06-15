@@ -42,9 +42,11 @@ pub use mathx::{
 pub use phrase::{PhraseBoundaryStrength, PhrasePlan, PhraseSyllablePlan, plan_phrase_prosody};
 pub use sequence::{
     EMPTY_CHIRP_CONTOUR, EMPTY_CHIRP_PITCH_CENTER, EMPTY_CHIRP_START_PITCH_CENTER,
-    EMPTY_CHIRP_VOWEL_POSITION, EMPTY_CHIRP_WARBLE_DEPTH, ProsodicPunctuation, SequenceEvent,
-    SequencedUtterance, SyllableEvent, estimate_utterance_sample_count, render_empty_chirp,
-    sequence_utterance,
+    EMPTY_CHIRP_VOWEL_POSITION, EMPTY_CHIRP_WARBLE_DEPTH, ProsodicPunctuation,
+    ROLE_LONG_PAUSE_MAX_SAMPLES, ROLE_LONG_PAUSE_MIN_SAMPLES, STAGED_REPLY_REST_MAX_SAMPLES,
+    STAGED_REPLY_REST_MIN_SAMPLES, SequenceEvent, SequencedUtterance, SyllableEvent,
+    SyllableTiming, estimate_utterance_sample_count, render_empty_chirp, role_long_pause_samples,
+    sequence_utterance, staged_reply_rest_samples,
 };
 pub use synth::{
     ATTACK_TRANSIENT_MIX, ATTACK_TRANSIENT_SECONDS, BASE_SYLLABLE_SAMPLES, BASE_SYLLABLE_SECONDS,

@@ -30,6 +30,84 @@ pub const EMPTY_CHIRP_CONTOUR: f64 = 1.0;
 /// Gives the fixed empty-chirp warble-depth knob.
 pub const EMPTY_CHIRP_WARBLE_DEPTH: f64 = 0.85;
 
+/// Gives the minimum `VOICE_V7` role-gated turn pause in samples (~600 ms).
+pub const ROLE_LONG_PAUSE_MIN_SAMPLES: u32 = 26_460;
+
+/// Gives the maximum `VOICE_V7` role-gated turn pause in samples (~1200 ms).
+pub const ROLE_LONG_PAUSE_MAX_SAMPLES: u32 = 52_920;
+
+/// Gives the minimum `VOICE_V7` staged-reply internal rest in samples (~30 ms).
+pub const STAGED_REPLY_REST_MIN_SAMPLES: u32 = 1_323;
+
+/// Gives the maximum `VOICE_V7` staged-reply internal rest in samples (~80 ms).
+pub const STAGED_REPLY_REST_MAX_SAMPLES: u32 = 3_528;
+
+/// Gives a per-syllable `VOICE_V7` timing directive.
+///
+/// The default reproduces `VOICE_V6` exactly: no pause override and a tonal
+/// word-boundary bridge. The discourse planner sets a `pause_override` and/or
+/// `bridge_suppressed` to stage long turn gaps and short reply rests.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SyllableTiming {
+    pause_override: Option<u32>,
+    bridge_suppressed: bool,
+}
+
+impl SyllableTiming {
+    /// Overrides the post-syllable gap length, clamped to the long-pause
+    /// ceiling.
+    #[must_use]
+    pub fn with_pause_override(mut self, samples: u32) -> Self {
+        self.pause_override = Some(samples.min(ROLE_LONG_PAUSE_MAX_SAMPLES));
+
+        self
+    }
+
+    /// Renders the post-syllable word gap as a silent rest instead of a bridge.
+    #[must_use]
+    pub fn suppress_bridge(mut self) -> Self {
+        self.bridge_suppressed = true;
+
+        self
+    }
+
+    /// Returns the explicit post-syllable gap override, if any.
+    pub fn pause_override(self) -> Option<u32> {
+        self.pause_override
+    }
+
+    /// Returns true when the word-boundary bridge is suppressed.
+    pub fn bridge_suppressed(self) -> bool {
+        self.bridge_suppressed
+    }
+}
+
+/// Maps a role amount to a bounded long turn pause in samples.
+pub fn role_long_pause_samples(amount: f64) -> u32 {
+    let amount = if amount.is_finite() {
+        amount.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let span = f64::from(ROLE_LONG_PAUSE_MAX_SAMPLES - ROLE_LONG_PAUSE_MIN_SAMPLES);
+    let target = f64::from(ROLE_LONG_PAUSE_MIN_SAMPLES) + (span * amount);
+
+    round_f64_to_u32(target).clamp(ROLE_LONG_PAUSE_MIN_SAMPLES, ROLE_LONG_PAUSE_MAX_SAMPLES)
+}
+
+/// Maps a role amount to a bounded staged-reply internal rest in samples.
+pub fn staged_reply_rest_samples(amount: f64) -> u32 {
+    let amount = if amount.is_finite() {
+        amount.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let span = f64::from(STAGED_REPLY_REST_MAX_SAMPLES - STAGED_REPLY_REST_MIN_SAMPLES);
+    let target = f64::from(STAGED_REPLY_REST_MIN_SAMPLES) + (span * amount);
+
+    round_f64_to_u32(target).clamp(STAGED_REPLY_REST_MIN_SAMPLES, STAGED_REPLY_REST_MAX_SAMPLES)
+}
+
 /// Gives one input event consumed by the utterance sequencer.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SequenceEvent {
@@ -50,6 +128,7 @@ pub enum SequenceEvent {
 pub struct SyllableEvent {
     knobs: KnobSet,
     continuation: bool,
+    timing: SyllableTiming,
 }
 
 /// Gives one prosodic punctuation marker.
@@ -119,6 +198,15 @@ impl SequenceEvent {
         Self::Syllable(SyllableEvent::new(knobs, continuation))
     }
 
+    /// Builds a voiced syllable event with an explicit timing directive.
+    pub fn syllable_with_timing(
+        knobs: KnobSet,
+        continuation: bool,
+        timing: SyllableTiming,
+    ) -> Self {
+        Self::Syllable(SyllableEvent::new(knobs, continuation).with_timing(timing))
+    }
+
     /// Builds a prosodic punctuation event.
     pub fn punctuation(punctuation: ProsodicPunctuation) -> Self {
         Self::Punctuation(punctuation)
@@ -131,7 +219,16 @@ impl SyllableEvent {
         Self {
             knobs,
             continuation,
+            timing: SyllableTiming::default(),
         }
+    }
+
+    /// Returns a copy of this syllable carrying a timing directive.
+    #[must_use]
+    pub fn with_timing(mut self, timing: SyllableTiming) -> Self {
+        self.timing = timing;
+
+        self
     }
 
     /// Returns the semantic knobs for this syllable.
@@ -142,6 +239,11 @@ impl SyllableEvent {
     /// Returns true when this syllable continues the previous wordpiece.
     pub fn is_continuation(&self) -> bool {
         self.continuation
+    }
+
+    /// Returns the timing directive for this syllable.
+    pub fn timing(&self) -> SyllableTiming {
+        self.timing
     }
 }
 
@@ -223,13 +325,23 @@ pub fn estimate_utterance_sample_count(events: &[SequenceEvent]) -> u64 {
     let mut sample_count = u64::from(LEADING_SILENCE_SAMPLES) + u64::from(TRAILING_SILENCE_SAMPLES);
     let mood = mood_from_events(events);
     let complexity = complexity_from_events(events);
+    let phrase_plan = plan_phrase_prosody(events);
 
-    for phrase_syllable in plan_phrase_prosody(events).syllables() {
+    for (plan, phrase_syllable) in plans.iter().zip(phrase_plan.syllables()) {
         sample_count += u64::from(phrase_syllable_samples(*phrase_syllable, mood, complexity));
-        sample_count += u64::from(phrase_syllable.pause_samples());
+        sample_count += u64::from(effective_pause_samples(
+            plan.event.timing(),
+            *phrase_syllable,
+        ));
     }
 
     sample_count
+}
+
+fn effective_pause_samples(timing: SyllableTiming, phrase_syllable: PhraseSyllablePlan) -> u32 {
+    timing
+        .pause_override()
+        .unwrap_or_else(|| phrase_syllable.pause_samples())
 }
 
 /// Lays out voiced syllables and control punctuation into an utterance.
@@ -305,8 +417,13 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
             Some(target_pitch_hz)
         };
 
-        if phrase_syllable.pause_samples() > 0 {
-            if phrase_syllable.boundary_strength() == PhraseBoundaryStrength::Word {
+        let timing = plan.event.timing();
+        let pause_samples = effective_pause_samples(timing, phrase_syllable);
+
+        if pause_samples > 0 {
+            if phrase_syllable.boundary_strength() == PhraseBoundaryStrength::Word
+                && !timing.bridge_suppressed()
+            {
                 let bridge_target_pitch_hz = next_target_pitch_hz(
                     index,
                     &plans,
@@ -320,13 +437,13 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
                     syllable.knobs(),
                     previous_pitch_hz.unwrap_or(target_pitch_hz),
                     bridge_target_pitch_hz,
-                    phrase_syllable.pause_samples(),
+                    pause_samples,
                     &mut synth_state,
                     &mut samples,
                 );
                 previous_pitch_hz = Some(bridge_target_pitch_hz);
             } else {
-                append_silence(&mut samples, phrase_syllable.pause_samples());
+                append_silence(&mut samples, pause_samples);
                 synth_state = SyllableRenderState::new();
             }
         }

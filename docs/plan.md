@@ -484,7 +484,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       determinism, bounded amplitude, finite output, and that ordinary syllables stay
       cleanly periodic.
       Deps: T-80, T-31 · Reqs: FR-79, NFR-3, NFR-4, NFR-16 · Est: 2.5h
-- [ ] **T-83 — Timing primitives: role-gated long pauses + suppressible bridging.** Raise
+- [x] **T-83 — Timing primitives: role-gated long pauses + suppressible bridging.** Raise
       the pause ceiling to allow strong hesitation/turn gaps (~600–1200 ms) for selected
       arcs, gated so simple sentences do not become sluggish, and make word-boundary
       bridging suppressible so reply phrases can use 30–80 ms internal rests and active
