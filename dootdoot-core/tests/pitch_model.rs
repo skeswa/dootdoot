@@ -9,7 +9,8 @@ use dootdoot_core::{
 
 #[test]
 fn pitch_center_maps_knob_to_high_register_span() {
-    let octave_ratio = exp(core::f64::consts::LN_2 * (PITCH_SEMITONE_SPAN / 12.0));
+    let high_ratio = exp(core::f64::consts::LN_2 * (PITCH_SEMITONE_SPAN / 12.0));
+    let low_ratio = exp(core::f64::consts::LN_2 * (-PITCH_SEMITONE_SPAN / 12.0));
 
     assert_eq!(
         pitch_center_hz(0.0).to_bits(),
@@ -17,11 +18,11 @@ fn pitch_center_maps_knob_to_high_register_span() {
     );
     assert_eq!(
         pitch_center_hz(1.0).to_bits(),
-        (PITCH_REGISTER_BIAS_HZ * octave_ratio).to_bits(),
+        (PITCH_REGISTER_BIAS_HZ * high_ratio).to_bits(),
     );
     assert_eq!(
         pitch_center_hz(-1.0).to_bits(),
-        (PITCH_REGISTER_BIAS_HZ / octave_ratio).to_bits(),
+        (PITCH_REGISTER_BIAS_HZ * low_ratio).to_bits(),
     );
 }
 

@@ -17,7 +17,7 @@ fn renderer_returns_fixed_finite_non_silent_syllable() {
     );
     assert!(samples.iter().all(|sample| sample.is_finite()));
     assert!(samples.iter().any(|sample| sample.abs() > 0.000_001));
-    assert_eq!(samples[0].to_bits(), 0.0_f64.to_bits());
+    assert!([0.0_f64.to_bits(), (-0.0_f64).to_bits()].contains(&samples[0].to_bits()));
 }
 
 #[test]

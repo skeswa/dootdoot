@@ -48,16 +48,16 @@ fn format_v1_synthesis_constants_are_pinned() {
     assert_eq!(bits(runtime(ENVELOPE_ATTACK_SECONDS)), bits(0.012));
     assert_eq!(bits(runtime(ENVELOPE_DECAY_SECONDS)), bits(0.080));
     assert_eq!(bits(runtime(ENVELOPE_RELEASE_SECONDS)), bits(0.025));
-    assert_eq!(bits(runtime(PITCH_REGISTER_BIAS_HZ)), bits(880.0));
-    assert_eq!(bits(runtime(PITCH_SEMITONE_SPAN)), bits(7.0));
+    assert_eq!(bits(runtime(PITCH_REGISTER_BIAS_HZ)), bits(760.0));
+    assert_eq!(bits(runtime(PITCH_SEMITONE_SPAN)), bits(10.0));
     assert_eq!(bits(runtime(EMPTY_CHIRP_START_PITCH_CENTER)), bits(-0.35));
     assert_eq!(bits(runtime(EMPTY_CHIRP_PITCH_CENTER)), bits(0.45));
     assert_eq!(bits(runtime(EMPTY_CHIRP_VOWEL_POSITION)), bits(0.15));
     assert_eq!(bits(runtime(EMPTY_CHIRP_CONTOUR)), bits(1.0));
     assert_eq!(bits(runtime(EMPTY_CHIRP_WARBLE_DEPTH)), bits(0.85));
-    assert_eq!(bits(runtime(SOURCE_SAW_MIX)), bits(0.65));
-    assert_eq!(bits(runtime(SOURCE_PULSE_MIX)), bits(0.35));
-    assert_eq!(bits(runtime(SOURCE_PULSE_WIDTH)), bits(0.42));
+    assert_eq!(bits(runtime(SOURCE_SAW_MIX)), bits(0.55));
+    assert_eq!(bits(runtime(SOURCE_PULSE_MIX)), bits(0.45));
+    assert_eq!(bits(runtime(SOURCE_PULSE_WIDTH)), bits(0.38));
     assert_eq!(bits(runtime(ATTACK_TRANSIENT_SECONDS)), bits(0.020));
     assert_eq!(bits(runtime(ATTACK_TRANSIENT_MIX)), bits(0.07));
     assert_eq!(bits(runtime(BODY_LAYER_MIX)), bits(0.11));
@@ -68,23 +68,23 @@ fn format_v1_synthesis_constants_are_pinned() {
 fn vowel_locus_and_formant_shape_are_pinned() {
     assert_eq!(
         runtime(FORMANT_EE_HZ).map(bits),
-        [bits(270.0), bits(2_290.0), bits(3_010.0)]
+        [bits(300.0), bits(2_360.0), bits(3_260.0)]
     );
     assert_eq!(
         runtime(FORMANT_AH_HZ).map(bits),
-        [bits(730.0), bits(1_090.0), bits(2_440.0)]
+        [bits(620.0), bits(1_280.0), bits(2_700.0)]
     );
     assert_eq!(
         runtime(FORMANT_OO_HZ).map(bits),
-        [bits(300.0), bits(870.0), bits(2_240.0)]
+        [bits(280.0), bits(760.0), bits(2_500.0)]
     );
     assert_eq!(
         runtime(FORMANT_Q).map(bits),
-        [bits(8.0), bits(10.0), bits(12.0)]
+        [bits(5.5), bits(7.0), bits(8.0)]
     );
     assert_eq!(
         runtime(FORMANT_GAINS).map(bits),
-        [bits(1.0), bits(0.55), bits(0.35)]
+        [bits(0.52), bits(0.42), bits(0.78)]
     );
 }
 

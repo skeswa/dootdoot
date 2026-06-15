@@ -14,19 +14,19 @@ pub const FORMANT_COUNT: usize = 3;
 pub const VOWEL_LOCUS_COUNT: usize = 3;
 
 /// Gives the fixed `ee` vowel formant centers in hertz.
-pub const FORMANT_EE_HZ: [f64; FORMANT_COUNT] = [270.0, 2_290.0, 3_010.0];
+pub const FORMANT_EE_HZ: [f64; FORMANT_COUNT] = [300.0, 2_360.0, 3_260.0];
 
 /// Gives the fixed `ah` vowel formant centers in hertz.
-pub const FORMANT_AH_HZ: [f64; FORMANT_COUNT] = [730.0, 1_090.0, 2_440.0];
+pub const FORMANT_AH_HZ: [f64; FORMANT_COUNT] = [620.0, 1_280.0, 2_700.0];
 
 /// Gives the fixed `oo` vowel formant centers in hertz.
-pub const FORMANT_OO_HZ: [f64; FORMANT_COUNT] = [300.0, 870.0, 2_240.0];
+pub const FORMANT_OO_HZ: [f64; FORMANT_COUNT] = [280.0, 760.0, 2_500.0];
 
 /// Gives the fixed formant resonance Q values.
-pub const FORMANT_Q: [f64; FORMANT_COUNT] = [8.0, 10.0, 12.0];
+pub const FORMANT_Q: [f64; FORMANT_COUNT] = [5.5, 7.0, 8.0];
 
 /// Gives the fixed per-formant gains.
-pub const FORMANT_GAINS: [f64; FORMANT_COUNT] = [1.0, 0.55, 0.35];
+pub const FORMANT_GAINS: [f64; FORMANT_COUNT] = [0.52, 0.42, 0.78];
 
 /// Gives the fixed base syllable duration in seconds.
 pub const BASE_SYLLABLE_SECONDS: f64 = 0.150;
@@ -92,10 +92,10 @@ pub const ENVELOPE_RELEASE_SECONDS: f64 = 0.025;
 pub const ENVELOPE_SUSTAIN_LEVEL: f64 = 0.35;
 
 /// Gives the high-register pitch bias in hertz.
-pub const PITCH_REGISTER_BIAS_HZ: f64 = 880.0;
+pub const PITCH_REGISTER_BIAS_HZ: f64 = 760.0;
 
 /// Gives the semantic pitch span around the register bias in semitones.
-pub const PITCH_SEMITONE_SPAN: f64 = 7.0;
+pub const PITCH_SEMITONE_SPAN: f64 = 10.0;
 
 /// Gives the fixed contour-steered internal pitch sweep in cents.
 pub const INTERNAL_PITCH_SWEEP_CENTS: f64 = 220.0;
@@ -113,13 +113,13 @@ pub const VOWEL_TRAJECTORY_BLOOM: f64 = 0.12;
 pub const PUNCTUATION_GLIDE_SEMITONES: f64 = 3.0;
 
 /// Gives the fixed saw contribution in the source oscillator.
-pub const SOURCE_SAW_MIX: f64 = 0.65;
+pub const SOURCE_SAW_MIX: f64 = 0.55;
 
 /// Gives the fixed pulse contribution in the source oscillator.
-pub const SOURCE_PULSE_MIX: f64 = 0.35;
+pub const SOURCE_PULSE_MIX: f64 = 0.45;
 
 /// Gives the fixed pulse width in the source oscillator.
-pub const SOURCE_PULSE_WIDTH: f64 = 0.42;
+pub const SOURCE_PULSE_WIDTH: f64 = 0.38;
 
 /// Gives the maximum additive harmonics used by the source oscillator.
 pub const SOURCE_MAX_HARMONICS: u32 = 48;

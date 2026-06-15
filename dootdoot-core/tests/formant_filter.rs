@@ -23,9 +23,9 @@ fn formant_frequencies_interpolate_between_vowel_loci() {
     assert_eq!(
         formant_frequencies(-0.5).map(f64::to_bits),
         [
-            500.0_f64.to_bits(),
-            1_690.0_f64.to_bits(),
-            2_725.0_f64.to_bits(),
+            460.0_f64.to_bits(),
+            1_820.0_f64.to_bits(),
+            2_980.0_f64.to_bits(),
         ],
     );
 }

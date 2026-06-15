@@ -507,13 +507,13 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
   sustain after decay.
 - attack transient = 20 ms at 7% mix; low-body layer = 11% mix in the 300-700 Hz
   region; upper-mid sparkle = 5.5% mix in the 2-5 kHz region.
-- pitch register bias = 880 Hz with a 7-semitone semantic span; source mix = 65% saw +
-  35% pulse at 42% pulse width.
+- pitch register bias = 760 Hz with a 10-semitone semantic span; source mix = 55% saw +
+  45% pulse at 38% pulse width.
 - empty chirp knobs = start pitch center −0.35, target pitch center +0.45, vowel +0.15,
   contour +1.0, warble depth +0.85, with the fixed rising final glide.
-- The 3-formant vowel loci are `ee` `[270, 2290, 3010]` Hz, `ah`
-  `[730, 1090, 2440]` Hz, and `oo` `[300, 870, 2240]` Hz, with Q `[8, 10, 12]` and
-  gains `[1.0, 0.55, 0.35]`.
+- The 3-formant vowel loci are `ee` `[300, 2360, 3260]` Hz, `ah`
+  `[620, 1280, 2700]` Hz, and `oo` `[280, 760, 2500]` Hz, with Q `[5.5, 7, 8]` and
+  gains `[0.52, 0.42, 0.78]`.
 
 Net effect: short words = quick single warbles; long words = flowing multi-syllable
 warbles; sentences = phrased bursts with intonation — recognizable "droid speech,"

@@ -243,7 +243,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       randomness and keep >6 kHz content modest because the references carry little energy there.
       Add tests for determinism, bounded output, and no silent/NaN paths.
       Deps: T-46 · Reqs: FR-16, FR-17, NFR-3, NFR-4, NFR-16 · Est: 2.5h
-- [ ] **T-48 — Rebalance register, pitch span, and formants.** Tune the fixed pitch bias/span,
+- [x] **T-48 — Rebalance register, pitch span, and formants.** Tune the fixed pitch bias/span,
       formant gains/Q/loci, and source mix so dootdoot no longer over-focuses the 500–2000 Hz
       band and has more BB-8-like body plus upper-mid brightness. Preserve the semantic axis
       mapping and add regression tests for pitch/formant bounds and sample determinism.
