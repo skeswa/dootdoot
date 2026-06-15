@@ -441,6 +441,111 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ---
 
+## Phase 16 — VOICE_V7 contextual performance & expanded synthesis range
+
+> Derived from
+> [`bb8-inquisitive-chatty-gap-analysis.md`](./research/bb8-inquisitive-chatty-gap-analysis.md)
+> (with prior-art context from
+> [`droid-synth-prior-art.md`](./research/droid-synth-prior-art.md)). The gap to the
+> `inquisitive-then-chatty` reference is **three co-primary problems** plus an enabling
+> one: tonal pitch range/glide (synthesis limit), timing (hard pause ceiling + tone
+> bridges filling rests), excitation roughness (no aperiodic source), and globally-applied
+> affect/archetype that saturates the utterance into one Yelp identity. The ordering is
+> deliberately **primitives-before-orchestration**: the planner has nothing dramatic to
+> schedule until the synth can whistle, go silent, and roughen. Do **not** raise global
+> brightness — this render is already brighter than the reference; the reference's
+> brightness is a swept tonal peak, not a higher floor. Every sample-affecting task here
+> requires `VOICE_V7` and a new golden fixture set, and stays inside the fixed,
+> deterministic, bounded droid parameter space (NFR-16).
+
+- [ ] **T-80 — Decide VOICE_V7 contract scope and add spec FRs.** Update
+      `design.md`/`spec.md` so the v7 contract covers expanded synthesis dynamic range
+      (whistle-range tonal sweep, wider per-gesture pitch span, noise/breath excitation),
+      role-gated long pauses with suppressible word-boundary bridging, dash/ellipsis as
+      control-only hesitation markers, an optional bounded code-talkbox mouth stage, a
+      deterministic discourse-performance planner emitting local phrase roles and
+      continuous performance curves, and localized (per-phrase/per-syllable) affect and
+      archetype. Add the new `FR-77…FR-89` requirements these tasks cite and document that
+      every new channel is deterministic, bounded, and surfaced in `--explain` where
+      useful. Restate the non-goals (no global brightness raise, no unseeded randomness, no
+      semantic-PCA change, no speech vocoder, no centered ring-mod, no sample libraries).
+      Deps: T-78 · Reqs: FR-33, FR-38, FR-39, NFR-16 · Est: 2h
+- [ ] **T-81 — Swept-oscillator whistle/chirp gesture + wider pitch span.** Add a
+      deterministic rising-chirp/whistle gesture that sweeps the **oscillator fundamental**
+      (not just the sparkle layer) toward the 2–4 kHz region, plus a wider per-gesture
+      pitch span so selected events can leave the current ~0.5–1.1 kHz band. Cap the new
+      range with named constants and add tests for deterministic sweep endpoints, the
+      raised ceiling, bounded/finite output, and no NaN/silent paths.
+      Deps: T-80, T-29 · Reqs: FR-77, FR-78, NFR-3, NFR-4, NFR-16 · Est: 2.5h
+- [ ] **T-82 — Noise/breath excitation blend (gesture roughness).** Add a deterministic
+      noise/breath excitation source blended under the tonal oscillator for selected
+      gestures so harmonicity can swing clean→rough within a gesture rather than staying
+      pinned near 0.94. Authored irregularity only — no runtime randomness. Add tests for
+      determinism, bounded amplitude, finite output, and that ordinary syllables stay
+      cleanly periodic.
+      Deps: T-80, T-31 · Reqs: FR-79, NFR-3, NFR-4, NFR-16 · Est: 2.5h
+- [ ] **T-83 — Timing primitives: role-gated long pauses + suppressible bridging.** Raise
+      the pause ceiling to allow strong hesitation/turn gaps (~600–1200 ms) for selected
+      arcs, gated so simple sentences do not become sluggish, and make word-boundary
+      bridging suppressible so reply phrases can use 30–80 ms internal rests and active
+      fraction can fall toward ~0.44 for staged inputs. Allow phrase-final lengthening and
+      amplitude tails that occupy space without counting as a voiced syllable. Update
+      output-length estimation and input-limit tests for the new timing.
+      Deps: T-80, T-33, T-75 · Reqs: FR-80, FR-81, FR-36, FR-37, NFR-16 · Est: 2.5h
+- [ ] **T-84 — Dash/ellipsis hesitation prosody.** Treat standalone `-`, `--`, em dash, and
+      `...` as control-only hesitation markers with a deterministic pause, instead of
+      voiced semantic tokens. Test that the standalone dash no longer appears with four-axis
+      values in `--explain` and routes to a pause/quiet rounded connector.
+      Deps: T-80, T-20, T-33 · Reqs: FR-82, FR-23a, NFR-16 · Est: 1.5h
+- [ ] **T-85 — Code-talkbox mouth-stage prototype.** Add a gated, bounded second stage
+      after the formant bank: a broad moving mouth filter (2–4 resonances) with a
+      deterministic open/close envelope per gesture, tongue/front-back curves linked to the
+      semantic/formant axes, optional breath/noise excitation into the stage, and mild
+      bounded saturation before the final envelope to reduce pure periodicity. Keep it
+      subtle and droid-like (not TTS). Add tests for determinism, bounded/finite output, and
+      that the stage is off by default until driven by the planner.
+      Deps: T-80, T-28, T-82 · Reqs: FR-83, NFR-3, NFR-4, NFR-16 · Est: 3h
+- [ ] **T-86 — Deterministic discourse-performance planner.** Add a pure planner that runs
+      after tokenization and before synthesis, assigning local phrase roles (`probe`,
+      `chatty_reply`, `hesitation`, `terminal_flourish`, `aside`) and continuous
+      performance curves (pitch center/velocity, formant target/velocity, brightness
+      pressure, mouth openness, archetype tension/release) as a pure function of the event
+      stream, punctuation, word count, and control tokens. Pin behavior with value tests and
+      `insta` snapshots before wiring it into synthesis.
+      Deps: T-80 · Reqs: FR-84, FR-85, FR-20, NFR-16 · Est: 3h
+- [ ] **T-87 — Localize affect/archetype and deploy gestures via the planner.** Wire the
+      planner into synthesis so the new primitives (whistle, roughness, talkbox, pauses)
+      are scheduled by role/curve. Localize affect and archetype: keep the utterance-level
+      mood row but compute per-phrase/per-syllable arousal attack/hold/release and local
+      valence, and prevent high positive arousal from selecting `Yelp` for the entire
+      utterance — reserve whistle/yelp for the opener and terminal accent and rotate
+      chatter/stutter/tremble in the middle. Surface role/curve decisions in `--explain`.
+      Add snapshots for the reference phrase and for `probe`/`chatty_reply` staging.
+      Deps: T-86, T-81, T-82, T-83, T-84, T-85 · Reqs: FR-84, FR-86, FR-87, FR-31, FR-32,
+      NFR-16, NFR-20 · Est: 3h
+- [ ] **T-88 — Event-based droid mechanisms + deterministic imperfection.** Convert the
+      always-on upper-mid sparkle into an event-based gesture resource (lower default mix,
+      shaped attack/decay, reserved for chirps/flourishes/selected chatter), and add sparse
+      phrase-aware seasoning families one at a time: self-oscillating/sine-resonator chirps,
+      envelope-controlled ring-mod stress, deterministic breath/noise bands, bounded
+      saturation blooms, tape-speed-style pitch/formant curves. Add a bounded deterministic
+      imperfection pass (roughness/slight filter mismatch) only after the dynamic-range,
+      timing, mouth, and planner baselines are stable. Keep >6 kHz modest; no single family
+      dominant. Add tests for determinism, bounded output, and sparsity.
+      Deps: T-87 · Reqs: FR-87, FR-88, NFR-3, NFR-4, NFR-16 · Est: 3h
+- [ ] **T-89 — Freeze VOICE_V7 + contextual acceptance doc.** Regenerate the exact
+      `inquisitive-then-chatty` comparison, write a V7 forensic/acceptance note tracking the
+      directional metrics (max internal gap, active-island sequence shape, dominant peak
+      range and fraction of active frames above ~1.1 kHz, active frame fraction, harmonicity
+      median/IQR, 2–5 kHz burstiness p90/max vs median, dash-is-control-only, by-ear
+      "opener, wait, answer" staging) **separately** from the golden hashes. Run by-ear
+      acceptance, lock all new constants into `VOICE_V7`, update `--version`, and regenerate
+      the v7 golden WAV hashes.
+      Deps: T-81, T-82, T-83, T-84, T-85, T-86, T-87, T-88 · Reqs: FR-33, FR-39, FR-89,
+      NFR-16, NFR-17, NFR-18, NFR-20 · Est: 3h
+
+---
+
 ## Critical paths
 
 ```mermaid
@@ -484,4 +589,27 @@ flowchart LR
     T75 --> T76[T-76 VOICE_V4 repeated-onset smoothing]
     T76 --> T77[T-77 VOICE_V5 word-attack smoothing]
     T77 --> T78[T-78 VOICE_V6 repeated-phrase smoothing]
+```
+
+`VOICE_V7` adds contextual performance and expanded synthesis range —
+**primitives before orchestration**: the planner (T-86/T-87) can only schedule gestures
+the synth can already produce (T-81–T-85).
+
+```mermaid
+flowchart LR
+    T78[T-78 VOICE_V6] --> T80[T-80 V7 contract scope]
+    T80 --> T81[T-81 whistle/pitch span]
+    T80 --> T82[T-82 noise/breath roughness]
+    T80 --> T83[T-83 timing primitives]
+    T80 --> T84[T-84 dash/ellipsis prosody]
+    T80 --> T85[T-85 talkbox mouth stage]
+    T80 --> T86[T-86 performance planner]
+    T81 --> T87[T-87 localize + deploy]
+    T82 --> T87
+    T83 --> T87
+    T84 --> T87
+    T85 --> T87
+    T86 --> T87
+    T87 --> T88[T-88 event mechanisms + imperfection]
+    T88 --> T89[T-89 VOICE_V7 freeze]
 ```

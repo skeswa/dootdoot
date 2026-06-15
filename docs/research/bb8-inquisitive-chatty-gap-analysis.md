@@ -16,6 +16,9 @@
 > current synthesis instrument **physically cannot produce**, regardless of how a planner
 > schedules them. The claims and the suggested implementation order below reflect that
 > reweighting.
+>
+> Follow-up prior-art context comes from
+> [`droid-synth-prior-art.md`](./droid-synth-prior-art.md).
 
 ## Summary
 
@@ -55,6 +58,12 @@ render already has a higher spectral centroid than the reference. The brightness
 the wrong _kind_ (see §"Cause Analysis 1"). The next step is to give the synthesis
 instrument the dynamic range it lacks — pitch sweep, true silence, and roughness — and
 then a deterministic performance planner to schedule those into discourse roles.
+
+The prior-art survey sharpens that conclusion. Strong droid voices are usually not static
+patches; they combine a performed control source, a synthetic carrier or resonator, and a
+vocalizing or destabilizing layer. `VOICE_V7` should therefore be framed as a
+performed-gesture voice: semantic PCA and phrase roles drive continuous control curves,
+and those curves drive both expanded synth primitives and a subtle mouth/roughness stage.
 
 ## Method
 
@@ -248,6 +257,37 @@ reference's gestures, and the performance channels that would stage them are sti
 The semantic PCA layer should remain the learnable core. The next work should sit above
 and around it: new synthesis primitives, and a performance layer that schedules them.
 
+## Prior-Art Calibration
+
+The follow-up survey in
+[`droid-synth-prior-art.md`](./droid-synth-prior-art.md) does not overturn this analysis.
+It makes the current ordering more explicit: dootdoot needs both a better instrument and a
+better performer.
+
+First, it supports the primitives-before-orchestration reweighting. Historical droid
+voices tend to work as chains: performed control into a synthetic carrier or resonator,
+then through a vocalizing or destabilizing layer. A planner can provide the performed
+control, but it still needs primitives capable of whistle-range tonal motion, true rests,
+roughened excitation, and mouth-like articulation.
+
+Second, it raises the priority of the mouth stage. The most BB-8-specific lineage points
+to tactile synth performance followed by talkbox-like mouth filtering. That makes the
+"almost mammalian" quality less likely to come from more oscillators alone. A broad
+secondary mouth filter, driven by phrase-role and gesture curves, should be treated as a
+co-primary `VOICE_V7` candidate alongside pitch range, timing, roughness, and planning.
+
+Third, it broadens "event-based sparkle" into "event-based droid mechanisms." Bright
+upper-mid accents are only one possible mechanism. Sparse self-oscillating chirps,
+sample-and-hold pitch ticks, envelope-controlled ring-mod stress, deterministic
+breath/noise bands, saturation blooms, and tape-speed-style pitch/formant curves are all
+historically grounded ways to create short livedness and texture. They should remain
+seasoning paths, not the main voice.
+
+Fourth, it reinforces the non-goals. A full speech vocoder, centered ring modulation,
+large sample libraries, unseeded randomness, or replacing the semantic PCA layer would
+move dootdoot away from its core premise. Prior art points toward instrument behavior and
+controlled articulation, not a bag of clips or English-to-phoneme robot speech.
+
 ## Recommendations
 
 ### 1. Expand the synthesis instrument's dynamic range first
@@ -264,6 +304,11 @@ synth the range the reference uses:
 
 These are bounded, deterministic additions. They are the most direct path to both the
 "whistle accent" and the "almost mammalian" qualities.
+
+Prior art suggests two useful implementation families for the rising tonal gestures:
+self-oscillating or sine-resonator chirps for R2-like punctuation, and continuous
+touch-synth-style pitch/formant glides for BB-8-like speech motion. The former should be
+sparse seasoning; the latter should become part of the main gesture vocabulary.
 
 ### 2. Fix timing in two places, not one
 
@@ -290,11 +335,31 @@ resource:
 Success should sound less like "constant gleam" and more like "small bright droid
 articulations, including the occasional whistle, inside a rounder voice."
 
+Prior art expands the accent palette beyond sparkle. Candidate event mechanisms:
+
+- self-oscillating or sine-resonator chirps for alert and chatter punctuation;
+- envelope-controlled ring modulation for anxious or metallic stress;
+- deterministic breath/noise bands for sibilant-like motion without TTS;
+- bounded saturation blooms for stressed yelps and terminal flourishes;
+- tape-speed-style curves where pitch and formants bend together.
+
+These must be phrase-aware and sparse. Overusing any one of them would pull the voice
+toward R2-D2, Daleks, or classic vocoder robots instead of BB-8.
+
 ### 4. Add a deterministic discourse-performance planner to deploy the new primitives
 
 Once the primitives exist, add a planner that runs after tokenization and before
 synthesis, assigning local phrase roles as a pure function of the event stream,
 punctuation, word count, and simple control tokens. Surface its decisions in `--explain`.
+
+The prior-art framing implies that this planner should output continuous performance
+curves, not just enum roles. Initial curve targets:
+
+- pitch center and pitch velocity;
+- formant target and formant velocity;
+- brightness pressure;
+- mouth openness;
+- archetype-specific tension/release.
 
 Initial roles worth supporting:
 
@@ -320,13 +385,16 @@ For this exact phrase, the standalone `-` should become a hesitation control mar
 semantic token. That alone makes the prompt's intended pacing more legible and is a small,
 self-contained change.
 
-### 6. Add a second vocal-formant stage for mammalian warmth
+### 6. Add a code-talkbox mouth stage for mammalian warmth
 
 The design already identifies BB-8's production chain as formant synth plus talkbox-like
-vocal shaping. A future voice could add a lightweight second stage after the existing
+vocal shaping, and the prior-art survey makes this the most BB-8-specific synthesis
+finding. A future voice should prototype a lightweight second stage after the existing
 formant bank:
 
-- a broad, moving mouth filter with a deterministic open-close envelope per gesture;
+- a broad, moving mouth filter with 2-4 resonances;
+- a deterministic open-close envelope per gesture;
+- tongue-position or front-back curves linked to the semantic/formant axes;
 - optional breath/noise excitation into that stage for moans and inquisitive holds
   (overlaps with #1's roughness work);
 - mild saturation or soft clipping before the final envelope to reduce pure periodicity.
@@ -358,22 +426,28 @@ The ordering is deliberately primitives-before-orchestration: the planner has no
 dramatic to schedule until the synth can whistle, go silent, and roughen.
 
 1. **VOICE_V7 scope note:** document that the next voice version targets contextual
-   performance _and_ expanded synthesis dynamic range, not another cleanup of
-   word-boundary smoothing.
+   performance, expanded synthesis dynamic range, and mouth articulation — not another
+   cleanup of word-boundary smoothing.
 2. **Synthesis dynamic range:** add a swept-oscillator chirp/whistle gesture, a wider
    per-gesture pitch span, and a noise/breath excitation blend so harmonicity can swing.
 3. **Timing primitives:** raise the pause ceiling for selected arcs and make word-boundary
    bridging suppressible.
 4. **Dash/ellipsis prosody:** treat standalone `-`, `--`, em dash, and `...` as
    control-only hesitation markers with deterministic pauses.
-5. **Local performance planner:** add phrase roles and local arousal/archetype curves,
-   with `--explain` rows for role decisions, deploying the gestures from steps 2–3.
-6. **Archetype contrast + event-based sparkle:** prevent high positive arousal from
-   selecting `Yelp` for an entire utterance; reserve whistle/yelp for accents; reduce
-   constant sparkle and carry brightness with the swept oscillator.
-7. **Second vocal stage:** prototype a subtle mouth-filter/noise/saturation layer for
-   held inquisitive and moan-like gestures.
-8. **Contextual acceptance doc:** regenerate the exact comparison and write a V7
+5. **Code-talkbox mouth prototype:** add a non-shipped or gated broad mouth filter driven
+   by mouth-open and tongue-position curves, then blend it subtly on inquisitive holds,
+   moans, and reply flourishes.
+6. **Local performance planner:** add phrase roles and local arousal/archetype curves,
+   with `--explain` rows for role decisions and continuous curve summaries, deploying the
+   gestures from steps 2–5.
+7. **Archetype contrast + event-based droid mechanisms:** prevent high positive arousal
+   from selecting `Yelp` for an entire utterance; reserve whistle/yelp for accents; reduce
+   constant sparkle; add sparse resonator chirps, breath/noise bands, saturation blooms,
+   or ring-mod stress accents one family at a time.
+8. **Deterministic imperfection pass:** add bounded roughness, slight filter mismatch, or
+   tape-speed-style pitch/formant curves only after the dynamic-range, timing, mouth, and
+   planner baselines are stable.
+9. **Contextual acceptance doc:** regenerate the exact comparison and write a V7
    acceptance note before freezing hashes.
 
 ## Non-Recommendations
@@ -390,3 +464,9 @@ dramatic to schedule until the synth can whistle, go silent, and roughen.
 - Do not treat the performance planner as the whole fix. It is necessary, but it can only
   schedule gestures the synthesis instrument is able to produce; two of this clip's three
   defining signatures need new primitives first.
+- Do not use a full speech vocoder over English text. Dootdoot needs vocal motion, not
+  intelligible TTS.
+- Do not center ring modulation. It is useful as emotional color, but too harsh and
+  villainous as the main voice.
+- Do not import large sample libraries. The useful prior-art lesson is instrument
+  behavior, not clip collage.

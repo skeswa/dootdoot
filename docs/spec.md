@@ -268,6 +268,73 @@
   acceptance, the surfaced `dootdoot VOICE_V6` version string, and regenerated golden
   WAV hashes.
 
+### 1.16 VOICE_V7 contextual performance & expanded synthesis range
+
+> Derived from
+> [`bb8-inquisitive-chatty-gap-analysis.md`](./research/bb8-inquisitive-chatty-gap-analysis.md).
+> `VOICE_V7` targets contextual performance, expanded synthesis dynamic range, and mouth
+> articulation. It keeps the four semantic PCA axes as the learnable core (FR-11) and adds
+> deterministic, bounded performance channels on top. Every requirement below is
+> sample-affecting and stays inside the fixed droid parameter space (NFR-16). Explicit
+> non-goals: `VOICE_V7` SHALL NOT raise global brightness as a level (this render already
+> exceeds the reference's median centroid), SHALL NOT introduce unseeded randomness, SHALL
+> NOT change the semantic PCA mapping, SHALL NOT use a speech vocoder over English text,
+> SHALL NOT center ring modulation as the main voice, and SHALL NOT import sample
+> libraries.
+
+- **FR-77** `VOICE_V7` SHALL provide a deterministic rising-chirp/whistle gesture that
+  sweeps the **oscillator fundamental itself** (not only the upper-mid sparkle layer)
+  toward the 2–4 kHz region, so the dominant tonal peak can climb into whistle range for
+  selected gestures.
+- **FR-78** `VOICE_V7` SHALL allow a wider per-gesture pitch span, bounded by named
+  constants, so selected events can leave the prior ~0.5–1.1 kHz band while ordinary
+  syllables remain in the established register.
+- **FR-79** `VOICE_V7` SHALL provide a deterministic noise/breath excitation source
+  blended under the tonal oscillator for selected gestures, so harmonicity can swing
+  clean→rough within a gesture; the blend SHALL be authored (no runtime randomness),
+  bounded, and finite, and ordinary syllables SHALL remain cleanly periodic.
+- **FR-80** `VOICE_V7` SHALL support role-gated long pauses (≈600–1200 ms) for selected
+  hesitation/turn arcs, gated so simple sentences do not become uniformly slower.
+- **FR-81** `VOICE_V7` word-boundary bridging SHALL be suppressible so staged reply
+  phrases can use short (≈30–80 ms) internal rests and the active-sound fraction can fall
+  toward the reference's staged level; phrase-final lengthening and amplitude tails MAY
+  occupy time without counting as an additional voiced syllable.
+- **FR-82** `VOICE_V7` SHALL treat standalone `-`, `--`, em dash, and `...` as
+  control-only hesitation markers with a deterministic pause, instead of voiced semantic
+  tokens; such markers SHALL NOT appear with four-axis values in `--explain`.
+- **FR-83** `VOICE_V7` MAY apply an optional, bounded code-talkbox mouth stage after the
+  formant bank — a broad moving mouth filter (2–4 resonances) with a deterministic
+  open/close envelope, tongue/front-back curves linked to the semantic/formant axes,
+  optional breath/noise excitation, and mild bounded saturation — kept subtle and
+  droid-like (not TTS), off by default until driven by the performance planner.
+- **FR-84** `VOICE_V7` SHALL include a deterministic discourse-performance planner that
+  runs after tokenization and before synthesis and assigns local phrase roles (`probe`,
+  `chatty_reply`, `hesitation`, `terminal_flourish`, `aside`) as a pure function of the
+  event stream, punctuation, word count, and control tokens.
+- **FR-85** The `VOICE_V7` planner SHALL emit bounded, deterministic continuous
+  performance curves (at least pitch center/velocity, formant target/velocity, brightness
+  pressure, mouth openness, and archetype tension/release) that drive the synthesis
+  primitives.
+- **FR-86** `VOICE_V7` affect and archetype SHALL be localized per phrase/syllable (local
+  arousal attack/hold/release and local valence) while retaining the utterance-level mood
+  row; high positive arousal SHALL NOT select `Yelp` for the entire utterance — whistle
+  and yelp SHALL be reserved for opener and terminal accents while the middle rotates
+  chatter/stutter/tremble variants.
+- **FR-87** `VOICE_V7` SHALL convert the always-on upper-mid sparkle into an event-based
+  gesture resource (lower default mix, shaped attack/decay, reserved for
+  chirps/flourishes/selected chatter) and MAY add sparse, phrase-aware seasoning families
+  one at a time (self-oscillating/sine-resonator chirps, envelope-controlled ring-mod
+  stress, deterministic breath/noise bands, bounded saturation blooms, tape-speed-style
+  pitch/formant curves), keeping >6 kHz modest and no single family dominant.
+- **FR-88** `VOICE_V7` MAY add a bounded, deterministic imperfection pass (gesture
+  roughness, slight filter mismatch, or tape-speed-style pitch/formant curves) applied
+  only after the dynamic-range, timing, mouth, and planner baselines are stable; it SHALL
+  remain finite and inside the droid parameter bounds.
+- **FR-89** The frozen `VOICE_V7` contract SHALL be documented with a contextual-clip
+  acceptance note (tracked separately from the golden hashes), the surfaced
+  `dootdoot VOICE_V7` version string, and regenerated golden WAV hashes; the planner's
+  role and curve decisions SHALL be surfaced in `--explain` where useful.
+
 ---
 
 ## 2. Non-functional requirements
