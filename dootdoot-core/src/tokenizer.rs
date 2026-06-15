@@ -3,7 +3,8 @@
 use thiserror::Error;
 use tokenizers::Tokenizer as HfTokenizer;
 
-const EMBEDDED_TOKENIZER_JSON: &[u8] = include_bytes!("../../assets/tokenizer.json");
+use crate::{DootAsset, embedded_doot_asset};
+
 const CONTINUATION_PREFIX: &str = "##";
 const CONTROL_TOKENS: [&str; 4] = ["[PAD]", "[CLS]", "[SEP]", "[MASK]"];
 const UNKNOWN_TOKEN: &str = "[UNK]";
@@ -39,15 +40,17 @@ pub struct TokenizerError {
 }
 
 impl Tokenizer {
-    /// Loads the embedded `tokenizer.json`.
+    /// Loads the tokenizer carried by a parsed dootdoot asset.
     ///
     /// # Errors
     ///
-    /// Returns an error if the committed tokenizer JSON is malformed or does
-    /// not contain the frozen special-token IDs required by `VOICE_V1`.
-    pub fn embedded() -> Result<Self, TokenizerError> {
-        let inner = HfTokenizer::from_bytes(EMBEDDED_TOKENIZER_JSON).map_err(|error| {
-            TokenizerError::new(format!("failed to load embedded tokenizer: {error}"))
+    /// Returns an error if the asset tokenizer JSON is malformed or does not
+    /// contain the frozen special-token IDs required by `VOICE_V1`.
+    pub fn from_asset(asset: &DootAsset) -> Result<Self, TokenizerError> {
+        let inner = HfTokenizer::from_bytes(asset.tokenizer_json()).map_err(|error| {
+            TokenizerError::new(format!(
+                "failed to load tokenizer from dootdoot asset: {error}",
+            ))
         })?;
         let control_token_ids = [
             token_id(&inner, CONTROL_TOKENS[0])?,
@@ -62,6 +65,20 @@ impl Tokenizer {
             control_token_ids,
             unknown_token_id,
         })
+    }
+
+    /// Loads the embedded dootdoot asset's tokenizer.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the committed dootdoot asset or its tokenizer JSON
+    /// cannot be loaded or validated.
+    pub fn embedded() -> Result<Self, TokenizerError> {
+        let asset = embedded_doot_asset().map_err(|error| {
+            TokenizerError::new(format!("failed to load embedded dootdoot asset: {error}"))
+        })?;
+
+        Self::from_asset(&asset)
     }
 
     /// Tokenizes input with injected special tokens disabled.

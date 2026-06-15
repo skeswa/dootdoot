@@ -80,4 +80,4 @@ regenerated golden WAV hashes.
 
 The `VOICE_V*` identifier names the rendered-output contract, not the binary layout of
 the baked semantic mapping asset. The current `VOICE_V6` renderer still embeds the
-locked `assets/format_v1.bin` token-to-axis table.
+locked token-to-axis table from `assets/dootdoot_asset_v1.doot`.

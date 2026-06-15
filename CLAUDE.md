@@ -19,31 +19,32 @@ A Rust CLI that **deterministically** turns text into BB-8-like droid sound, whe
 _semantically similar text sounds similar_ (a learnable sound-language). Pipeline detail
 is in `docs/design.md` §2; the workspace has three crates:
 
-- **`dootdoot-core`** — pure, deterministic engine (functional core): tokenizer, mapping,
-  synth, owned math, WAV, `FORMAT_V1` constants. No I/O, no audio device.
+- **`dootdoot-core`** — pure, deterministic engine (functional core): `.doot` asset
+  parser, tokenizer, mapping, synth, owned math, WAV, `VOICE_V*` constants. No I/O, no
+  audio device.
 - **`dootdoot`** — thin CLI shell (imperative shell): `clap`, stdin, `rodio` playback,
   `--explain`, error/exit mapping. Holds essentially all side effects.
-- **`xtask`** — build-time only, never shipped: generates `assets/format_v1.bin` from
-  `potion-base-8M` via `model2vec-rs`.
+- **`xtask`** — build-time only, never shipped: generates
+  `assets/dootdoot_asset_v1.doot` from `potion-base-8M` via `model2vec-rs`.
 
 ### Load-bearing invariants (violating these breaks the core promises)
 
 - **model2vec / `candle` are BUILD-TIME ONLY.** The shipped binary has no tensor runtime:
-  the token→4-axis mapping is precomputed into `assets/format_v1.bin` (~300 KB) and
-  `tokenizer.json`, both committed and `include_bytes!`-embedded. (Sound because PCA
+  the token→4-axis mapping and tokenizer JSON are precomputed into
+  `assets/dootdoot_asset_v1.doot` and `include_bytes!`-embedded. (Sound because PCA
   projection is linear: pooling baked vectors == pooling-then-projecting, _exact before
   the int16 quantization_ the table uses.)
 - **The sequence baseline is dootdoot's own pooling, NOT `model2vec.encode()`.** `encode()`
   L2-normalizes the pooled vector (`potion-base-8M` has `normalize: true`); that step is
   nonlinear and does not commute with the projection, so it can't be recovered from baked
   4-axis vectors. dootdoot's baseline is the token-weight-scaled mean in PCA space,
-  denominator = token count, **no L2 norm** — a documented, FORMAT_V1-pinned divergence
+  denominator = token count, **no L2 norm** — a documented, `VOICE_V1`-pinned divergence
   (design.md §4.2, FR-11). Goal: relative semantic ordering, not `encode()` equivalence.
 - **Determinism is bit-exact on the CI-verified platforms (macOS + Linux);** Windows is
   intended but not yet guaranteed. No libm transcendentals in the audio path
   (`sin`/`exp`/`tanh` are our own pinned impls); synthesis in `f64`; one fixed float→i16
   rounding rule; no fast-math/FMA. Any parallelism must be byte-identical to serial.
-- **`FORMAT_V1` is a versioned contract** over everything affecting an output sample
+- **`VOICE_V1` is a versioned contract** over everything affecting an output sample
   (mapping, quantization scales, tokenizer config, synth + timing constants, punctuation
   rules, chirp, float→i16 rounding, WAV serialization, math version).
   **Any change that alters even one sample MUST bump the version** (`V1`→`V2`) and
@@ -96,7 +97,7 @@ cargo clippy --all-targets -- -D warnings
 cargo llvm-cov
 cargo deny check && cargo machete
 
-# Regenerate the baked asset (ONLY when intentionally changing the mapping → FORMAT bump)
+# Regenerate the baked asset (ONLY when intentionally changing mapping/tokenizer inputs)
 cargo run -p xtask
 ```
 

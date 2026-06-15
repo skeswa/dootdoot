@@ -8,7 +8,8 @@ openings that still sounded click-like on repeated subwords.
 ## Scope
 
 - `dootdoot --version` reports `dootdoot VOICE_V4`.
-- The embedded semantic mapping artifact remains the locked `assets/format_v1.bin`.
+- The embedded semantic mapping remains the locked token-to-axis table in
+  `assets/dootdoot_asset_v1.doot`.
 - Connected syllables no longer replay the full attack transient.
 - Connected pitch and vowel openings blend from the previous rendered state.
 - Connected envelope starts ramp through the early body instead of replaying the full

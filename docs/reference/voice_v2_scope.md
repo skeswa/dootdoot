@@ -51,8 +51,8 @@ The first V2 performance channel applies the pure phrase plan to synthesis:
 - consecutive punctuation keeps the first marker's glide/lengthening role while the
   longest single pause wins.
 
-The `VOICE_V2` CLI version string was `VOICE_V2`; the embedded semantic mapping
-artifact is still the locked `format_v1.bin` table.
+The `VOICE_V2` CLI version string was `VOICE_V2`; the embedded semantic mapping is still
+the locked token-to-axis table now carried by `assets/dootdoot_asset_v1.doot`.
 
 ## Implemented Affect Analysis
 

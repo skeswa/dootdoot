@@ -1,9 +1,9 @@
-//! Format artifact serialization tests.
+//! Dootdoot asset serialization tests.
 
-use dootdoot_core::{FORMAT_HEADER_BYTES, FORMAT_MAGIC, FORMAT_TOKEN_RECORD_BYTES};
+use dootdoot_core::{DOOT_ASSET_SPEC_VERSION, DOOT_ASSET_TOKEN_RECORD_BYTES, DootAsset};
 use xtask::{
     PcaProjection, SourceManifest, SourceModel, compute_squash_stats, dequantize_i16,
-    quantize_symmetric_i16, serialize_format_artifact,
+    quantize_symmetric_i16, serialize_doot_asset,
 };
 
 #[test]
@@ -19,7 +19,7 @@ fn quantization_uses_symmetric_half_even_rounding() {
 }
 
 #[test]
-fn serialized_format_artifact_uses_pinned_layout() {
+fn serialized_doot_asset_uses_protobuf_asset_spec() {
     let source_model = SourceModel::from_parts(vec![1.0, 2.0, 3.0, 4.0], vec![0.25, 0.75], 2, 2)
         .expect("source model should be valid");
     let projection = PcaProjection::from_parts(
@@ -47,12 +47,21 @@ acquisition = "download-to-build-cache"
     )
     .expect("manifest should parse");
 
-    let bytes = serialize_format_artifact(&source_model, &projection, &squash_stats, &manifest)
-        .expect("artifact should serialize");
+    let bytes = serialize_doot_asset(
+        &source_model,
+        &projection,
+        &squash_stats,
+        &manifest,
+        br#"{"version":"1.0"}"#,
+    )
+    .expect("asset should serialize");
+    let asset = DootAsset::parse(&bytes).expect("serialized asset should parse");
 
-    assert_eq!(&bytes[..FORMAT_MAGIC.len()], FORMAT_MAGIC);
+    assert_eq!(asset.spec_version(), DOOT_ASSET_SPEC_VERSION);
+    assert_eq!(asset.token_count(), source_model.token_count());
+    assert_eq!(asset.tokenizer_json(), br#"{"version":"1.0"}"#);
     assert_eq!(
-        bytes.len(),
-        FORMAT_HEADER_BYTES + (source_model.token_count() * FORMAT_TOKEN_RECORD_BYTES),
+        asset.record_bytes().len(),
+        source_model.token_count() * DOOT_ASSET_TOKEN_RECORD_BYTES,
     );
 }

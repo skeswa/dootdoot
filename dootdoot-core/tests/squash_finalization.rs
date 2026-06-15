@@ -1,21 +1,21 @@
 //! `VOICE_V1` squash finalization tests.
 
-use dootdoot_core::{FormatSquashFunction, embedded_format_v1};
+use dootdoot_core::{DootAssetSquashFunction, embedded_doot_asset};
 
 const SQUASH_DOC: &str = include_str!("../../docs/validation/squash.md");
 
 #[test]
-fn format_v1_squash_is_finalized_without_artifact_regeneration() {
-    let format = embedded_format_v1().expect("embedded format should parse");
+fn doot_asset_squash_is_finalized_without_asset_regeneration() {
+    let asset = embedded_doot_asset().expect("embedded asset should parse");
 
-    assert_eq!(format.squash_function(), FormatSquashFunction::TanhZScore);
+    assert_eq!(asset.squash_function(), DootAssetSquashFunction::TanhZScore);
 
     for expected in [
         "Finalized for VOICE_V1",
         "tanh z-score",
         "T-52",
-        "No artifact regeneration",
-        "was needed",
+        "No asset regeneration",
+        "remain the VOICE_V1 contract",
     ] {
         assert!(
             SQUASH_DOC.contains(expected),

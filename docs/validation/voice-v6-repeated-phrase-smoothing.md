@@ -8,7 +8,8 @@ pulsing in repeated high-arousal phrases.
 ## Scope
 
 - `dootdoot --version` reports `dootdoot VOICE_V6`.
-- The embedded semantic mapping artifact remains the locked `assets/format_v1.bin`.
+- The embedded semantic mapping remains the locked token-to-axis table in
+  `assets/dootdoot_asset_v1.doot`.
 - Word bridges render as low, flatter connectors rather than foreground pulses.
 - Word-connected syllables keep smoother pitch inheritance over a longer opening.
 - Word-connected complexity, internal pitch, archetype pitch, and texture motion are

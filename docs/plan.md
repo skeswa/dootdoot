@@ -69,12 +69,12 @@
 ## Phase 2 — Build-time asset generation (`xtask`)
 
 - [x] **T-11 — Acquire `potion-base-8M` (upstream F32) + pin a source manifest.** Decide
-      vendored-blob vs scripted download; place model + `tokenizer.json` under `assets/` (or a
+      vendored-blob vs scripted download; place model + `tokenizer.json` under a
       build cache). Commit `assets/source_manifest.toml` pinning HF repo, exact commit SHA,
       `model.safetensors`/`tokenizer.json` SHA-256, `hidden_dim=256`, `normalize=true`, dtype;
       have `xtask` validate the acquired files against it (and abort on mismatch) before doing
       any work. Document the choice. (dtype is build-time only; xtask emits its own int16
-      artifact.)
+      records inside the `.doot` asset.)
       Deps: T-04 · Reqs: FR-5, FR-42, FR-43, NFR-8 · Est: 1.5h
 - [x] **T-12 — Load model & extract all token embeddings.** Use `model2vec-rs` to read the
       ~30k × ~256 embedding matrix and per-token weights.
@@ -86,35 +86,38 @@
       loading positive); unit-test reproducibility.
       Deps: T-13 · Reqs: FR-41 · Est: 1h
 - [x] **T-15 — Choose squash function + compute per-axis stats.** Select the squash
-      (tanh vs percentile-clamp) **here** — it determines which stats the header carries —
+      (tanh vs percentile-clamp) **here** — it determines which stats the `.doot` asset carries —
       and derive the per-axis stats over the full vocab. Document the choice; T-52 may revise
-      it and regenerate the artifact before the freeze.
+      it and regenerate the asset before the freeze.
       Deps: T-14 · Reqs: FR-12 · Est: 1.5h
-- [x] **T-16 — Define `format_v1.bin` binary layout.** Little-endian. Header (magic,
+- [x] **T-16 — Define the dootdoot asset spec.** Protocol Buffers payload with asset spec
       version, vocab size, axis count, the 4 axis dequant scales + weight dequant scale as
-      f32, squash stats, and model/tokenizer/PCA-matrix hashes) + per-token records
-      (4×int16 quantized PCA + 1×int16 quantized weight = 10 bytes). The runtime file stores
-      projected values, so it does NOT contain the PCA matrix. Document the layout.
+      f32, squash stats, model/tokenizer/PCA-matrix hashes, tokenizer JSON, and compact
+      per-token records (4×int16 quantized PCA + 1×int16 quantized weight = 10 bytes). The
+      runtime asset stores projected values, so it does NOT contain the PCA matrix. Document the
+      layout.
       Deps: T-15 · Reqs: FR-10, FR-38 · Est: 1.5h
-- [x] **T-17 — Serialize per-token 4-vectors + weights to `format_v1.bin`.** Project each
+- [x] **T-17 — Serialize per-token 4-vectors + weights to `dootdoot_asset_v1.doot`.** Project each
       token; quantize components and weight to int16 with the **symmetric signed, zero-point-
       free** rule (`s = max|·|/32767`, round-half-to-even, clamp to ±32767, code −32768
-      unused; design.md §4.2); write the file; compute and embed model/tokenizer/PCA hashes.
-      Unit-test the quantize↔dequantize round-trip and tie-rounding determinism.
+      unused; design.md §4.2); write the protobuf asset; compute and embed
+      model/tokenizer/PCA hashes plus tokenizer JSON. Unit-test the quantize↔dequantize round-trip
+      and tie-rounding determinism.
       Deps: T-16 · Reqs: FR-9, FR-10, FR-40, FR-42 · Est: 2h
-- [x] **T-18 — Commit `assets/format_v1.bin` + `tokenizer.json`.** Verify size (~300 KB)
-      and add a regeneration README note.
+- [x] **T-18 — Commit `assets/dootdoot_asset_v1.doot`.** Verify size (~1 MB), parser
+      compatibility, and add a regeneration README note.
       Deps: T-17 · Reqs: FR-42, NFR-7 · Est: 0.5h
 
 ---
 
-## Phase 3 — Core mapping layer (`mapping`, `format`, `tokenizer`)
+## Phase 3 — Core asset, mapping, and tokenizer layers
 
-- [x] **T-19 — `format` module: load embedded artifact.** `include_bytes!` the table;
-      parse header; expose PCA stats, squash stats, hashes, the `format_v1.bin` artifact
-      id, and voice contract ids.
+- [x] **T-19 — Asset module: load embedded `.doot` asset.** `include_bytes!` the protobuf
+      asset; parse the dootdoot asset spec; expose tokenizer JSON, PCA stats, squash stats,
+      hashes, asset spec ids, and voice contract ids.
       Deps: T-02, T-18 · Reqs: FR-9, FR-33, FR-38 · Est: 2h
-- [x] **T-20 — `tokenizer` wrapper.** Wrap HF `tokenizers` with embedded `tokenizer.json`;
+- [x] **T-20 — `tokenizer` wrapper.** Wrap HF `tokenizers` with tokenizer JSON from the
+      embedded `.doot` asset;
       `add_special_tokens=false`; expose token IDs + `##` continuation flags. Apply the
       control-token drop filter (`[PAD]`/`[CLS]`/`[SEP]`/`[MASK]` by ID, **keeping** `[UNK]`)
       so literal `"[MASK]"` etc. are dropped; test literal `"[CLS]"`/`"[MASK]"` and that
@@ -266,10 +269,10 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       directionally improved body, upper-mid brightness, gesture motion, harmonicity, and phrase
       air, but accept/reject by listening for reliable BB-8-family identity.
       Deps: T-45, T-46, T-47, T-48, T-49, T-50 · Reqs: NFR-16 · Est: 3h
-- [x] **T-52 — Validate/finalize squash; regenerate artifact if changed.** Confirm the
+- [x] **T-52 — Validate/finalize squash; regenerate asset if changed.** Confirm the
       squash chosen at T-15 still lands tastefully after by-ear tuning; if it (or its stats)
-      changes, **re-run `xtask` to regenerate `format_v1.bin`** (header stats only — baked
-      vectors are pre-squash) before the freeze. Lock into `VOICE_V1`.
+      changes, **re-run `xtask` to regenerate `dootdoot_asset_v1.doot`** (squash stats only —
+      baked vectors are pre-squash) before the freeze. Lock into `VOICE_V1`.
       Deps: T-51, T-23, T-15 · Reqs: FR-12, FR-39 · Est: 1.5h
 - [x] **T-53 — Validate learnability spread.** Spot-check that distinct semantic clusters
       are audibly distinct and similar ones audibly similar; adjust axis ranges if needed.
@@ -426,6 +429,15 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       V6 forensic analysis and acceptance check.
       Deps: T-77 · Reqs: FR-33, FR-39, FR-71, FR-72, FR-73, FR-74, FR-75, FR-76,
       NFR-16, NFR-17, NFR-18 · Est: 2h
+
+## Phase 15 — Dootdoot asset spec consolidation
+
+- [x] **T-79 — Consolidate runtime assets into a protobuf `.doot` asset.** Replace the
+      split `format_v1.bin` + runtime `tokenizer.json` assets with
+      `assets/dootdoot_asset_v1.doot`; add the dootdoot asset spec parser, route tokenizer and
+      mapping through the single asset, update `xtask` generation, and revise source-of-truth
+      docs/reference material.
+      Deps: T-18, T-19, T-20 · Reqs: FR-5, FR-40, FR-42, NFR-7, NFR-8 · Est: 3h
 
 ---
 

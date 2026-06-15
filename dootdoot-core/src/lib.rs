@@ -2,9 +2,9 @@
 
 mod affect;
 mod archetype;
+mod asset;
 mod complexity;
 mod engine;
-mod format;
 mod mapping;
 mod mathx;
 mod phrase;
@@ -17,17 +17,17 @@ pub use affect::{AffectAnalysis, AffectTokenScore, UtteranceMood, analyze_affect
 pub use archetype::{
     ArchetypeSelection, GESTURE_ARCHETYPE_PALETTE, GestureArchetype, plan_gesture_archetypes,
 };
+pub use asset::{
+    ACTIVE_VOICE, DOOT_ASSET_AXIS_COUNT, DOOT_ASSET_FILE_V1, DOOT_ASSET_HASH_BYTES,
+    DOOT_ASSET_SCALE_COUNT, DOOT_ASSET_SPEC_VERSION, DOOT_ASSET_SQUASH_STATS_PER_AXIS,
+    DOOT_ASSET_TOKEN_RECORD_BYTES, DootAsset, DootAssetError, DootAssetHashes, DootAssetParts,
+    DootAssetScales, DootAssetSpec, DootAssetSquashAxisStats, DootAssetSquashFunction, VOICE_V1,
+    VOICE_V2, VOICE_V3, VOICE_V4, VOICE_V5, VOICE_V6, embedded_doot_asset,
+};
 pub use complexity::{ComplexityAnalysis, analyze_complexity_for_text};
 pub use engine::{
     EngineError, ExplainMoodRow, ExplainPunctuationRow, ExplainRow, ExplainTokenRow,
     explain_rows_for_text, render_text_canonical_buffer, sequence_events_for_text,
-};
-pub use format::{
-    ACTIVE_VOICE, FORMAT_ARTIFACT_V1, FORMAT_AXIS_COUNT, FORMAT_HASH_BYTES, FORMAT_HEADER_BYTES,
-    FORMAT_MAGIC, FORMAT_SCALE_COUNT, FORMAT_SQUASH_STATS_PER_AXIS, FORMAT_TOKEN_RECORD_BYTES,
-    FORMAT_VERSION_NUMBER, Format, FormatArtifact, FormatError, FormatSquashFunction,
-    SquashAxisStats, VOICE_V1, VOICE_V2, VOICE_V3, VOICE_V4, VOICE_V5, VOICE_V6,
-    embedded_format_v1,
 };
 pub use mapping::{
     KNOB_BOUNDS, KNOB_MODULATION_DEPTHS, KnobBounds, KnobSet, Mapping, MappingError, PooledVector,

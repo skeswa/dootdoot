@@ -1,8 +1,9 @@
-//! `format_v1.bin` serialization.
+//! Dootdoot asset spec serialization.
 
 use dootdoot_core::{
-    FORMAT_AXIS_COUNT, FORMAT_HEADER_BYTES, FORMAT_MAGIC, FORMAT_SCALE_COUNT,
-    FORMAT_SQUASH_STATS_PER_AXIS, FORMAT_TOKEN_RECORD_BYTES, FORMAT_VERSION_NUMBER,
+    DOOT_ASSET_AXIS_COUNT, DOOT_ASSET_HASH_BYTES, DOOT_ASSET_TOKEN_RECORD_BYTES, DootAsset,
+    DootAssetHashes, DootAssetParts, DootAssetScales, DootAssetSquashAxisStats,
+    DootAssetSquashFunction,
 };
 use num_traits::ToPrimitive;
 use sha2::{Digest, Sha256};
@@ -12,18 +13,19 @@ use crate::{
     SquashStats,
 };
 
-/// Serializes a complete `format_v1.bin` artifact to bytes.
+/// Serializes a complete `.doot` asset to protobuf bytes.
 ///
 /// # Errors
 ///
 /// Returns an error when projection dimensions are inconsistent, hashes are
-/// malformed, numeric fields exceed the format range, or quantization cannot be
-/// represented.
-pub fn serialize_format_artifact(
+/// malformed, numeric fields exceed the asset spec range, or quantization
+/// cannot be represented.
+pub fn serialize_doot_asset(
     source_model: &SourceModel,
     projection: &PcaProjection,
     squash_stats: &SquashStats,
     manifest: &SourceManifest,
+    tokenizer_json: &[u8],
 ) -> Result<Vec<u8>> {
     validate_artifact_inputs(source_model, projection, squash_stats)?;
 
@@ -36,28 +38,34 @@ pub fn serialize_format_artifact(
             .map(|weight| f64::from(*weight).abs())
             .fold(0.0, f64::max),
     )?;
-    let mut bytes = Vec::with_capacity(
-        FORMAT_HEADER_BYTES + (source_model.token_count() * FORMAT_TOKEN_RECORD_BYTES),
-    );
+    let mut record_bytes =
+        Vec::with_capacity(source_model.token_count() * DOOT_ASSET_TOKEN_RECORD_BYTES);
 
-    write_header(
-        &mut bytes,
-        source_model,
-        &axis_scales,
-        weight_scale,
-        squash_stats,
-        manifest,
-        &pca_hash(projection),
-    )?;
     write_records(
-        &mut bytes,
+        &mut record_bytes,
         source_model,
         &projected,
         &axis_scales,
         weight_scale,
     )?;
 
-    Ok(bytes)
+    let parts = DootAssetParts::new(
+        usize_to_u32(source_model.token_count())?,
+        DootAssetScales::new(axis_scales, weight_scale),
+        doot_squash_function(squash_stats.function()),
+        doot_squash_stats(squash_stats),
+        DootAssetHashes::new(
+            decode_hash(manifest.model_sha256(), "model")?,
+            decode_hash(manifest.tokenizer_sha256(), "tokenizer")?,
+            pca_hash(projection),
+        ),
+        tokenizer_json.to_vec(),
+        record_bytes,
+    );
+
+    DootAsset::from_parts(parts)
+        .and_then(|asset| asset.to_protobuf_bytes())
+        .map_err(|error| SourceManifestError::new(format!("failed to encode .doot asset: {error}")))
 }
 
 /// Quantizes a value with symmetric signed int16 half-even rounding.
@@ -93,23 +101,23 @@ fn validate_artifact_inputs(
     projection: &PcaProjection,
     squash_stats: &SquashStats,
 ) -> Result<()> {
-    if projection.axis_count() != FORMAT_AXIS_COUNT {
+    if projection.axis_count() != DOOT_ASSET_AXIS_COUNT {
         return Err(SourceManifestError::new(format!(
-            "format requires {FORMAT_AXIS_COUNT} PCA axes, got {}",
+            "dootdoot asset spec requires {DOOT_ASSET_AXIS_COUNT} PCA axes, got {}",
             projection.axis_count(),
         )));
     }
 
-    if squash_stats.axis_count() != FORMAT_AXIS_COUNT {
+    if squash_stats.axis_count() != DOOT_ASSET_AXIS_COUNT {
         return Err(SourceManifestError::new(format!(
-            "format requires {FORMAT_AXIS_COUNT} squash axes, got {}",
+            "dootdoot asset spec requires {DOOT_ASSET_AXIS_COUNT} squash axes, got {}",
             squash_stats.axis_count(),
         )));
     }
 
     if source_model.embedding_width() != projection.source_width() {
         return Err(SourceManifestError::new(format!(
-            "format source/projection width mismatch: source {}, projection {}",
+            "dootdoot asset source/projection width mismatch: source {}, projection {}",
             source_model.embedding_width(),
             projection.source_width(),
         )));
@@ -120,10 +128,10 @@ fn validate_artifact_inputs(
 
 fn projected_values(source_model: &SourceModel, projection: &PcaProjection) -> Vec<f64> {
     let source_width = source_model.embedding_width();
-    let mut projected = Vec::with_capacity(source_model.token_count() * FORMAT_AXIS_COUNT);
+    let mut projected = Vec::with_capacity(source_model.token_count() * DOOT_ASSET_AXIS_COUNT);
 
     for row in source_model.embeddings().chunks_exact(source_width) {
-        for axis in 0..FORMAT_AXIS_COUNT {
+        for axis in 0..DOOT_ASSET_AXIS_COUNT {
             let component_start = axis * source_width;
             let component_end = component_start + source_width;
             let component = &projection.components()[component_start..component_end];
@@ -140,16 +148,16 @@ fn projected_values(source_model: &SourceModel, projection: &PcaProjection) -> V
     projected
 }
 
-fn axis_scales(projected: &[f64]) -> Result<[f32; FORMAT_AXIS_COUNT]> {
-    let mut maxima = [0.0_f64; FORMAT_AXIS_COUNT];
+fn axis_scales(projected: &[f64]) -> Result<[f32; DOOT_ASSET_AXIS_COUNT]> {
+    let mut maxima = [0.0_f64; DOOT_ASSET_AXIS_COUNT];
 
-    for token_axes in projected.chunks_exact(FORMAT_AXIS_COUNT) {
+    for token_axes in projected.chunks_exact(DOOT_ASSET_AXIS_COUNT) {
         for (maximum, value) in maxima.iter_mut().zip(token_axes) {
             *maximum = maximum.max(value.abs());
         }
     }
 
-    let mut scales = [0.0_f32; FORMAT_AXIS_COUNT];
+    let mut scales = [0.0_f32; DOOT_ASSET_AXIS_COUNT];
 
     for (scale, maximum) in scales.iter_mut().zip(maxima) {
         *scale = scale_from_max(maximum)?;
@@ -170,51 +178,14 @@ fn scale_from_max(maximum: f64) -> Result<f32> {
     })
 }
 
-fn write_header(
-    bytes: &mut Vec<u8>,
-    source_model: &SourceModel,
-    axis_scales: &[f32; FORMAT_AXIS_COUNT],
-    weight_scale: f32,
-    squash_stats: &SquashStats,
-    manifest: &SourceManifest,
-    pca_hash: &[u8; 32],
-) -> Result<()> {
-    bytes.extend_from_slice(&FORMAT_MAGIC);
-    push_u32(bytes, usize_to_u32(FORMAT_HEADER_BYTES)?);
-    push_u32(bytes, FORMAT_VERSION_NUMBER);
-    push_u32(bytes, usize_to_u32(source_model.token_count())?);
-    push_u32(bytes, usize_to_u32(FORMAT_AXIS_COUNT)?);
-
-    for scale in axis_scales {
-        push_f32(bytes, *scale);
-    }
-
-    push_f32(bytes, weight_scale);
-    push_u32(bytes, squash_function_id(squash_stats.function()));
-
-    for axis in squash_stats.axes() {
-        push_f64(bytes, axis.mean());
-        push_f64(bytes, axis.standard_deviation());
-    }
-
-    debug_assert_eq!(FORMAT_SCALE_COUNT, FORMAT_AXIS_COUNT + 1);
-    debug_assert_eq!(FORMAT_SQUASH_STATS_PER_AXIS, 2);
-
-    bytes.extend_from_slice(&decode_hash(manifest.model_sha256(), "model")?);
-    bytes.extend_from_slice(&decode_hash(manifest.tokenizer_sha256(), "tokenizer")?);
-    bytes.extend_from_slice(pca_hash);
-
-    Ok(())
-}
-
 fn write_records(
     bytes: &mut Vec<u8>,
     source_model: &SourceModel,
     projected: &[f64],
-    axis_scales: &[f32; FORMAT_AXIS_COUNT],
+    axis_scales: &[f32; DOOT_ASSET_AXIS_COUNT],
     weight_scale: f32,
 ) -> Result<()> {
-    for (token_index, token_axes) in projected.chunks_exact(FORMAT_AXIS_COUNT).enumerate() {
+    for (token_index, token_axes) in projected.chunks_exact(DOOT_ASSET_AXIS_COUNT).enumerate() {
         for (value, scale) in token_axes.iter().zip(axis_scales) {
             push_i16(bytes, quantize_symmetric_i16(*value, f64::from(*scale))?);
         }
@@ -231,14 +202,27 @@ fn write_records(
     Ok(())
 }
 
-fn squash_function_id(function: SquashFunction) -> u32 {
+fn doot_squash_function(function: SquashFunction) -> DootAssetSquashFunction {
     match function {
-        SquashFunction::TanhZScore => 1,
+        SquashFunction::TanhZScore => DootAssetSquashFunction::TanhZScore,
     }
 }
 
-fn decode_hash(hash: &str, name: &str) -> Result<[u8; 32]> {
-    let mut bytes = [0_u8; 32];
+fn doot_squash_stats(
+    squash_stats: &SquashStats,
+) -> [DootAssetSquashAxisStats; DOOT_ASSET_AXIS_COUNT] {
+    let axes = squash_stats.axes();
+
+    [
+        DootAssetSquashAxisStats::new(axes[0].mean(), axes[0].standard_deviation()),
+        DootAssetSquashAxisStats::new(axes[1].mean(), axes[1].standard_deviation()),
+        DootAssetSquashAxisStats::new(axes[2].mean(), axes[2].standard_deviation()),
+        DootAssetSquashAxisStats::new(axes[3].mean(), axes[3].standard_deviation()),
+    ]
+}
+
+fn decode_hash(hash: &str, name: &str) -> Result<[u8; DOOT_ASSET_HASH_BYTES]> {
+    let mut bytes = [0_u8; DOOT_ASSET_HASH_BYTES];
 
     hex::decode_to_slice(hash, &mut bytes)
         .map_err(|error| SourceManifestError::new(format!("invalid {name} hash: {error}")))?;
@@ -284,19 +268,7 @@ fn round_half_to_even(value: f64) -> Result<f64> {
     }
 }
 
-fn push_u32(bytes: &mut Vec<u8>, value: u32) {
-    bytes.extend_from_slice(&value.to_le_bytes());
-}
-
 fn push_i16(bytes: &mut Vec<u8>, value: i16) {
-    bytes.extend_from_slice(&value.to_le_bytes());
-}
-
-fn push_f32(bytes: &mut Vec<u8>, value: f32) {
-    bytes.extend_from_slice(&value.to_le_bytes());
-}
-
-fn push_f64(bytes: &mut Vec<u8>, value: f64) {
     bytes.extend_from_slice(&value.to_le_bytes());
 }
 

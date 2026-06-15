@@ -1,7 +1,8 @@
 # Asset Regeneration Guide
 
-Normal builds use committed assets and do not need network access. Regeneration is a
-release-engineering operation for intentional mapping or format changes.
+Normal builds use the committed `.doot` asset and do not need network access.
+Regeneration is a release-engineering operation for intentional mapping or asset-spec
+changes.
 
 ## Inputs
 
@@ -25,16 +26,15 @@ outputs to work around it.
 
 ```sh
 cargo run -p xtask
-cp target/generated/format_v1.bin assets/format_v1.bin
-cp target/source-cache/minishlab/potion-base-8M/<revision>/tokenizer.json assets/tokenizer.json
+cp target/generated/dootdoot_asset_v1.doot assets/dootdoot_asset_v1.doot
 cargo test -p xtask
 cargo test -p dootdoot-core --test golden_wav_hashes
 scripts/lint
 ```
 
-If the source manifest changes, review and commit it with the regenerated assets. If the
-tokenizer changes, copy the new pinned `tokenizer.json` byte-for-byte from the validated
-cache.
+If the source manifest changes, review and commit it with the regenerated asset. The
+tokenizer JSON is embedded inside the `.doot` payload, so there is no separate runtime
+tokenizer file to copy.
 
 ## When to Bump the Voice
 
@@ -57,8 +57,9 @@ Examples that do not require a voice bump:
 
 ## Review Checklist
 
-- `assets/format_v1.bin` or the new versioned asset has the expected size and layout.
-- `assets/tokenizer.json` matches the pinned manifest hash.
-- Golden WAV hashes were regenerated only after accepting the new format's sound.
+- `assets/dootdoot_asset_v1.doot` has the expected size and parses as the dootdoot asset
+  spec.
+- The embedded tokenizer JSON hash matches the pinned manifest hash.
+- Golden WAV hashes were regenerated only after accepting the new voice's sound.
 - `docs/design.md`, `docs/spec.md`, `docs/plan.md`, and the versioned reference document
   describe the new contract.

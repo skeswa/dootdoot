@@ -1,4 +1,4 @@
-# FORMAT_V2 Affect Assets
+# VOICE_V2 Affect Assets
 
 `vader_valence.tsv` is a compact two-column extraction of the VADER sentiment lexicon:
 

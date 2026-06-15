@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     Result, SourceFiles, SourceManifest, SourceManifestError, bb8_metrics, compute_pca_projection,
-    compute_squash_stats, load_source_model, serialize_format_artifact,
+    compute_squash_stats, load_source_model, serialize_doot_asset,
 };
 
 /// Runs the selected xtask command from process arguments.
@@ -35,7 +35,7 @@ where
     let mut args = args.into_iter().map(Into::into).collect::<Vec<_>>();
 
     if args.is_empty() {
-        generate_format_artifact()?;
+        generate_doot_asset()?;
 
         return Ok(String::new());
     }
@@ -50,7 +50,7 @@ where
     }
 }
 
-fn generate_format_artifact() -> Result<()> {
+fn generate_doot_asset() -> Result<()> {
     let workspace = workspace_root()?;
     let manifest_path = workspace.join("assets/source_manifest.toml");
     let manifest_text = fs::read_to_string(&manifest_path).map_err(|error| {
@@ -86,7 +86,13 @@ fn generate_format_artifact() -> Result<()> {
 
     let projection = compute_pca_projection(&source_model, 4)?;
     let squash_stats = compute_squash_stats(&source_model, &projection)?;
-    let artifact = serialize_format_artifact(&source_model, &projection, &squash_stats, &manifest)?;
+    let asset = serialize_doot_asset(
+        &source_model,
+        &projection,
+        &squash_stats,
+        &manifest,
+        &tokenizer,
+    )?;
     let generated_dir = workspace.join("target/generated");
     fs::create_dir_all(&generated_dir).map_err(|error| {
         SourceManifestError::new(format!(
@@ -94,8 +100,8 @@ fn generate_format_artifact() -> Result<()> {
             generated_dir.display(),
         ))
     })?;
-    let generated_path = generated_dir.join("format_v1.bin");
-    fs::write(&generated_path, artifact).map_err(|error| {
+    let generated_path = generated_dir.join("dootdoot_asset_v1.doot");
+    fs::write(&generated_path, asset).map_err(|error| {
         SourceManifestError::new(format!(
             "failed to write {}: {error}",
             generated_path.display(),

@@ -3,41 +3,41 @@
 use thiserror::Error;
 
 use crate::{
-    FORMAT_AXIS_COUNT, FORMAT_TOKEN_RECORD_BYTES, FormatArtifact, FormatSquashFunction,
-    embedded_format_v1, tanh,
+    DOOT_ASSET_AXIS_COUNT, DOOT_ASSET_TOKEN_RECORD_BYTES, DootAsset, DootAssetSquashFunction,
+    embedded_doot_asset, tanh,
 };
 
 /// Maps tokenizer IDs to baked semantic vectors and pooling weights.
 #[derive(Debug, Clone)]
-pub struct Mapping<'a> {
-    format: FormatArtifact<'a>,
+pub struct Mapping {
+    asset: DootAsset,
 }
 
 /// Gives one dequantized token vector and its pooling weight.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TokenVector {
-    axes: [f64; FORMAT_AXIS_COUNT],
+    axes: [f64; DOOT_ASSET_AXIS_COUNT],
     weight: f64,
 }
 
 /// Gives a pooled sequence baseline vector.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PooledVector {
-    axes: [f64; FORMAT_AXIS_COUNT],
+    axes: [f64; DOOT_ASSET_AXIS_COUNT],
 }
 
 /// Gives a bounded squashed semantic vector.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SquashedVector {
-    axes: [f64; FORMAT_AXIS_COUNT],
+    axes: [f64; DOOT_ASSET_AXIS_COUNT],
 }
 
 /// Gives the frozen per-axis modulation depths in pitch/vowel/contour/warble
 /// order.
-pub const KNOB_MODULATION_DEPTHS: [f64; FORMAT_AXIS_COUNT] = [0.85, 0.90, 1.10, 1.20];
+pub const KNOB_MODULATION_DEPTHS: [f64; DOOT_ASSET_AXIS_COUNT] = [0.85, 0.90, 1.10, 1.20];
 
 /// Gives the frozen per-axis knob bounds in pitch/vowel/contour/warble order.
-pub const KNOB_BOUNDS: [KnobBounds; FORMAT_AXIS_COUNT] = [
+pub const KNOB_BOUNDS: [KnobBounds; DOOT_ASSET_AXIS_COUNT] = [
     KnobBounds::new(-1.0, 1.0),
     KnobBounds::new(-1.0, 1.0),
     KnobBounds::new(-1.0, 1.0),
@@ -54,7 +54,7 @@ pub struct KnobBounds {
 /// Gives one syllable's semantic knob row.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct KnobSet {
-    axes: [f64; FORMAT_AXIS_COUNT],
+    axes: [f64; DOOT_ASSET_AXIS_COUNT],
 }
 
 /// Reports why a token ID could not be mapped.
@@ -64,10 +64,10 @@ pub struct MappingError {
     message: String,
 }
 
-impl<'a> Mapping<'a> {
-    /// Builds a mapping from a parsed format artifact.
-    pub fn from_format(format: FormatArtifact<'a>) -> Self {
-        Self { format }
+impl Mapping {
+    /// Builds a mapping from a parsed dootdoot asset.
+    pub fn from_asset(asset: DootAsset) -> Self {
+        Self { asset }
     }
 
     /// Looks up and dequantizes one tokenizer ID.
@@ -80,38 +80,38 @@ impl<'a> Mapping<'a> {
         let token_index = usize::try_from(token_id)
             .map_err(|error| MappingError::new(format!("token ID does not fit usize: {error}")))?;
 
-        if token_index >= self.format.token_count() {
+        if token_index >= self.asset.token_count() {
             return Err(MappingError::new(format!(
                 "token ID {token_id} is outside mapping table with {} records",
-                self.format.token_count(),
+                self.asset.token_count(),
             )));
         }
 
         let start = token_index
-            .checked_mul(FORMAT_TOKEN_RECORD_BYTES)
+            .checked_mul(DOOT_ASSET_TOKEN_RECORD_BYTES)
             .ok_or_else(|| MappingError::new("mapping record offset overflow"))?;
         let end = start
-            .checked_add(FORMAT_TOKEN_RECORD_BYTES)
+            .checked_add(DOOT_ASSET_TOKEN_RECORD_BYTES)
             .ok_or_else(|| MappingError::new("mapping record end overflow"))?;
         let record = self
-            .format
+            .asset
             .record_bytes()
             .get(start..end)
-            .ok_or_else(|| MappingError::new("mapping record is missing from artifact"))?;
+            .ok_or_else(|| MappingError::new("mapping record is missing from asset"))?;
         let axes = [
-            dequantize(read_i16(record, 0)?, self.format.axis_scales()[0]),
-            dequantize(read_i16(record, 2)?, self.format.axis_scales()[1]),
-            dequantize(read_i16(record, 4)?, self.format.axis_scales()[2]),
-            dequantize(read_i16(record, 6)?, self.format.axis_scales()[3]),
+            dequantize(read_i16(record, 0)?, self.asset.axis_scales()[0]),
+            dequantize(read_i16(record, 2)?, self.asset.axis_scales()[1]),
+            dequantize(read_i16(record, 4)?, self.asset.axis_scales()[2]),
+            dequantize(read_i16(record, 6)?, self.asset.axis_scales()[3]),
         ];
-        let weight = dequantize(read_i16(record, 8)?, self.format.weight_scale());
+        let weight = dequantize(read_i16(record, 8)?, self.asset.weight_scale());
 
         Ok(TokenVector { axes, weight })
     }
 
     /// Returns the number of token records in the mapping table.
     pub fn token_count(&self) -> usize {
-        self.format.token_count()
+        self.asset.token_count()
     }
 
     /// Applies the frozen axis squash to one token vector.
@@ -124,14 +124,14 @@ impl<'a> Mapping<'a> {
         self.squash_axes(pooled.axes())
     }
 
-    fn squash_axes(&self, input_axes: [f64; FORMAT_AXIS_COUNT]) -> SquashedVector {
-        match self.format.squash_function() {
-            FormatSquashFunction::TanhZScore => {
-                let mut axes = [0.0_f64; FORMAT_AXIS_COUNT];
+    fn squash_axes(&self, input_axes: [f64; DOOT_ASSET_AXIS_COUNT]) -> SquashedVector {
+        match self.asset.squash_function() {
+            DootAssetSquashFunction::TanhZScore => {
+                let mut axes = [0.0_f64; DOOT_ASSET_AXIS_COUNT];
 
                 for (squashed_axis, (input_axis, stats)) in axes
                     .iter_mut()
-                    .zip(input_axes.into_iter().zip(self.format.squash_stats()))
+                    .zip(input_axes.into_iter().zip(self.asset.squash_stats()))
                 {
                     *squashed_axis = tanh((input_axis - stats.mean()) / stats.standard_deviation());
                 }
@@ -144,12 +144,12 @@ impl<'a> Mapping<'a> {
 
 impl TokenVector {
     /// Builds a token vector from dequantized axis and weight values.
-    pub fn new(axes: [f64; FORMAT_AXIS_COUNT], weight: f64) -> Self {
+    pub fn new(axes: [f64; DOOT_ASSET_AXIS_COUNT], weight: f64) -> Self {
         Self { axes, weight }
     }
 
     /// Returns dequantized semantic axes in fixed `VOICE_V1` order.
-    pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
+    pub fn axes(&self) -> [f64; DOOT_ASSET_AXIS_COUNT] {
         self.axes
     }
 
@@ -161,19 +161,19 @@ impl TokenVector {
 
 impl PooledVector {
     /// Returns the pooled semantic axes in fixed `VOICE_V1` order.
-    pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
+    pub fn axes(&self) -> [f64; DOOT_ASSET_AXIS_COUNT] {
         self.axes
     }
 }
 
 impl SquashedVector {
     /// Builds a squashed vector from bounded axis values.
-    pub fn new(axes: [f64; FORMAT_AXIS_COUNT]) -> Self {
+    pub fn new(axes: [f64; DOOT_ASSET_AXIS_COUNT]) -> Self {
         Self { axes }
     }
 
     /// Returns the squashed axes in fixed `VOICE_V1` order.
-    pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
+    pub fn axes(&self) -> [f64; DOOT_ASSET_AXIS_COUNT] {
         self.axes
     }
 }
@@ -197,8 +197,8 @@ impl KnobBounds {
 
 impl KnobSet {
     /// Builds a knob row from already-bounded axes.
-    pub(crate) fn from_axes(axes: [f64; FORMAT_AXIS_COUNT]) -> Self {
-        let mut bounded_axes = [0.0_f64; FORMAT_AXIS_COUNT];
+    pub(crate) fn from_axes(axes: [f64; DOOT_ASSET_AXIS_COUNT]) -> Self {
+        let mut bounded_axes = [0.0_f64; DOOT_ASSET_AXIS_COUNT];
 
         for (index, axis) in bounded_axes.iter_mut().enumerate() {
             let bounds = KNOB_BOUNDS[index];
@@ -209,7 +209,7 @@ impl KnobSet {
     }
 
     /// Returns semantic knobs in pitch/vowel/contour/warble order.
-    pub fn axes(&self) -> [f64; FORMAT_AXIS_COUNT] {
+    pub fn axes(&self) -> [f64; DOOT_ASSET_AXIS_COUNT] {
         self.axes
     }
 
@@ -246,12 +246,12 @@ impl MappingError {
 ///
 /// # Errors
 ///
-/// Returns an error if the committed format artifact cannot be parsed.
-pub fn embedded_mapping() -> Result<Mapping<'static>, MappingError> {
-    embedded_format_v1()
-        .map(Mapping::from_format)
+/// Returns an error if the committed dootdoot asset cannot be parsed.
+pub fn embedded_mapping() -> Result<Mapping, MappingError> {
+    embedded_doot_asset()
+        .map(Mapping::from_asset)
         .map_err(|error| {
-            MappingError::new(format!("failed to load embedded mapping format: {error}"))
+            MappingError::new(format!("failed to load embedded mapping asset: {error}"))
         })
 }
 
@@ -272,7 +272,7 @@ pub fn pool_sequence(tokens: &[TokenVector]) -> Result<PooledVector, MappingErro
     let denominator = f64::from(u32::try_from(tokens.len()).map_err(|error| {
         MappingError::new(format!("token sequence length does not fit u32: {error}"))
     })?);
-    let mut axes = [0.0_f64; FORMAT_AXIS_COUNT];
+    let mut axes = [0.0_f64; DOOT_ASSET_AXIS_COUNT];
 
     for token in tokens {
         for (pooled_axis, token_axis) in axes.iter_mut().zip(token.axes()) {
@@ -291,7 +291,7 @@ pub fn pool_sequence(tokens: &[TokenVector]) -> Result<PooledVector, MappingErro
 pub fn assemble_knobs(baseline: SquashedVector, token: SquashedVector) -> KnobSet {
     let baseline_axes = baseline.axes();
     let token_axes = token.axes();
-    let mut axes = [0.0_f64; FORMAT_AXIS_COUNT];
+    let mut axes = [0.0_f64; DOOT_ASSET_AXIS_COUNT];
 
     for (index, axis) in axes.iter_mut().enumerate() {
         let bounds = KNOB_BOUNDS[index];

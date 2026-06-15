@@ -48,7 +48,7 @@ The directional contextual clip set is:
 - `enemy-approaching-alarm`;
 - `inquisitive-then-chatty`.
 
-These clips are directional acceptance aids, not format constants. They check that sad,
+These clips are directional acceptance aids, not asset-spec constants. They check that sad,
 excited, anxious, surprised, alarm-like, and inquisitive phrases move the v2 performance
 channels in the intended directions while the golden WAV hashes remain the sample-level
 contract.

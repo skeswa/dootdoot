@@ -1,12 +1,14 @@
 //! Axis squash tests.
 
-use dootdoot_core::{TokenVector, embedded_format_v1, embedded_mapping, pool_sequence, tanh};
+use dootdoot_core::{
+    DootAsset, TokenVector, embedded_doot_asset, embedded_mapping, pool_sequence, tanh,
+};
 
 #[test]
 fn mapping_squashes_token_axes_with_frozen_tanh_zscore_stats() {
-    let format = embedded_format_v1().expect("format should parse");
+    let asset = embedded_doot_asset().expect("asset should parse");
     let mapping = embedded_mapping().expect("mapping should load");
-    let token = TokenVector::new(fixture_axes(&format), 1.0);
+    let token = TokenVector::new(fixture_axes(&asset), 1.0);
     let squashed = mapping.squash_token(token);
 
     assert_eq!(squashed.axes().map(f64::to_bits), expected_bits());
@@ -14,17 +16,17 @@ fn mapping_squashes_token_axes_with_frozen_tanh_zscore_stats() {
 
 #[test]
 fn mapping_squashes_pooled_baseline_axes_with_same_stats() {
-    let format = embedded_format_v1().expect("format should parse");
+    let asset = embedded_doot_asset().expect("asset should parse");
     let mapping = embedded_mapping().expect("mapping should load");
-    let pooled = pool_sequence(&[TokenVector::new(fixture_axes(&format), 1.0)])
+    let pooled = pool_sequence(&[TokenVector::new(fixture_axes(&asset), 1.0)])
         .expect("single token should pool");
     let squashed = mapping.squash_pooled(pooled);
 
     assert_eq!(squashed.axes().map(f64::to_bits), expected_bits());
 }
 
-fn fixture_axes(format: &dootdoot_core::FormatArtifact<'_>) -> [f64; 4] {
-    let stats = format.squash_stats();
+fn fixture_axes(asset: &DootAsset) -> [f64; 4] {
+    let stats = asset.squash_stats();
 
     [
         stats[0].mean(),

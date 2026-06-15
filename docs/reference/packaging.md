@@ -32,4 +32,4 @@ core release.
 No Homebrew formula or prebuilt binary workflow is committed for v1. The first packaging
 surface is Cargo because it keeps the binary, committed assets, and Rust toolchain story
 simple. Add Homebrew or release archives only when tag-based release automation exists,
-and keep those artifacts downstream of the same locked format/golden-hash checks.
+and keep those artifacts downstream of the same locked asset-spec/golden-hash checks.

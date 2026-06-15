@@ -23,7 +23,7 @@
 ### 1.2 Tokenization
 
 - **FR-5** The tool SHALL tokenize input using the `potion-base-8M` WordPiece
-  tokenizer loaded from an embedded `tokenizer.json`.
+  tokenizer loaded from the tokenizer JSON embedded inside the committed `.doot` asset.
 - **FR-6** The tool SHALL disable special tokens during tokenization
   (`add_special_tokens = false`); `[CLS]`/`[SEP]` SHALL NOT produce sound.
 - **FR-7** The tool SHALL voice unknown (`[UNK]`) tokens using their own mapping
@@ -34,7 +34,7 @@
 ### 1.3 Semantic mapping
 
 - **FR-9** The tool SHALL map each token to a 4-dimensional pre-squash vector by
-  lookup in an embedded baked table keyed by token ID.
+  lookup in the baked table embedded inside the committed `.doot` asset, keyed by token ID.
 - **FR-10** The baked table SHALL store, per token, a 4-dimensional int16 PCA vector
   and a scalar pooling weight.
 - **FR-11** The tool SHALL compute a sequence baseline vector in PCA space as the
@@ -129,16 +129,17 @@
 ### 1.9 Voice contract & versioning
 
 - **FR-38** `VOICE_V1` SHALL bundle **every** parameter or rule that can affect an
-  output sample, including: the model hash; the tokenizer configuration (the
-  `tokenizer.json` hash **and** the runtime tokenization flags — `add_special_tokens`,
-  normalization/lowercasing, the `##` continuation convention); the control-token drop
-  filter set (`[PAD]`/`[CLS]`/`[SEP]`/`[MASK]`, excluding `[UNK]`); the PCA projection
-  matrix (by hash); the int16 quantization scales and rule for the 4 axes and the pooling
-  weight (symmetric signed, zero-point-free, `s = max|·|/32767`, round-half-to-even,
-  code −32768 unused); the sequence pooling rule (the weight-scaled mean with denominator =
-  token count, and the deliberate omission of L2 normalization); the knob-assembly rule
-  (per-axis modulation depths `α_k`, per-axis bounds `[lo_k, hi_k]`, and the final clamp);
-  the per-axis squash statistics and squash function;
+  output sample, including: the model hash; the tokenizer configuration (the tokenizer
+  JSON hash embedded in the `.doot` asset **and** the runtime tokenization flags —
+  `add_special_tokens`, normalization/lowercasing, the `##` continuation convention);
+  the control-token drop filter set (`[PAD]`/`[CLS]`/`[SEP]`/`[MASK]`, excluding
+  `[UNK]`); the PCA projection matrix (by hash); the int16 quantization scales and rule
+  for the 4 axes and the pooling weight (symmetric signed, zero-point-free,
+  `s = max|·|/32767`, round-half-to-even, code −32768 unused); the sequence pooling rule
+  (the weight-scaled mean with denominator = token count, and the deliberate omission of
+  L2 normalization); the knob-assembly rule (per-axis modulation depths `α_k`, per-axis
+  bounds `[lo_k, hi_k]`, and the final clamp); the per-axis squash statistics and squash
+  function;
   all fixed synthesis constants; the timing constants (syllable duration, pauses,
   padding); the prosodic-punctuation rules; the empty-input "?" chirp constants; the
   float→i16 rounding rule; the WAV serialization choices (sample rate, bit depth,
@@ -149,15 +150,16 @@
 
 ### 1.10 Build-time generation (xtask)
 
-- **FR-40** An `xtask` tool SHALL generate `assets/format_v1.bin` from `potion-base-8M`
-  by extracting all token embeddings, computing the top-4 PCA projection, canonicalizing
-  component signs deterministically, computing squash statistics, and serializing the
-  per-token vectors and weights.
+- **FR-40** An `xtask` tool SHALL generate `assets/dootdoot_asset_v1.doot` from
+  `potion-base-8M` by extracting all token embeddings, computing the top-4 PCA
+  projection, canonicalizing component signs deterministically, computing squash
+  statistics, and serializing the tokenizer JSON plus per-token vectors and weights into
+  the dootdoot asset spec Protocol Buffers payload.
 - **FR-41** PCA component signs SHALL be canonicalized by a deterministic rule (e.g.
   force each component's largest-magnitude loading positive) so generation is
   reproducible.
-- **FR-42** `assets/format_v1.bin` and `assets/tokenizer.json` SHALL be committed to
-  the repository and embedded into the shipped binary.
+- **FR-42** `assets/dootdoot_asset_v1.doot` SHALL be the only committed runtime asset
+  needed for tokenization and mapping, and it SHALL be embedded into the shipped binary.
 - **FR-43** A committed `assets/source_manifest.toml` SHALL pin the immutable upstream
   source: HF repo, exact commit revision (SHA, not a branch/tag), expected SHA-256 of
   `model.safetensors` and `tokenizer.json`, and the structural expectations
@@ -290,8 +292,8 @@
 
 - **NFR-6** The shipped binary SHALL NOT depend on `model2vec-rs`, `candle`, or any
   tensor framework at runtime.
-- **NFR-7** The embedded baked mapping table SHALL be on the order of ~300 KB (header +
-  ~30k per-token records of 4×int16 + int16 weight).
+- **NFR-7** The committed `.doot` runtime asset SHALL be on the order of ~1 MB, carrying
+  the tokenizer JSON plus ~30k compact per-token records of 4×int16 + int16 weight.
 - **NFR-8** A **normal build** (compiling from the committed assets) and **runtime**
   SHALL require no network access. **Asset regeneration** via `xtask` is exempt and MAY
   require a one-time model download, depending on the acquisition decision (FR-40/T-11).

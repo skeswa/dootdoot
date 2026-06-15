@@ -9,7 +9,8 @@ quiet bridge.
 ## Scope
 
 - `dootdoot --version` reports `dootdoot VOICE_V5`.
-- The embedded semantic mapping artifact remains the locked `assets/format_v1.bin`.
+- The embedded semantic mapping remains the locked token-to-axis table in
+  `assets/dootdoot_asset_v1.doot`.
 - Subword and word-boundary connections are distinct renderer states.
 - Word-boundary starts ramp from a low bridge-matched floor instead of reusing the high
   subword connection floor.

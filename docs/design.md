@@ -115,17 +115,18 @@ semantics therefore also fixes the tokenizer choice.
   stops _injected_ markers; a user can still type the literal text `[CLS]`, `[MASK]`, etc.,
   which WordPiece resolves to a single registered special-token ID. We therefore apply an
   explicit **drop filter** after tokenization, by token ID, against a fixed set:
-  **`[PAD]`, `[CLS]`, `[SEP]`, `[MASK]`** (resolved from the embedded `tokenizer.json`'s
-  registered specials). Filtered tokens are removed entirely — not voiced, not counted as
-  syllables — exactly like prosodic punctuation (§6.4). The set is frozen in `VOICE_V1`
-  (§8.2).
+  **`[PAD]`, `[CLS]`, `[SEP]`, `[MASK]`** (resolved from the tokenizer JSON embedded in
+  the `.doot` asset's registered specials). Filtered tokens are removed entirely — not
+  voiced, not counted as syllables — exactly like prosodic punctuation (§6.4). The set is
+  frozen in `VOICE_V1` (§8.2).
 - **`[UNK]` is the deliberate exception** — it is **not** in the filter. WordPiece falls
   back to `[UNK]` for unrepresentable input; it has its own embedding, so it produces a
   consistent "unknown" warble. We keep it: deterministic and on-theme ("the droid doesn't
   know that word").
 - **Empty after filtering** → treated as empty input: the inquisitive "?" chirp (§7.4).
   (E.g. input that is only `[PAD]`.)
-- The tokenizer is driven by the model's `tokenizer.json`, **embedded in the binary**.
+- The tokenizer is driven by the model's `tokenizer.json`, carried inside the embedded
+  `.doot` runtime asset.
 
 ---
 
@@ -162,8 +163,8 @@ keeps the artifact tiny regardless of source dimensionality.
 **Source dtype.** Upstream `minishlab/potion-base-8M` currently publishes **F32**
 `safetensors`. dtype is irrelevant to the shipped binary — the model is a build-time
 input only (§4.2) and is never embedded. `xtask` reads whatever the upstream weights are,
-projects to 4 axes, and produces its **own int16-quantized** `format_v1.bin` (§4.2);
-nothing relies on the source being pre-quantized.
+projects to 4 axes, and writes dootdoot's **own int16-quantized** records into
+`dootdoot_asset_v1.doot` (§4.2); nothing relies on the source being pre-quantized.
 
 **Rejected alternatives:** GloVe/word2vec (word-level only, large), fastText (heavier,
 older), and running a full transformer at runtime via `candle` (unnecessary weight —
@@ -171,10 +172,10 @@ see §9).
 
 ### 4.2 Decision: model2vec is a BUILD-TIME dependency only
 
-The function `token → semantic vector → 4 PCA axes` is **frozen** under the format
-contract (§8). Therefore it can be **precomputed once, offline, for the entire
-~30k-token vocabulary**, and shipped as a tiny lookup table. The runtime never loads
-model2vec or a tensor framework.
+The function `token → semantic vector → 4 PCA axes` is **frozen** under the dootdoot
+asset spec and the voice contract (§8). Therefore it can be **precomputed once, offline,
+for the entire ~30k-token vocabulary**, and shipped as a tiny lookup table. The runtime
+never loads model2vec or a tensor framework.
 
 This works because **PCA projection is linear**, so projection commutes with the
 weighted mean. In exact arithmetic, pooling the baked 4-dim vectors equals pooling the
@@ -240,24 +241,26 @@ Pooling weights use the **same** symmetric rule with their own scale `s_w`. Weig
 non-negative, so in practice only `[0, 32767]` is populated; the rule is identical (no
 special unsigned encoding) to keep one code path. `s_w = max_t w_t / 32767`.
 
-All five scales (`s_1..s_4`, `s_w`) live in the file header as f32 and are part of
+All five scales (`s_1..s_4`, `s_w`) live in the `.doot` asset as f32 and are part of
 `VOICE_V1` (§8.2). The nonlinear "squash" (§5.3) is **never baked**; it is applied at
 runtime after pooling (for the baseline) and after per-token lookup (for gestures), so it
 operates on the dequantized values and the linearity argument holds up to int16 rounding.
 
-**Baked file (`format_v1.bin`) layout and size.** Little-endian throughout.
+**Dootdoot asset spec (`.doot`) layout and size.** The runtime asset is a Protocol
+Buffers message, `assets/dootdoot_asset_v1.doot`, that accumulates the tokenizer JSON and
+the semantic mapping into one committed file. Its fields include the asset spec version,
+vocab size, axis count (4), the 4 axis dequant scales + the weight dequant scale (f32
+each), the per-axis squash statistics (§5.3), the model-, tokenizer-, and PCA-matrix
+hashes (§8.2), the complete tokenizer JSON, and a compact `token_records` bytes field.
 
-- _Header_ (a few hundred bytes): magic + format version; vocab size; axis count (4);
-  the 4 axis dequant scales + the weight dequant scale (f32 each); the per-axis squash
-  statistics (§5.3); and the model-, tokenizer- and PCA-matrix hashes (§8.2).
-- _Per-token record_ (10 bytes): 4 × int16 (quantized PCA components) + 1 × int16
-  (quantized pooling weight).
-- _Total_ ≈ 30k × 10 bytes + header ≈ **~300 KB** (the upstream F32 model embeddings are a
-  build-time input only and are not shipped).
+Each token record inside `token_records` is still 10 little-endian bytes: 4 × int16
+(quantized PCA components) + 1 × int16 (quantized pooling weight). The `.doot` file is
+roughly **1 MB** because it contains the ~300 KB mapping records plus the tokenizer JSON.
+The upstream F32 model embeddings are a build-time input only and are not shipped.
 
-Note the runtime file stores the **projected** values, so it does **not** carry the
-256→4 PCA matrix; that matrix is a build-time artifact, recorded in the contract only by
-hash for provenance.
+The runtime asset stores the **projected** values, so it does **not** carry the 256→4 PCA
+matrix; that matrix is a build-time artifact, recorded in the contract only by hash for
+provenance.
 
 **Source manifest (reproducible regeneration).** A mutable model _name_ is not a
 reproducible input: `minishlab/potion-base-8M` could be re-uploaded and silently change
@@ -276,9 +279,10 @@ make regeneration itself reproducible. So the source is pinned by a committed
 `xtask` **validates the downloaded/vendored files against this manifest before computing
 or writing anything** (matching revision, byte-hashes, and the structural fields), and
 aborts on any mismatch. This makes "regenerate the asset" deterministic and reviewable:
-two runs from the same manifest produce byte-identical `format_v1.bin`. The manifest is
-committed alongside the assets (§9.3); the model hash it pins is the same one recorded in
-`VOICE_V1` (§8.2), so the build input and the runtime contract cannot silently diverge.
+two runs from the same manifest produce byte-identical `dootdoot_asset_v1.doot`. The
+manifest is committed alongside the asset (§9.3); the model hash it pins is the same one
+recorded in `VOICE_V1` (§8.2), so the build input and the runtime contract cannot
+silently diverge.
 
 See §9 for the resulting runtime/build-time split.
 
@@ -293,7 +297,7 @@ perceptually meaningful** set.
 
 **Mechanism: pinned PCA.** Offline, we run the entire vocab through PCA, keep the top
 **K = 4** principal components, apply the fixed projection matrix to every token vector,
-and **bake the already-projected 4-axis values** into the format artifact. At runtime the
+and **bake the already-projected 4-axis values** into the `.doot` asset. At runtime the
 engine only _looks up and dequantizes_ these projected values (§4.2) — it never applies
 the PCA matrix, which is not shipped (recorded in the contract by hash only).
 
@@ -334,15 +338,15 @@ PCA outputs are unbounded. Each axis is squashed into a fixed perceptual range u
 **frozen per-axis statistics** computed offline over the vocab (e.g. percentiles or
 mean/std).
 
-**The squash function is chosen at artifact-generation time, not at the end of tuning.**
-The function (tanh vs percentile-clamp) determines which statistics the header must
-carry, so it cannot be deferred past the point where `format_v1.bin` is produced. The
-build pipeline reflects this: the squash function is selected when squash stats are
+**The squash function is chosen at asset-generation time, not at the end of tuning.** The
+function (tanh vs percentile-clamp) determines which statistics the `.doot` asset must
+carry, so it cannot be deferred past the point where `dootdoot_asset_v1.doot` is produced.
+The build pipeline reflects this: the squash function is selected when squash stats are
 computed (plan task T-15), and any later adjustment during voice tuning (T-46)
-**regenerates the artifact** before the `VOICE_V1` freeze (T-48). Because the squash is
+**regenerates the asset** before the `VOICE_V1` freeze (T-48). Because the squash is
 applied at runtime and is _not_ baked into the per-token vectors, a change touches only
-the header statistics, so regeneration is cheap. Whatever is frozen becomes part of
-`VOICE_V1` (§8.2).
+the asset's squash statistics, so regeneration is cheap. Whatever is frozen becomes part
+of `VOICE_V1` (§8.2).
 
 Squash is applied in two places, consistently, on the dequantized values:
 
@@ -701,9 +705,9 @@ requires a version bump (below). **`VOICE_V1` includes:**
 _Mapping inputs_
 
 - model2vec model hash (the build-time embedding source);
-- the full tokenizer configuration, by hash of the embedded `tokenizer.json` **plus** the
-  runtime flags that affect tokenization (`add_special_tokens = false`, lowercasing /
-  normalization, the `##` continuation convention) — not just the vocab;
+- the full tokenizer configuration, by hash of the tokenizer JSON embedded in the `.doot`
+  asset **plus** the runtime flags that affect tokenization (`add_special_tokens = false`,
+  lowercasing / normalization, the `##` continuation convention) — not just the vocab;
 - the **control-token drop filter** set (`[PAD]`/`[CLS]`/`[SEP]`/`[MASK]`, `[UNK]`
   excluded) applied after tokenization (§3.3);
 - the pinned 256→4 PCA projection matrix (by hash);
@@ -739,10 +743,10 @@ sample bumps the identifier** (`VOICE_V1` → `VOICE_V2` → `VOICE_V3` → `VOI
 version = same sound, forever, on every verified platform (§8.1)_, while letting the
 voice evolve deliberately.
 
-The `VOICE_V*` identifier is the rendered-output contract, not the on-disk layout version
-of the baked mapping artifact. `VOICE_V6` still uses the locked `assets/format_v1.bin`
-token-to-axis table; V6 exists because repeated-phrase rendering changed the generated
-samples.
+The `VOICE_V*` identifier is the rendered-output contract, not the dootdoot asset spec
+version. `VOICE_V6` still uses the locked token-to-axis table carried by
+`assets/dootdoot_asset_v1.doot`; V6 exists because repeated-phrase rendering changed the
+generated samples.
 
 ### 8.3 Decision: `VOICE_V2` broadens performance channels, not the semantic core
 
@@ -757,7 +761,7 @@ allowed only as deterministic, bounded **performance channels** around that core
 - **Complexity** — a scalar from owned WordPiece and character-shape signals that can
   drive articulation density without changing meaning-timbre. The first-pass scalar uses
   only non-whitespace character count and continuation `WordPiece` subtoken count; Zipf,
-  frequency, iconicity, or similar third-party tables stay out of the format until an
+  frequency, iconicity, or similar third-party tables stay out of the asset spec until an
   explicit asset-license policy admits them. In synthesis it remains a separate
   performance channel that can lengthen syllables and add bounded internal sub-gestures
   around the unchanged semantic knobs.
@@ -854,9 +858,11 @@ to build time. The resulting split:
 
 **Runtime dependencies (shipped binary):**
 
-- `tokenizers` (HuggingFace) — tokenize text → IDs using the embedded `tokenizer.json`.
-- the baked **~300 KB** `format_v1.bin` table (header + per-token 4×int16 + int16
-  weight; layout and size in §4.2), embedded.
+- `tokenizers` (HuggingFace) — tokenize text → IDs using the tokenizer JSON embedded in
+  the `.doot` asset.
+- the committed `assets/dootdoot_asset_v1.doot` Protocol Buffers asset, embedded with
+  `include_bytes!`; it contains the tokenizer JSON, provenance hashes, squash stats, and
+  compact per-token records (4×int16 axes + int16 weight).
 - the **owned math** module.
 - `hound`, `rodio`, `clap`.
 - **No `model2vec-rs`, no `candle`, no tensor framework.** Smaller, faster-starting,
@@ -868,11 +874,11 @@ to build time. The resulting split:
 
 ### 9.2 Decision: workspace layout (lib + bin + xtask)
 
-- **`dootdoot-core`** (library): the pure, deterministic engine — tokenizer wrapper,
-  mapping (baked-table load + linear pooling + axis squash), synth (the §6.2 signal
+- **`dootdoot-core`** (library): the pure, deterministic engine — `.doot` asset parser,
+  tokenizer wrapper, mapping (asset load + linear pooling + axis squash), synth (the §6.2 signal
   graph: control pitch model + oscillator/source → formant bank → ring-mod → envelope),
   the **owned math** module, WAV
-  serialization **to bytes / an `impl Write`**, and the `VOICE_V1` constants. No
+  serialization **to bytes / an `impl Write`**, and the `VOICE_V*` constants. No
   filesystem or audio-device I/O (it hands back buffers/bytes; the binary performs the
   actual writes). Fully unit-testable and reusable.
 - **`dootdoot`** (binary): thin CLI shell — `clap` parsing, stdin handling, `rodio`
@@ -881,22 +887,22 @@ to build time. The resulting split:
   `potion-base-8M` via `model2vec-rs`, extracts all 256-dim embeddings, computes PCA→4,
   **canonicalizes component signs** (e.g. force each component's largest-magnitude
   loading positive, so the result is reproducible), computes squash stats, and writes
-  the committed `assets/format_v1.bin`.
+  the committed `assets/dootdoot_asset_v1.doot`.
 
 ### 9.3 Decision: committed, reviewable artifacts
 
-`assets/format_v1.bin` and `assets/tokenizer.json` are **committed to the repo and
-embedded** in the binary (`include_bytes!`). The frozen contract literally lives in a
-reviewable artifact. `assets/source_manifest.toml` (§4.2) is committed alongside them: it
-pins the immutable upstream source (repo, commit SHA, file hashes, `hidden_dim`,
-`normalize`, dtype) that `xtask` validates before regenerating, so the build input is as
-reviewable and reproducible as the output.
+`assets/dootdoot_asset_v1.doot` is **committed to the repo and embedded** in the binary
+(`include_bytes!`). The frozen runtime asset literally lives in a reviewable file.
+`assets/source_manifest.toml` (§4.2) is committed alongside it: it pins the immutable
+upstream source (repo, commit SHA, file hashes, `hidden_dim`, `normalize`, dtype) that
+`xtask` validates before regenerating, so the build input is as reviewable and
+reproducible as the output.
 
 Two distinct build paths, with different network stories:
 
 - **Normal build** (`cargo build`/`test`/`install`): compiles from the committed assets
   and is **fully offline** — no network, ever. This is the guarantee in NFR-8.
-- **Asset regeneration** (running `xtask` to rebuild `format_v1.bin`): a rare, deliberate
+- **Asset regeneration** (running `xtask` to rebuild `dootdoot_asset_v1.doot`): a rare, deliberate
   operation that needs the `potion-base-8M` model as input. Whether that model is a
   **vendored blob** (regeneration also offline) or **downloaded once** (regeneration may
   require network) is the open ops decision in §11 and plan task T-11. Regeneration is
@@ -930,8 +936,8 @@ These do not change the architecture and are settled during implementation:
   glide time, warble rate, envelope shape, ring-mod frequency/mix, syllable duration,
   pause lengths, register bias. Tuned **by ear**, then frozen into `VOICE_V1`.
 - **Squash function** — tanh vs percentile-clamp. Note this is _not_ fully open-ended:
-  it must be chosen when `format_v1.bin` is generated (T-15), and any later change
-  regenerates the artifact before the freeze (§5.3, T-46).
+  it must be chosen when `dootdoot_asset_v1.doot` is generated (T-15), and any later
+  change regenerates the asset before the freeze (§5.3, T-46).
 - **How `xtask` obtains `potion-base-8M`** — vendored blob (regeneration stays offline)
   vs scripted download (regeneration may need network). This affects only regeneration,
   never the normal offline build (§9.3, T-11).

@@ -9,7 +9,8 @@ staccato.
 ## Scope
 
 - `dootdoot --version` reports `dootdoot VOICE_V3`.
-- The embedded semantic mapping artifact remains the locked `assets/format_v1.bin`.
+- The embedded semantic mapping remains the locked token-to-axis table in
+  `assets/dootdoot_asset_v1.doot`.
 - Word boundaries keep deterministic duration, but render as quiet transition bridges
   instead of hard zero-filled gaps.
 - Connected syllables share oscillator/filter phase and use connected envelope edges.

@@ -19,7 +19,8 @@ Stable contracts and low-level implementation notes.
 - [`usage.md`](usage.md) — CLI examples, `--explain`, edge cases, and input limits.
 - [`reference/asset_regeneration.md`](reference/asset_regeneration.md) — safe `xtask`
   regeneration flow and voice-bump rules.
-- [`reference/format_v1.md`](reference/format_v1.md) — committed `format_v1.bin` layout.
+- [`reference/dootdoot_asset_spec.md`](reference/dootdoot_asset_spec.md) — committed
+  `.doot` Protocol Buffers asset spec.
 - [`reference/voice_v2_scope.md`](reference/voice_v2_scope.md) — scoped V2
   performance channels and bounds.
 - [`reference/mathx.md`](reference/mathx.md) — owned transcendental math contract.
