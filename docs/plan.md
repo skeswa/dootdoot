@@ -281,7 +281,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ## Phase 8 — Test suite & determinism contract
 
-- [ ] **T-55 — Define golden corpus.** Fix inputs: `""`, `"hello"`, `"hello there"`,
+- [x] **T-55 — Define golden corpus.** Fix inputs: `""`, `"hello"`, `"hello there"`,
       `"playing"`, `"cat"`, `"dog"`, `"airplane"`, `"?"`, punctuation, `[UNK]` triggers,
       a long input.
       Deps: T-54 · Reqs: NFR-17 · Est: 1h

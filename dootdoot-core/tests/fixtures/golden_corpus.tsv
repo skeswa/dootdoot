@@ -1,0 +1,12 @@
+# label	input
+empty	
+hello	hello
+hello_there	hello there
+playing	playing
+cat	cat
+dog	dog
+airplane	airplane
+bare_question	?
+punctuation	hello?!, there.
+unknown	[UNK]
+long	hello there cat dog airplane playing hello there cat dog airplane playing hello there cat dog airplane playing
