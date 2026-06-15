@@ -638,6 +638,81 @@ pub fn upper_mid_sparkle_sample(phase: f64, elapsed_seconds: f64, warble_depth: 
     sparkle.clamp(-UPPER_MID_SPARKLE_MIX, UPPER_MID_SPARKLE_MIX)
 }
 
+/// Gives the maximum `VOICE_V7` noise/breath excitation blend mix.
+pub const NOISE_BREATH_MAX_MIX: f64 = 0.5;
+
+/// Gives the value-noise stride that bandlimits the breath excitation.
+const NOISE_BREATH_STRIDE: u32 = 7;
+
+/// Computes one deterministic value-noise breath sample, scaled by roughness.
+///
+/// The source is authored, not random: a fixed integer hash of the sample index
+/// produces a reproducible value-noise curve in `[-1, 1]`. At `roughness_amount
+/// == 0` the result is exactly `0.0`, so ordinary syllables stay cleanly
+/// periodic; otherwise the magnitude is bounded by the (clamped) amount.
+pub fn noise_breath_sample(sample_index: u32, roughness_amount: f64) -> f64 {
+    let amount = if roughness_amount.is_finite() {
+        roughness_amount.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    if amount <= 0.0 {
+        return 0.0;
+    }
+
+    (noise_breath_raw(sample_index) * amount).clamp(-1.0, 1.0)
+}
+
+/// Blends a deterministic noise/breath source under a tonal sample.
+///
+/// `roughness_amount == 0` returns `tonal` unchanged (clean periodicity);
+/// higher amounts cross-fade toward the breath source up to
+/// `NOISE_BREATH_MAX_MIX`, so a gesture's harmonicity can swing clean→rough
+/// without any runtime randomness.
+pub fn blend_noise_excitation(tonal: f64, sample_index: u32, roughness_amount: f64) -> f64 {
+    let amount = if roughness_amount.is_finite() {
+        roughness_amount.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    if amount <= 0.0 {
+        return tonal;
+    }
+
+    let mix = amount * NOISE_BREATH_MAX_MIX;
+
+    (tonal * (1.0 - mix)) + (noise_breath_raw(sample_index) * mix)
+}
+
+fn noise_breath_raw(sample_index: u32) -> f64 {
+    let base = sample_index / NOISE_BREATH_STRIDE;
+    let step = sample_index % NOISE_BREATH_STRIDE;
+    let fraction = f64::from(step) / f64::from(NOISE_BREATH_STRIDE);
+    let low = hashed_unit(base);
+    let high = hashed_unit(base.wrapping_add(1));
+    let smooth = fraction * fraction * (3.0 - (2.0 * fraction));
+
+    low + ((high - low) * smooth)
+}
+
+fn hashed_unit(index: u32) -> f64 {
+    let hashed = mix_hash(index);
+
+    ((f64::from(hashed) / f64::from(u32::MAX)) * 2.0) - 1.0
+}
+
+fn mix_hash(mut value: u32) -> u32 {
+    value ^= value >> 16;
+    value = value.wrapping_mul(0x7feb_352d);
+    value ^= value >> 15;
+    value = value.wrapping_mul(0x846c_a68b);
+    value ^= value >> 16;
+
+    value
+}
+
 /// Computes the deterministic per-syllable vowel trajectory.
 pub fn vowel_trajectory_position(vowel_position: f64, contour: f64, elapsed_seconds: f64) -> f64 {
     vowel_trajectory_position_for_duration(

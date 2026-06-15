@@ -477,7 +477,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       range with named constants and add tests for deterministic sweep endpoints, the
       raised ceiling, bounded/finite output, and no NaN/silent paths.
       Deps: T-80, T-29 · Reqs: FR-77, FR-78, NFR-3, NFR-4, NFR-16 · Est: 2.5h
-- [ ] **T-82 — Noise/breath excitation blend (gesture roughness).** Add a deterministic
+- [x] **T-82 — Noise/breath excitation blend (gesture roughness).** Add a deterministic
       noise/breath excitation source blended under the tonal oscillator for selected
       gestures so harmonicity can swing clean→rough within a gesture rather than staying
       pinned near 0.94. Authored irregularity only — no runtime randomness. Add tests for
