@@ -2,7 +2,7 @@
 
 use core::f64::consts::{LN_2, PI};
 
-use crate::{ArchetypeSelection, GestureArchetype, cos, exp, sin};
+use crate::{ArchetypeSelection, GestureArchetype, cos, exp, sin, tanh};
 
 /// Gives the synthesis sample rate in hertz.
 pub const SYNTH_SAMPLE_RATE_HZ: u32 = 44_100;
@@ -711,6 +711,146 @@ fn mix_hash(mut value: u32) -> u32 {
     value ^= value >> 16;
 
     value
+}
+
+/// Gives the number of broad resonances in the `VOICE_V7` mouth stage.
+pub const MOUTH_RESONANCE_COUNT: usize = 3;
+
+/// Gives the maximum wet mix of the `VOICE_V7` code-talkbox mouth stage.
+pub const MOUTH_STAGE_MAX_MIX: f64 = 0.45;
+
+const MOUTH_RESONANCE_Q: f64 = 2.2;
+const MOUTH_BREATH_MIX: f64 = 0.40;
+const MOUTH_SATURATION_DRIVE: f64 = 1.6;
+
+/// Gives the per-gesture drive of the `VOICE_V7` mouth stage.
+///
+/// `closed` leaves the stage off so it passes the formant-core signal through
+/// untouched; the planner opens it on inquisitive holds, moans, and flourishes.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MouthDrive {
+    openness: f64,
+    front_back: f64,
+    breath_amount: f64,
+}
+
+impl MouthDrive {
+    /// Builds a mouth drive from openness, tongue front/back, and breath.
+    pub fn new(openness: f64, front_back: f64, breath_amount: f64) -> Self {
+        Self {
+            openness,
+            front_back,
+            breath_amount,
+        }
+    }
+
+    /// Builds the closed (off) mouth drive.
+    pub fn closed() -> Self {
+        Self {
+            openness: 0.0,
+            front_back: 0.0,
+            breath_amount: 0.0,
+        }
+    }
+
+    fn sanitized(self) -> Option<(f64, f64, f64)> {
+        let openness = if self.openness.is_finite() {
+            self.openness.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+
+        if openness <= 0.0 {
+            return None;
+        }
+
+        let front_back = if self.front_back.is_finite() {
+            self.front_back.clamp(-1.0, 1.0)
+        } else {
+            0.0
+        };
+        let breath_amount = if self.breath_amount.is_finite() {
+            self.breath_amount.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+
+        Some((openness, front_back, breath_amount))
+    }
+}
+
+/// A bounded broad mouth filter applied after the formant bank.
+#[derive(Debug, Clone, Default)]
+pub struct MouthStage {
+    filters: [BandpassFilter; MOUTH_RESONANCE_COUNT],
+}
+
+impl MouthStage {
+    /// Builds a silent (closed) mouth stage.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Processes one sample through the gated mouth stage.
+    ///
+    /// A closed drive returns the input unchanged; an open drive blends in
+    /// broad moving resonances, optional breath, and mild bounded
+    /// saturation. The output is always finite and bounded.
+    pub fn process_sample(&mut self, input: f64, sample_index: u32, drive: MouthDrive) -> f64 {
+        let Some((openness, front_back, breath_amount)) = drive.sanitized() else {
+            return input;
+        };
+        let centers = mouth_resonance_hz(openness, front_back);
+        let mut wet = 0.0;
+
+        for (filter, center_hz) in self.filters.iter_mut().zip(centers) {
+            wet += filter.process_sample(input, center_hz, MOUTH_RESONANCE_Q);
+        }
+
+        wet /= f64_from_usize(MOUTH_RESONANCE_COUNT);
+        wet += noise_breath_sample(sample_index, breath_amount) * MOUTH_BREATH_MIX;
+
+        let driven = tanh(wet * MOUTH_SATURATION_DRIVE) / MOUTH_SATURATION_DRIVE;
+        let mix = openness * MOUTH_STAGE_MAX_MIX;
+
+        (input * (1.0 - mix)) + (driven * mix)
+    }
+
+    /// Clears the mouth filter state.
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+}
+
+/// Computes the deterministic per-gesture mouth open/close envelope.
+pub fn mouth_open_envelope(elapsed_seconds: f64, duration_seconds: f64) -> f64 {
+    let progress = syllable_progress(elapsed_seconds, duration_seconds);
+
+    sin(PI * progress).clamp(0.0, 1.0)
+}
+
+/// Computes the broad moving mouth resonance centers in hertz.
+pub fn mouth_resonance_hz(openness: f64, front_back: f64) -> [f64; MOUTH_RESONANCE_COUNT] {
+    let openness = if openness.is_finite() {
+        openness.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let front_back = if front_back.is_finite() {
+        front_back.clamp(-1.0, 1.0)
+    } else {
+        0.0
+    };
+
+    [
+        (420.0 + (380.0 * openness)).clamp(200.0, 3_600.0),
+        (1_100.0 + (700.0 * front_back)).clamp(200.0, 3_600.0),
+        (2_500.0 + (300.0 * front_back)).clamp(200.0, 3_600.0),
+    ]
+}
+
+fn f64_from_usize(value: usize) -> f64 {
+    u32::try_from(value).map_or(f64::from(u32::MAX), f64::from)
 }
 
 /// Computes the deterministic per-syllable vowel trajectory.

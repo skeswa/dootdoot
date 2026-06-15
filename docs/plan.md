@@ -497,7 +497,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       voiced semantic tokens. Test that the standalone dash no longer appears with four-axis
       values in `--explain` and routes to a pause/quiet rounded connector.
       Deps: T-80, T-20, T-33 · Reqs: FR-82, FR-23a, NFR-16 · Est: 1.5h
-- [ ] **T-85 — Code-talkbox mouth-stage prototype.** Add a gated, bounded second stage
+- [x] **T-85 — Code-talkbox mouth-stage prototype.** Add a gated, bounded second stage
       after the formant bank: a broad moving mouth filter (2–4 resonances) with a
       deterministic open/close envelope per gesture, tongue/front-back curves linked to the
       semantic/formant axes, optional breath/noise excitation into the stage, and mild
