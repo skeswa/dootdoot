@@ -270,7 +270,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       changes, **re-run `xtask` to regenerate `format_v1.bin`** (header stats only — baked
       vectors are pre-squash) before the freeze. Lock into `FORMAT_V1`.
       Deps: T-51, T-23, T-15 · Reqs: FR-12, FR-39 · Est: 1.5h
-- [ ] **T-53 — Validate learnability spread.** Spot-check that distinct semantic clusters
+- [x] **T-53 — Validate learnability spread.** Spot-check that distinct semantic clusters
       are audibly distinct and similar ones audibly similar; adjust axis ranges if needed.
       Deps: T-51 · Reqs: NFR-14, NFR-15, NFR-16 · Est: 2h
 - [ ] **T-54 — Lock `FORMAT_V1`.** Finalize all constants/hashes; assert version surfaced
