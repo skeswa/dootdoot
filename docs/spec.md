@@ -69,11 +69,16 @@
 
 ### 1.5 Timing
 
-- **FR-20** Each token SHALL occupy a fixed base syllable duration (≈150 ms);
-  duration SHALL NOT vary with semantics.
+- **FR-20** _(Removed.)_ Syllable duration is no longer required to be fixed. Variable,
+  deterministic duration (e.g. phrase-final lengthening, complexity- or affect-driven
+  pacing) is permitted. The ID is retired and not reused. Rationale and direction:
+  [`bb8-expressiveness-gap-analysis.md`](./bb8-expressiveness-gap-analysis.md).
 - **FR-21** Consecutive subword tokens within the same word SHALL be connected by
   portamento with no intervening silence.
-- **FR-22** A short fixed pause (≈80 ms) SHALL separate distinct words.
+- **FR-22** Distinct words SHALL be separated by a deterministic inter-word pause so the
+  ear can segment words. The pause length MAY vary with phrase structure, boundary
+  strength, or affect (e.g. word vs clause vs sentence boundaries) rather than being a
+  single fixed constant, provided it remains a pure function of the input.
 - **FR-23** Prosodic punctuation tokens (`.` `!` `?` `,` `;` `:`) SHALL be treated as
   control-only markers: they SHALL NOT be voiced as their own syllable and SHALL NOT
   count toward the voiced-syllable total. Each SHALL shape the **preceding** syllable

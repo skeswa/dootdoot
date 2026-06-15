@@ -460,15 +460,21 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
 ### 6.4 Decision: temporal / rhythmic structure
 
 - **One token = one syllable** — a single continuous formant-glide warble (not a
-  cluster of discrete beeps). Base duration **fixed** (~150 ms). Duration is _not_ a
-  fifth semantic axis — keeping it fixed preserves the 4-axis learnable contract and a
-  regular, learnable rhythm.
+  cluster of discrete beeps). `FORMAT_V1` ships a single **fixed** base duration
+  (~170 ms) as a V1 implementation choice for a regular, learnable rhythm — but this is
+  **not** a hard requirement (the original FR-20 fixing it has been removed). Duration is
+  _not_ a fifth **semantic** axis (it does not encode token meaning), yet deterministic,
+  structure- or affect-driven duration variation (phrase-final lengthening, complexity-
+  or mood-driven pacing) is permitted and explored in
+  [`bb8-expressiveness-gap-analysis.md`](./bb8-expressiveness-gap-analysis.md).
 - **Within a word, syllables glide together** — consecutive subword tokens of the same
   word (detected via WordPiece `##` continuation marking) are connected by portamento
   with **no silence**, so a multi-token word sounds like one flowing multi-syllable
   utterance (`playing` = two glided syllables). Word length becomes audible.
-- **Between words, a short pause** (~80 ms) — the burst-like BB-8 cadence; lets the ear
-  segment words.
+- **Between words, a short pause** (`FORMAT_V1`: ~110 ms) — the burst-like BB-8 cadence;
+  lets the ear segment words. The pause need not be a single fixed constant (revised
+  FR-22): deterministic variation by boundary strength (word vs clause vs sentence) is
+  permitted; `FORMAT_V1` uses one fixed value.
 - **Punctuation is control-only, not voiced.** A fixed set of prosodic punctuation
   tokens (`.` `!` `?` `,` `;` `:`) is recognized and treated as control markers: they do
   **not** produce their own syllable. Instead each shapes the **preceding** syllable's

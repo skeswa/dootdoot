@@ -145,7 +145,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-26 — Define fixed synthesis constants.** Initial values for formant freqs/vowel
       locus, glide time, warble rate, ring-mod freq/mix, envelope, register bias,
       durations, pauses. (Refined in Phase 7.)
-      Deps: T-02 · Reqs: FR-17, FR-20, FR-22, FR-24 · Est: 1.5h
+      Deps: T-02 · Reqs: FR-17, FR-22, FR-24 · Est: 1.5h
 - [x] **T-27 — Harmonically-rich source oscillator.** Band-limited saw/pulse via `mathx`.
       Deps: T-07, T-26 · Reqs: FR-16 · Est: 2h
 - [x] **T-28 — Formant filter bank.** 2–3 resonant bandpasses; vowel position parameter
@@ -259,7 +259,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       Adjust fixed syllable/pause/tail timing only as needed to reduce active density and create
       more phrase air; update exact sample-count estimation and input-limit tests for any timing
       changes. Preserve deterministic timing templates, not runtime randomness.
-      Deps: T-49, T-43 · Reqs: FR-20, FR-21, FR-22, FR-24, FR-36, FR-37, NFR-16 · Est: 2h
+      Deps: T-49, T-43 · Reqs: FR-21, FR-22, FR-24, FR-36, FR-37, NFR-16 · Est: 2h
 - [x] **T-51 — Final integrated BB-8 tuning pass.** Tune by ear across varied text and the local
       BB-8 reference clips after the layered voice changes land. Use the T-45 metrics to confirm
       directionally improved body, upper-mid brightness, gesture motion, harmonicity, and phrase
