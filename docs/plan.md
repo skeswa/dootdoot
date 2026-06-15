@@ -342,7 +342,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       and sparse emphasis. Update output-length estimation, input-limit tests, and
       `FORMAT_V2` golden hashes once the constants are frozen.
       Deps: T-65 · Reqs: FR-20, FR-22, FR-24, FR-36, FR-37, FR-38, FR-39, NFR-16 · Est: 3h
-- [ ] **T-67 — Add licensing-safe affect assets.** Bake VADER (MIT) valence and an
+- [x] **T-67 — Add licensing-safe affect assets.** Bake VADER (MIT) valence and an
       owned arousal proxy from punctuation density, repeated markers, all-caps,
       hand-curated intensifiers, token count, and character/WordPiece complexity. Do not
       commit AFINN, SentiWordNet, SUBTLEX-US, NRC-VAD, Warriner, Zipf, or VAD-derived

@@ -1,0 +1,54 @@
+[punctuation]
+marker_weight = 0.10
+question_weight = 0.12
+exclamation_weight = 0.18
+comma_clause_weight = 0.05
+max_score = 0.45
+
+[repeated_markers]
+second_marker_weight = 0.08
+max_score = 0.24
+
+[all_caps]
+word_weight = 0.12
+min_word_len = 2
+max_score = 0.36
+
+[intensifiers]
+booster_weight = 0.16
+dampener_weight = -0.10
+boosters = [
+  "absolutely",
+  "awfully",
+  "completely",
+  "deeply",
+  "especially",
+  "extremely",
+  "incredibly",
+  "really",
+  "so",
+  "totally",
+  "truly",
+  "very",
+]
+dampeners = [
+  "barely",
+  "hardly",
+  "kind of",
+  "kinda",
+  "little",
+  "maybe",
+  "mildly",
+  "partly",
+  "slightly",
+  "somewhat",
+]
+
+[token_count]
+per_token_weight = 0.012
+max_score = 0.20
+
+[complexity]
+wordpiece_weight = 0.04
+character_weight = 0.006
+max_score = 0.25
