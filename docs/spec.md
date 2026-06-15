@@ -396,7 +396,14 @@
   MAY additionally smooth connected phrase rendering without changing the semantic
   mapping core; `VOICE_V4` MAY additionally smooth repeated connected onsets; `VOICE_V5`
   MAY additionally smooth bridged word-boundary attacks; `VOICE_V6` MAY additionally
-  smooth repeated-phrase bridge and motion pulsing.
+  smooth repeated-phrase bridge and motion pulsing; `VOICE_V7` MAY additionally vary
+  deterministic, bounded contextual-performance channels (expanded synthesis dynamic
+  range — whistle-range tonal sweep, wider per-gesture pitch span, noise/breath
+  excitation; role-gated long pauses with suppressible word-boundary bridging;
+  dash/ellipsis hesitation markers; an optional code-talkbox mouth stage; a
+  discourse-performance planner emitting local phrase roles and continuous performance
+  curves; and localized per-phrase/per-syllable affect and archetype), each a pure
+  function of the text and clamped to the fixed droid parameter space.
 
 ### 2.5 Testing
 

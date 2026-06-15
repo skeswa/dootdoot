@@ -458,7 +458,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 > requires `VOICE_V7` and a new golden fixture set, and stays inside the fixed,
 > deterministic, bounded droid parameter space (NFR-16).
 
-- [ ] **T-80 — Decide VOICE_V7 contract scope and add spec FRs.** Update
+- [x] **T-80 — Decide VOICE_V7 contract scope and add spec FRs.** Update
       `design.md`/`spec.md` so the v7 contract covers expanded synthesis dynamic range
       (whistle-range tonal sweep, wider per-gesture pitch span, noise/breath excitation),
       role-gated long pauses with suppressible word-boundary bridging, dash/ellipsis as
