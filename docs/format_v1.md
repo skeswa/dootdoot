@@ -31,3 +31,13 @@ Each token record is 10 bytes:
 |      8 |    2 | pooling weight     | `i16`     |
 
 The record count must equal the header vocab size.
+
+## Freeze status
+
+`FORMAT_V1` is locked. The Phase 7 voice tuning accepted the final sample-affecting
+synthesis constants, T-52 squash finalized the tanh z-score mapping without regenerating
+the artifact, and T-53 learnability spread validated the final semantic/audio cluster
+separation.
+
+Any future change that alters one or more rendered output samples requires a new
+identifier, `FORMAT_V2`, plus regenerated golden fixtures.

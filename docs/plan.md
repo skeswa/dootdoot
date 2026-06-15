@@ -273,7 +273,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-53 — Validate learnability spread.** Spot-check that distinct semantic clusters
       are audibly distinct and similar ones audibly similar; adjust axis ranges if needed.
       Deps: T-51 · Reqs: NFR-14, NFR-15, NFR-16 · Est: 2h
-- [ ] **T-54 — Lock `FORMAT_V1`.** Finalize all constants/hashes; assert version surfaced
+- [x] **T-54 — Lock `FORMAT_V1`.** Finalize all constants/hashes; assert version surfaced
       by `--version`; document that further output changes require `V2`.
       Deps: T-52, T-53 · Reqs: FR-38, FR-39 · Est: 1h
 
