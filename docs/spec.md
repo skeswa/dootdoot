@@ -72,7 +72,7 @@
 - **FR-20** _(Removed.)_ Syllable duration is no longer required to be fixed. Variable,
   deterministic duration (e.g. phrase-final lengthening, complexity- or affect-driven
   pacing) is permitted. The ID is retired and not reused. Rationale and direction:
-  [`bb8-expressiveness-gap-analysis.md`](./bb8-expressiveness-gap-analysis.md).
+  [`bb8-expressiveness-gap-analysis.md`](./research/bb8-expressiveness-gap-analysis.md).
 - **FR-21** Consecutive subword tokens within the same word SHALL be connected by
   portamento with no intervening silence.
 - **FR-22** Distinct words SHALL be separated by a deterministic inter-word pause so the

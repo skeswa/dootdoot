@@ -5,7 +5,7 @@ use dootdoot_core::{
     SIN_COS_TABLE_BITS, SIN_COS_TABLE_LEN, TANH_EXP_CLAMP,
 };
 
-const MATHX_RATIONALE: &str = include_str!("../../docs/mathx.md");
+const MATHX_RATIONALE: &str = include_str!("../../docs/reference/mathx.md");
 
 #[test]
 fn mathx_contract_pins_table_sizes_and_polynomial_degrees() {

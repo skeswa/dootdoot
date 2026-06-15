@@ -21,8 +21,8 @@
 
 After Phase 7, dootdoot is a structurally faithful BB-8 _timbre_: a deterministic
 formant voice with portamento, compound warble, body, sparkle, and a faint
-electronic edge (see `voice-tuning.md`). The remaining shortfall is expression and
-structure. The user named four gaps:
+electronic edge (see [`voice-tuning.md`](../validation/voice-tuning.md)). The remaining
+shortfall is expression and structure. The user named four gaps:
 
 | #     | Gap (as observed)                                                                                         | One-line technical restatement                                                                                                           |
 | ----- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
@@ -43,7 +43,7 @@ addresses all four; Sections 3–6 analyze them one at a time.
 
 So the gaps are measured against ground truth, here is the exact current pipeline
 for the structural/expressive layer (timbre internals are in
-`bb8-sound-signature-analysis.md`).
+[`bb8-sound-signature-analysis.md`](./bb8-sound-signature-analysis.md)).
 
 ### 2.1 Token → knob (`engine.rs`, `mapping.rs`)
 
@@ -381,10 +381,10 @@ directions of maximum _semantic_ variance over the whole 30k vocab; there is no
 guarantee any of the top-4 components aligns with valence or arousal. Even when one
 loosely correlates, it maps to an arbitrary perceptual knob (pitch/vowel/contour/warble)
 with no relationship to the _prosodic conventions_ of emotion (sad → low + flat + slow +
-dark). The `learnability-spread.md` work confirms the axes carry _some_ structured
-meaning, but "structured lexical meaning" ≠ "emotional prosody." Empirically, the
-current output has no consistent sad-sounds-sad behavior because nothing connects text
-sentiment to the §3.3 acoustic directions.
+dark). The [`learnability-spread.md`](../validation/learnability-spread.md) work confirms
+the axes carry _some_ structured meaning, but "structured lexical meaning" ≠ "emotional
+prosody." Empirically, the current output has no consistent sad-sounds-sad behavior
+because nothing connects text sentiment to the §3.3 acoustic directions.
 
 The production evidence says the same thing structurally: BB-8's emotion was a
 **separate authored channel** (Schwartz's English performance), not a byproduct of which
@@ -561,9 +561,9 @@ BB-8 used the same split: a lexical/timing script (the words) performed with an 
 overlay (Schwartz's English, Abrams' and Hader's live performance). Expressiveness and
 learnability can coexist if expression is its own structured, deterministic layer.
 
-The residual tradeoff noted in `voice-tuning.md` — "dootdoot remains cleaner and more
-regular than the reference set" — is what these channels would address, at the cost of a
-more complex but still deterministic contract.
+The residual tradeoff noted in [`voice-tuning.md`](../validation/voice-tuning.md) —
+"dootdoot remains cleaner and more regular than the reference set" — is what these
+channels would address, at the cost of a more complex but still deterministic contract.
 
 ---
 

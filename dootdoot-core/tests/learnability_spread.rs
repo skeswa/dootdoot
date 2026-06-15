@@ -2,7 +2,7 @@
 
 use dootdoot_core::{ExplainRow, explain_rows_for_text, render_text_canonical_buffer};
 
-const LEARNABILITY: &str = include_str!("../../docs/learnability-spread.md");
+const LEARNABILITY: &str = include_str!("../../docs/validation/learnability-spread.md");
 
 #[test]
 fn final_semantic_and_audio_spread_keep_close_words_closer() {

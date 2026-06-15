@@ -466,7 +466,7 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
   _not_ a fifth **semantic** axis (it does not encode token meaning), yet deterministic,
   structure- or affect-driven duration variation (phrase-final lengthening, complexity-
   or mood-driven pacing) is permitted and explored in
-  [`bb8-expressiveness-gap-analysis.md`](./bb8-expressiveness-gap-analysis.md).
+  [`bb8-expressiveness-gap-analysis.md`](./research/bb8-expressiveness-gap-analysis.md).
 - **Within a word, syllables glide together** — consecutive subword tokens of the same
   word (detected via WordPiece `##` continuation marking) are connected by portamento
   with **no silence**, so a multi-token word sounds like one flowing multi-syllable

@@ -2,7 +2,7 @@
 
 use dootdoot_core::{FormatSquashFunction, embedded_format_v1};
 
-const SQUASH_DOC: &str = include_str!("../../docs/squash.md");
+const SQUASH_DOC: &str = include_str!("../../docs/validation/squash.md");
 
 #[test]
 fn format_v1_squash_is_finalized_without_artifact_regeneration() {

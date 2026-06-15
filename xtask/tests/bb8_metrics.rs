@@ -3,7 +3,7 @@
 use std::fs;
 
 const SCRIPT: &str = include_str!("../../scripts/bb8-metrics");
-const ANALYSIS: &str = include_str!("../../docs/bb8-sound-signature-analysis.md");
+const ANALYSIS: &str = include_str!("../../docs/research/bb8-sound-signature-analysis.md");
 
 #[test]
 fn bb8_metrics_script_decodes_references_and_runs_xtask_report() {

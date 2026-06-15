@@ -2,7 +2,7 @@
 
 use dootdoot_core::{FORMAT_V1, FORMAT_VERSION_NUMBER, embedded_format_v1};
 
-const FORMAT_DOC: &str = include_str!("../../docs/format_v1.md");
+const FORMAT_DOC: &str = include_str!("../../docs/reference/format_v1.md");
 
 #[test]
 fn format_v1_identifier_and_documentation_are_locked() {

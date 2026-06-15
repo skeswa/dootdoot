@@ -1,6 +1,6 @@
 //! Voice tuning acceptance documentation tests.
 
-const TUNING: &str = include_str!("../../docs/voice-tuning.md");
+const TUNING: &str = include_str!("../../docs/validation/voice-tuning.md");
 
 #[test]
 fn integrated_tuning_acceptance_records_phase_seven_decision() {

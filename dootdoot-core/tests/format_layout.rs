@@ -5,7 +5,7 @@ use dootdoot_core::{
     FORMAT_SQUASH_STATS_PER_AXIS, FORMAT_TOKEN_RECORD_BYTES, FORMAT_VERSION_NUMBER,
 };
 
-const FORMAT_LAYOUT: &str = include_str!("../../docs/format_v1.md");
+const FORMAT_LAYOUT: &str = include_str!("../../docs/reference/format_v1.md");
 
 #[test]
 fn format_v1_layout_sizes_are_pinned() {

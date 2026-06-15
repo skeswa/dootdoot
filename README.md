@@ -51,7 +51,8 @@ voice turns the knobs into sound. Because the whole mapping is frozen and uses o
 pinned math, identical input yields identical output everywhere.
 
 Full rationale lives in [`docs/design.md`](docs/design.md); the requirements are in
-[`docs/spec.md`](docs/spec.md).
+[`docs/spec.md`](docs/spec.md). The full documentation map is
+[`docs/README.md`](docs/README.md).
 
 ## Contributing
 

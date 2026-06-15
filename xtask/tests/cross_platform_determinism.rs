@@ -1,7 +1,7 @@
 //! Cross-platform determinism CI contract tests.
 
 const CI_WORKFLOW: &str = include_str!("../../.github/workflows/ci.yml");
-const CROSS_PLATFORM: &str = include_str!("../../docs/cross-platform-determinism.md");
+const CROSS_PLATFORM: &str = include_str!("../../docs/reference/cross-platform-determinism.md");
 
 #[test]
 fn ci_verifies_golden_hashes_on_linux_and_macos() {

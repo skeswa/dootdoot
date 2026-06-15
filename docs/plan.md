@@ -217,7 +217,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 ## Phase 7 — Voice tuning (freeze the sound)
 
 > **Tuning decomposition.** T-45…T-50 were inserted after
-> [`bb8-sound-signature-analysis.md`](./bb8-sound-signature-analysis.md) to split the
+> [`bb8-sound-signature-analysis.md`](./research/bb8-sound-signature-analysis.md) to split the
 > original broad T-45 tuning pass into implementation-sized, testable voice-DNA changes
 > while keeping completed task IDs stable. Metrics are directional aids only; by-ear review
 > remains the final acceptance gate for T-51.
