@@ -173,6 +173,8 @@ pub(crate) struct SyllablePerformance {
     pitch_offset_semitones: f64,
     final_lowering_semitones: f64,
     emphasized: bool,
+    mood_valence: f64,
+    mood_arousal: f64,
 }
 
 /// Filters samples through the fixed formant bank.
@@ -537,12 +539,16 @@ impl SyllablePerformance {
         pitch_offset_semitones: f64,
         final_lowering_semitones: f64,
         emphasized: bool,
+        mood_valence: f64,
+        mood_arousal: f64,
     ) -> Self {
         Self {
             duration_samples,
             pitch_offset_semitones,
             final_lowering_semitones,
             emphasized,
+            mood_valence: mood_valence.clamp(-1.0, 1.0),
+            mood_arousal: mood_arousal.clamp(0.0, 1.0),
         }
     }
 
@@ -552,6 +558,8 @@ impl SyllablePerformance {
             pitch_offset_semitones: 0.0,
             final_lowering_semitones: 0.0,
             emphasized: false,
+            mood_valence: 0.0,
+            mood_arousal: 0.0,
         }
     }
 }
@@ -580,6 +588,13 @@ pub(crate) fn render_syllable_with_performance(
 ) -> Vec<f64> {
     let duration_samples = performance.duration_samples.max(1);
     let duration_seconds = f64::from(duration_samples) / f64::from(SYNTH_SAMPLE_RATE_HZ);
+    let contour = (knobs.contour() + (performance.mood_valence * 0.35)).clamp(-1.0, 1.0);
+    let vowel_bias = (performance.mood_valence * 0.16) + (performance.mood_arousal * 0.10);
+    let warble_depth = (knobs.warble_depth() + (performance.mood_arousal * 0.35)).clamp(-1.0, 1.0);
+    let brightness_gain =
+        (1.0 + (performance.mood_arousal * 0.45) + (performance.mood_valence * 0.12))
+            .clamp(0.78, 1.55);
+    let subgesture_density = 1.0 + (performance.mood_arousal * 0.80);
     let pitch_offset_semitones = performance.pitch_offset_semitones
         + if performance.emphasized {
             PHRASE_EMPHASIS_PITCH_SEMITONES
@@ -601,12 +616,8 @@ pub(crate) fn render_syllable_with_performance(
 
     for sample_index in 0..duration_samples {
         let elapsed_seconds = f64::from(sample_index) / f64::from(SYNTH_SAMPLE_RATE_HZ);
-        let glided_pitch_hz = portamento_pitch_hz(
-            start_pitch_hz,
-            target_pitch_hz,
-            knobs.contour(),
-            elapsed_seconds,
-        );
+        let glided_pitch_hz =
+            portamento_pitch_hz(start_pitch_hz, target_pitch_hz, contour, elapsed_seconds);
         let final_glide_pitch_hz = apply_final_glide_hz(
             glided_pitch_hz,
             target_pitch_hz,
@@ -623,28 +634,33 @@ pub(crate) fn render_syllable_with_performance(
         );
         let internal_pitch_hz = apply_internal_pitch_swoop_hz_for_duration(
             phrase_final_pitch_hz,
-            knobs.contour(),
+            contour,
             elapsed_seconds,
             duration_seconds,
         );
         let pitch_hz = apply_warble_hz_with_phase(
             internal_pitch_hz,
-            knobs.warble_depth(),
+            warble_depth,
             elapsed_seconds,
             warble_phase_offset,
         );
         let source = source_oscillator_sample(phase, pitch_hz);
         let vowel_position = vowel_trajectory_position_for_duration(
-            knobs.vowel_position(),
-            knobs.contour(),
+            (knobs.vowel_position() + vowel_bias).clamp(-1.0, 1.0),
+            contour,
             elapsed_seconds,
             duration_seconds,
         );
         let voiced = formants.process_sample(source, vowel_position);
         let layered = voiced
             + body_layer_sample(body_phase, vowel_position)
-            + attack_transient_sample(elapsed_seconds, knobs.contour())
-            + upper_mid_sparkle_sample(sparkle_phase, elapsed_seconds, knobs.warble_depth());
+            + attack_transient_sample(elapsed_seconds, contour)
+            + (brightness_gain
+                * upper_mid_sparkle_sample(
+                    sparkle_phase,
+                    elapsed_seconds * subgesture_density,
+                    warble_depth,
+                ));
         let layered = if performance.emphasized {
             layered * PHRASE_EMPHASIS_GAIN
         } else {
@@ -664,7 +680,7 @@ pub(crate) fn render_syllable_with_performance(
         );
         sparkle_phase = wrap_phase(
             sparkle_phase
-                + (upper_mid_sparkle_frequency_hz(knobs.warble_depth(), knobs.contour())
+                + (upper_mid_sparkle_frequency_hz(warble_depth, contour)
                     / f64::from(SYNTH_SAMPLE_RATE_HZ)),
         );
     }

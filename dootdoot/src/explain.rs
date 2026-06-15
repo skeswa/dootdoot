@@ -25,6 +25,17 @@ fn format_explain_rows(rows: &[ExplainRow]) -> String {
 
     for row in rows {
         match row {
+            ExplainRow::Mood(mood) => {
+                let mood = mood.mood();
+
+                writeln!(
+                    table,
+                    "mood │ valence:{:+.3} │ arousal:{:+.3} │ - │ -",
+                    mood.valence(),
+                    mood.arousal(),
+                )
+                .expect("writing to a String cannot fail");
+            }
             ExplainRow::Token(token) => {
                 let knobs = token.knobs();
 

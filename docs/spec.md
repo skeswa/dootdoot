@@ -181,6 +181,9 @@
   offsets, final lowering, pitch reset, and sparse emphasis within fixed bounds.
 - **FR-48** `FORMAT_V2` affect analysis SHALL pool VADER-derived token valence and owned
   arousal proxies into deterministic utterance-level valence and arousal scores.
+- **FR-49** `FORMAT_V2` synthesis SHALL map utterance arousal to deterministic duration
+  rate, pitch lift, brightness, warble amount, and sub-gesture density, and SHALL map
+  valence to contour and darker/brighter vowel/texture bias within fixed bounds.
 
 ---
 

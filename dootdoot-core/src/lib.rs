@@ -13,8 +13,8 @@ mod wav;
 
 pub use affect::{AffectAnalysis, AffectTokenScore, UtteranceMood, analyze_affect_for_text};
 pub use engine::{
-    EngineError, ExplainPunctuationRow, ExplainRow, ExplainTokenRow, explain_rows_for_text,
-    render_text_canonical_buffer, sequence_events_for_text,
+    EngineError, ExplainMoodRow, ExplainPunctuationRow, ExplainRow, ExplainTokenRow,
+    explain_rows_for_text, render_text_canonical_buffer, sequence_events_for_text,
 };
 pub use format::{
     ACTIVE_FORMAT, FORMAT_AXIS_COUNT, FORMAT_HASH_BYTES, FORMAT_HEADER_BYTES, FORMAT_MAGIC,

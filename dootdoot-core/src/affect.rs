@@ -95,6 +95,22 @@ impl AffectTokenScore {
 }
 
 impl UtteranceMood {
+    /// Builds a mood from already normalized values.
+    pub fn new(valence: f64, arousal: f64) -> Self {
+        Self {
+            valence: valence.clamp(-1.0, 1.0),
+            arousal: arousal.clamp(0.0, 1.0),
+        }
+    }
+
+    /// Builds the neutral zero-valence, low-arousal mood.
+    pub fn neutral() -> Self {
+        Self {
+            valence: 0.0,
+            arousal: BASE_AROUSAL,
+        }
+    }
+
     /// Returns pooled normalized valence in `[-1, 1]`.
     pub fn valence(&self) -> f64 {
         self.valence
@@ -126,7 +142,7 @@ pub fn analyze_affect_for_text(text: &str) -> Result<AffectAnalysis, TokenizerEr
 
     Ok(AffectAnalysis {
         token_scores,
-        mood: UtteranceMood { valence, arousal },
+        mood: UtteranceMood::new(valence, arousal),
     })
 }
 

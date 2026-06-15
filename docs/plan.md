@@ -353,7 +353,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       tests for punctuation/case/intensifier-driven arousal plus negative/positive
       valence examples.
       Deps: T-67 · Reqs: FR-38, FR-39, NFR-16 · Est: 2h
-- [ ] **T-69 — Drive prosody from affect and expose mood in `--explain`.** Map arousal to
+- [x] **T-69 — Drive prosody from affect and expose mood in `--explain`.** Map arousal to
       rate, pitch register, pitch range, brightness, warble amount, and sub-gesture
       density; map valence to contour direction and darker/brighter voice quality. Add
       an `--explain` mood row and snapshots for sad, excited, calm, and alarm-like text.

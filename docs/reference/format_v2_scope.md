@@ -63,3 +63,16 @@ configuration. It returns per-token valence/arousal rows plus an utterance mood:
 - arousal combines punctuation density, repeated markers, all-caps words, owned
   intensifiers/dampeners, token count, character/WordPiece complexity, and valence energy;
 - all scores are deterministic and clamped to the documented fixed bounds.
+
+## Implemented Affect-Driven Prosody
+
+Text analysis prepends a mood control event to the sequencer stream and adds a `mood`
+control row to `--explain`. Synthesis uses the utterance mood as follows:
+
+- arousal shortens or lengthens phrase-planned syllable durations within a fixed rate
+  window;
+- arousal raises pitch register, adds warble, increases upper-mid brightness, and speeds
+  sub-gesture motion;
+- valence bends contour and biases vowel/texture brighter for positive text and darker
+  for negative text;
+- mood rows are stderr-only explain output and do not change output routing.

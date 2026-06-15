@@ -4,7 +4,8 @@ use thiserror::Error;
 
 use crate::{
     KnobSet, MappingError, ProsodicPunctuation, SequenceEvent, TokenVector, TokenizerError,
-    assemble_knobs, embedded_mapping, embedded_tokenizer, pool_sequence, render_canonical_buffer,
+    UtteranceMood, analyze_affect_for_text, assemble_knobs, embedded_mapping, embedded_tokenizer,
+    pool_sequence, render_canonical_buffer,
 };
 
 /// Reports why text could not be rendered.
@@ -46,6 +47,8 @@ struct TextAnalysis {
 /// Gives one row in the `--explain` table.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExplainRow {
+    /// A whole-utterance mood row.
+    Mood(ExplainMoodRow),
     /// A voiced token row with semantic knobs.
     Token(ExplainTokenRow),
     /// A control-only prosodic punctuation row.
@@ -65,6 +68,12 @@ pub struct ExplainTokenRow {
 pub struct ExplainPunctuationRow {
     token: String,
     punctuation: ProsodicPunctuation,
+}
+
+/// Gives one whole-utterance mood row in the `--explain` table.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ExplainMoodRow {
+    mood: UtteranceMood,
 }
 
 /// Converts text into sequencer events.
@@ -90,6 +99,7 @@ pub fn explain_rows_for_text(text: &str) -> Result<Vec<ExplainRow>, EngineError>
 fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
     let tokenizer = embedded_tokenizer()?;
     let mapping = embedded_mapping()?;
+    let mood = analyze_affect_for_text(text)?.mood();
     let encoded_input = tokenizer.tokenize(text)?;
     let mut templates = Vec::new();
     let mut voiced_tokens = Vec::new();
@@ -115,8 +125,8 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
     }
 
     if voiced_tokens.is_empty() {
-        let mut events = Vec::new();
-        let mut explain_rows = Vec::new();
+        let mut events = vec![SequenceEvent::mood(mood)];
+        let mut explain_rows = vec![ExplainRow::mood(mood)];
 
         for template in templates {
             match template {
@@ -149,8 +159,8 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
         .copied()
         .map(|token_vector| mapping.squash_token(token_vector))
         .collect::<Vec<_>>();
-    let mut events = Vec::new();
-    let mut explain_rows = Vec::new();
+    let mut events = vec![SequenceEvent::mood(mood)];
+    let mut explain_rows = vec![ExplainRow::mood(mood)];
 
     for template in templates {
         match template {
@@ -195,6 +205,10 @@ pub fn render_text_canonical_buffer(text: &str) -> Result<Vec<i16>, EngineError>
 }
 
 impl ExplainRow {
+    fn mood(mood: UtteranceMood) -> Self {
+        Self::Mood(ExplainMoodRow { mood })
+    }
+
     fn token(token: String, knobs: KnobSet, continuation: bool) -> Self {
         Self::Token(ExplainTokenRow {
             token,
@@ -205,6 +219,13 @@ impl ExplainRow {
 
     fn punctuation(token: String, punctuation: ProsodicPunctuation) -> Self {
         Self::Punctuation(ExplainPunctuationRow { token, punctuation })
+    }
+}
+
+impl ExplainMoodRow {
+    /// Returns the utterance mood for this control row.
+    pub fn mood(&self) -> UtteranceMood {
+        self.mood
     }
 }
 
