@@ -214,10 +214,55 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ## Phase 7 — Voice tuning (freeze the sound)
 
-- [ ] **T-45 — Iterative tuning of fixed constants.** Tune by ear (formants, glide, warble,
-      ring-mod, envelope, register, durations, pauses) until reliably BB-8-like across
-      varied text.
-      Deps: T-40, T-41 · Reqs: NFR-16 · Est: 3h
+> **Tuning decomposition.** T-58…T-63 were appended after
+> [`bb8-sound-signature-analysis.md`](./bb8-sound-signature-analysis.md) to split the
+> original broad T-45 tuning pass into implementation-sized, testable voice-DNA changes
+> without renumbering the existing future tasks. Metrics are directional aids only; by-ear
+> review remains the final acceptance gate for T-45.
+
+- [ ] **T-58 — Establish BB-8 comparison corpus + metrics harness.** Keep a small local
+      reference/dootdoot comparison workflow for T-45 tuning: decode the downloaded BB-8 clips to
+      mono 44.1 kHz, render a fixed dootdoot phrase corpus, and report the directional metrics
+      from the analysis doc (active fraction/islands, magnitude-spectrum centroid/85% rolloff,
+      dominant-peak motion, harmonicity, and broad power bands). Document that the active-island
+      metrics are gate-dependent and that BB-8 brightness mainly lives in the 2–5 kHz upper-mid
+      region, not >6 kHz. This is a tuning aid, not a golden contract.
+      Deps: T-40, T-41 · Reqs: NFR-16 · Est: 1.5h
+- [ ] **T-59 — Add internal pitch and vowel trajectories.** Give every syllable a fixed
+      deterministic micro-gesture even when there is no neighboring token: an internal pitch
+      swoop layered with existing inter-token portamento, plus a time-varying vowel/formant
+      trajectory around the semantic vowel target. Add focused tests for deterministic trajectory
+      endpoints/ranges and keep all motion inside the fixed droid parameter space.
+      Deps: T-32, T-33, T-58 · Reqs: FR-15, FR-16, FR-18, FR-19, NFR-16 · Est: 2.5h
+- [ ] **T-60 — Add deterministic transient/body/upper-mid layers.** Keep the pitched
+      formant core, but add bounded deterministic layers that make each gesture less like a single
+      clean oscillator: attack transient/noise, optional low body around the 300–700 Hz region,
+      and gesture-shaped upper-mid sparkle primarily in the 2–5 kHz band. Avoid unseeded
+      randomness and keep >6 kHz content modest because the references carry little energy there.
+      Add tests for determinism, bounded output, and no silent/NaN paths.
+      Deps: T-59 · Reqs: FR-16, FR-17, NFR-3, NFR-4, NFR-16 · Est: 2.5h
+- [ ] **T-61 — Rebalance register, pitch span, and formants.** Tune the fixed pitch bias/span,
+      formant gains/Q/loci, and source mix so dootdoot no longer over-focuses the 500–2000 Hz
+      band and has more BB-8-like body plus upper-mid brightness. Preserve the semantic axis
+      mapping and add regression tests for pitch/formant bounds and sample determinism.
+      Deps: T-60 · Reqs: FR-13, FR-16, FR-17, FR-18, NFR-16 · Est: 2h
+- [ ] **T-62 — Replace simple sine warble with compound deterministic modulation.** Move from a
+      per-syllable 8.5 Hz sine vibrato to a richer deterministic LFO stack (slow drift + faster
+      flutter) whose phase/position handling avoids every token beginning identically. The
+      semantic warble knob scales amount/complexity while remaining bounded. Add tests for
+      deterministic phase behavior and knob-range limits.
+      Deps: T-61 · Reqs: FR-16, FR-18, NFR-3, NFR-16 · Est: 2h
+- [ ] **T-63 — Rework envelope and phrasing templates.** Replace the simple ADSR-like gate with
+      a droid gesture envelope: asymmetric attack, internal pulse/dip, and deterministic tail.
+      Adjust fixed syllable/pause/tail timing only as needed to reduce active density and create
+      more phrase air; update exact sample-count estimation and input-limit tests for any timing
+      changes. Preserve deterministic timing templates, not runtime randomness.
+      Deps: T-62, T-43 · Reqs: FR-20, FR-21, FR-22, FR-24, FR-36, FR-37, NFR-16 · Est: 2h
+- [ ] **T-45 — Final integrated BB-8 tuning pass.** Tune by ear across varied text and the local
+      BB-8 reference clips after the layered voice changes land. Use the T-58 metrics to confirm
+      directionally improved body, upper-mid brightness, gesture motion, harmonicity, and phrase
+      air, but accept/reject by listening for reliable BB-8-family identity.
+      Deps: T-58, T-59, T-60, T-61, T-62, T-63 · Reqs: NFR-16 · Est: 3h
 - [ ] **T-46 — Validate/finalize squash; regenerate artifact if changed.** Confirm the
       squash chosen at T-15 still lands tastefully after by-ear tuning; if it (or its stats)
       changes, **re-run `xtask` to regenerate `format_v1.bin`** (header stats only — baked
@@ -275,7 +320,9 @@ flowchart LR
     T01[T-01] --> T04[T-04] --> T11[T-11] --> T12[T-12] --> T13[T-13]
     T13 --> T14[T-14] --> T15[T-15] --> T16[T-16] --> T17[T-17] --> T18[T-18]
     T18 --> T1920["T-19 / T-20"] --> T21[T-21] --> T22[T-22] --> T23[T-23] --> T24[T-24]
-    T24 --> T33[T-33] --> T36[T-36] --> T40[T-40] --> T45[T-45] --> T4647["T-46 / T-47"]
+    T24 --> T33[T-33] --> T36[T-36] --> T40[T-40] --> T58[T-58] --> T59[T-59]
+    T59 --> T60[T-60] --> T61[T-61] --> T62[T-62] --> T63[T-63] --> T45[T-45]
+    T45 --> T4647["T-46 / T-47"]
     T4647 --> T48[T-48] --> T49[T-49] --> T50[T-50] --> T51[T-51] --> T54[T-54] --> T57[T-57]
 
     OM["T-06 … T-10<br/>owned math"] --> T33
@@ -283,5 +330,6 @@ flowchart LR
 ```
 
 Owned math (T-06–T-10) and the synth primitives (T-26–T-32) proceed in parallel and
-converge at T-33. Tuning (Phase 7) must precede freezing (T-48), which gates all
-golden-file tests (Phase 8).
+converge at T-33. Tuning now runs through the BB-8 comparison/tuning breakdown
+(T-58–T-63) before the final by-ear T-45 acceptance pass. Tuning must precede freezing
+(T-48), which gates all golden-file tests (Phase 8).
