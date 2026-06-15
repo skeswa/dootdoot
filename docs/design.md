@@ -672,6 +672,31 @@ bumps it to `V2`.** This gives users the guarantee: _same text + same FORMAT ver
 same sound, forever, on every verified platform (§8.1)_, while letting the voice evolve
 deliberately.
 
+### 8.3 Decision: `FORMAT_V2` broadens performance channels, not the semantic core
+
+`FORMAT_V2` keeps the four PCA-derived semantic axes as the learnable core: pitch center,
+vowel/formant position, contour/glide shape, and warble depth. New expressiveness is
+allowed only as deterministic, bounded **performance channels** around that core:
+
+- **Phrase timing** — boundary strength, pause length, pitch reset, declination, final
+  lowering, pre-boundary lengthening, and sparse emphasis.
+- **Affect** — licensing-safe valence and arousal signals derived from fixed lexical,
+  punctuation, case, token-count, and complexity rules.
+- **Complexity** — a scalar from owned WordPiece and character-shape signals that can
+  drive articulation density without changing meaning-timbre.
+- **Archetype** — a small fixed gesture palette (`chatter`, `yelp`, `moan`,
+  `stutter/burst`, `tremble`, plus sparse non-vocal seasoning) selected by a pure rule.
+
+Every V2 channel is a pure function of the input token/control-event stream. No runtime
+randomness, clock, seed, external service, or platform-dependent state is permitted.
+Every scalar has fixed bounds and every categorical channel has a fixed finite palette;
+renderers clamp before synthesis so NFR-16 remains true after broadening beyond the V1
+"only four axes vary" rule.
+
+Where useful for learnability, `--explain` may add rows for phrase, mood, complexity, or
+archetype decisions. These rows are still stderr-only control/performance rows; they do
+not affect output routing and are part of the versioned snapshot contract.
+
 ---
 
 ## 9. Architecture

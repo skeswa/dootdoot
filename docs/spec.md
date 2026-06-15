@@ -165,6 +165,18 @@
   computing or writing any asset, and SHALL abort on any mismatch, so that regeneration is
   reproducible.
 
+### 1.11 FORMAT_V2 expressiveness
+
+- **FR-44** `FORMAT_V2` MAY add deterministic, bounded performance channels for phrase
+  timing, affect, complexity, and a small gesture-archetype palette, while keeping the
+  four PCA-derived semantic axes as the learnable meaning core.
+- **FR-45** Every `FORMAT_V2` performance channel SHALL be a pure function of the
+  token/control-event stream and SHALL NOT depend on runtime randomness, clocks, seeds,
+  external services, or platform-dependent state.
+- **FR-46** `FORMAT_V2` explain output SHALL keep semantic token rows visible and MAY add
+  stderr-only control/performance rows for mood, phrase, complexity, or archetype
+  decisions where useful for learnability.
+
 ---
 
 ## 2. Non-functional requirements
@@ -220,8 +232,9 @@
   baseline (FR-11), not `model2vec.encode()`; the property asserted is _relative_
   similarity ordering, which the model2vec-derived PCA-space pool preserves.
 - **NFR-16** Every output, regardless of input, SHALL remain within the fixed droid
-  parameter space (only the 4 bounded axes vary), preserving a consistent BB-8-family
-  identity.
+  parameter space, preserving a consistent BB-8-family identity. `FORMAT_V1` achieves
+  this by varying only the four bounded semantic axes; `FORMAT_V2` MAY additionally vary
+  deterministic, bounded phrase, affect, complexity, and archetype channels.
 
 ### 2.5 Testing
 

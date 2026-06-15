@@ -324,7 +324,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 > then gesture archetypes. Every sample-affecting task here requires `FORMAT_V2` and a new
 > golden fixture set.
 
-- [ ] **T-64 — Decide FORMAT_V2 contract scope and NFR-16 broadening.** Update
+- [x] **T-64 — Decide FORMAT_V2 contract scope and NFR-16 broadening.** Update
       `design.md`/`spec.md` so the v2 contract can include a fixed set of deterministic,
       bounded performance channels: semantic axes, phrase timing, affect, complexity, and
       a small archetype dimension. Keep the four semantic axes as the learnable core and
