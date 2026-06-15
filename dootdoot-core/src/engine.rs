@@ -3,10 +3,12 @@
 use thiserror::Error;
 
 use crate::{
-    HesitationMarker, KnobSet, MappingError, ProsodicPunctuation, SequenceEvent, SyllableTiming,
-    TokenVector, TokenizerError, UtteranceMood, analyze_affect_for_text,
-    analyze_complexity_for_text, assemble_knobs, embedded_mapping, embedded_tokenizer,
-    plan_gesture_archetypes, pool_sequence, render_canonical_buffer,
+    HesitationMarker, KnobSet, MappingError, PerformanceCurves, PerformanceSyllable, PhraseRole,
+    ProsodicPunctuation, SequenceEvent, SyllableEvent, SyllableTiming, TokenVector, TokenizerError,
+    UtteranceMood, analyze_affect_for_text, analyze_complexity_for_text, archetype_for_role,
+    assemble_knobs, embedded_mapping, embedded_tokenizer, plan_discourse_performance,
+    plan_gesture_archetypes, pool_sequence, render_canonical_buffer, role_long_pause_samples,
+    staged_reply_rest_samples,
 };
 
 /// Reports why text could not be rendered.
@@ -72,6 +74,7 @@ pub struct ExplainTokenRow {
     token: String,
     knobs: KnobSet,
     continuation: bool,
+    role: PhraseRole,
 }
 
 /// Gives one prosodic punctuation row in the `--explain` table.
@@ -204,6 +207,40 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
         .copied()
         .map(|token_vector| mapping.squash_token(token_vector))
         .collect::<Vec<_>>();
+    let knobs_per_voiced = squashed_tokens
+        .iter()
+        .map(|squashed| assemble_knobs(baseline, *squashed))
+        .collect::<Vec<_>>();
+
+    // Pass 1: build base events (no curves/archetype yet) for the planner.
+    let mut base_events = vec![
+        SequenceEvent::mood(mood),
+        SequenceEvent::complexity(complexity),
+    ];
+
+    for template in &templates {
+        match template {
+            EventTemplate::Punctuation(index) => {
+                base_events.push(SequenceEvent::punctuation(
+                    punctuation_tokens[*index].punctuation,
+                ));
+            }
+            EventTemplate::Voiced(index) => {
+                base_events.push(SequenceEvent::syllable_with_timing(
+                    knobs_per_voiced[*index],
+                    voiced_tokens[*index].continuation,
+                    voiced_tokens[*index].timing,
+                ));
+            }
+            EventTemplate::Hesitation(_) => {}
+        }
+    }
+
+    let plan = plan_discourse_performance(&base_events);
+    let plan_rows = plan.syllables();
+    let deployed = deploy_performance_timing(&voiced_tokens, plan_rows);
+
+    // Pass 2: build the final, planner-enriched events plus explain rows.
     let mut events = vec![
         SequenceEvent::mood(mood),
         SequenceEvent::complexity(complexity),
@@ -231,24 +268,32 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
             }
             EventTemplate::Voiced(index) => {
                 let token = &voiced_tokens[index];
-                let knobs = assemble_knobs(baseline, squashed_tokens[index]);
+                let knobs = knobs_per_voiced[index];
+                let role = plan_rows
+                    .get(index)
+                    .map_or(PhraseRole::ChattyReply, PerformanceSyllable::role);
+                let curves = plan_rows
+                    .get(index)
+                    .map_or_else(PerformanceCurves::neutral, PerformanceSyllable::curves);
 
-                events.push(SequenceEvent::syllable_with_timing(
-                    knobs,
-                    token.continuation,
-                    token.timing,
+                events.push(SequenceEvent::archetype(archetype_for_role(role, index)));
+                events.push(SequenceEvent::Syllable(
+                    SyllableEvent::new(knobs, token.continuation)
+                        .with_timing(deployed[index])
+                        .with_performance(role, curves),
                 ));
                 explain_rows.push(ExplainRow::token(
                     token.text.clone(),
                     knobs,
                     token.continuation,
+                    role,
                 ));
             }
         }
     }
 
     Ok(TextAnalysis {
-        events: with_archetype_events(events),
+        events,
         explain_rows,
     })
 }
@@ -269,11 +314,12 @@ impl ExplainRow {
         Self::Mood(ExplainMoodRow { mood })
     }
 
-    fn token(token: String, knobs: KnobSet, continuation: bool) -> Self {
+    fn token(token: String, knobs: KnobSet, continuation: bool, role: PhraseRole) -> Self {
         Self::Token(ExplainTokenRow {
             token,
             knobs,
             continuation,
+            role,
         })
     }
 
@@ -329,6 +375,72 @@ fn with_archetype_events(events: Vec<SequenceEvent>) -> Vec<SequenceEvent> {
     output
 }
 
+fn deploy_performance_timing(
+    voiced: &[VoicedToken],
+    plan: &[PerformanceSyllable],
+) -> Vec<SyllableTiming> {
+    // Only stage long turn gaps and reply rests when the utterance has real
+    // discourse structure (some non-`ChattyReply` role). A plain statement stays
+    // on the smooth `VOICE_V3`/`VOICE_V6` connected path.
+    let has_structure = plan
+        .iter()
+        .any(|syllable| syllable.role() != PhraseRole::ChattyReply);
+    let mut timings = Vec::with_capacity(voiced.len());
+
+    for index in 0..voiced.len() {
+        let base = voiced[index].timing;
+        let role = plan
+            .get(index)
+            .map_or(PhraseRole::ChattyReply, PerformanceSyllable::role);
+        let next_role = plan.get(index + 1).map(PerformanceSyllable::role);
+        let next_continuation = voiced.get(index + 1).map(|token| token.continuation);
+
+        timings.push(deploy_one_timing(
+            base,
+            role,
+            next_role,
+            next_continuation,
+            has_structure,
+        ));
+    }
+
+    timings
+}
+
+fn deploy_one_timing(
+    base: SyllableTiming,
+    role: PhraseRole,
+    next_role: Option<PhraseRole>,
+    next_continuation: Option<bool>,
+    has_structure: bool,
+) -> SyllableTiming {
+    match role {
+        PhraseRole::Probe | PhraseRole::Hesitation => {
+            if next_role.is_some_and(|next| next != role) {
+                let turn = role_long_pause_samples(0.55);
+                let pause = base.pause_override().unwrap_or(0).max(turn);
+
+                base.with_pause_override(pause).suppress_bridge()
+            } else {
+                base
+            }
+        }
+        PhraseRole::ChattyReply => {
+            if has_structure
+                && next_role == Some(PhraseRole::ChattyReply)
+                && next_continuation == Some(false)
+                && base.pause_override().is_none()
+            {
+                base.with_pause_override(staged_reply_rest_samples(0.5))
+                    .suppress_bridge()
+            } else {
+                base
+            }
+        }
+        PhraseRole::TerminalFlourish | PhraseRole::Aside => base,
+    }
+}
+
 impl ExplainMoodRow {
     /// Returns the utterance mood for this control row.
     pub fn mood(&self) -> UtteranceMood {
@@ -350,6 +462,11 @@ impl ExplainTokenRow {
     /// Returns true when this token is a `WordPiece` continuation.
     pub fn is_continuation(&self) -> bool {
         self.continuation
+    }
+
+    /// Returns the discourse role assigned to this voiced row.
+    pub fn role(&self) -> PhraseRole {
+        self.role
     }
 }
 

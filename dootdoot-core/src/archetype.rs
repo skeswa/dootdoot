@@ -1,6 +1,6 @@
 //! Deterministic `VOICE_V2` gesture-archetype selection.
 
-use crate::{ProsodicPunctuation, SequenceEvent, UtteranceMood};
+use crate::{PhraseRole, ProsodicPunctuation, SequenceEvent, UtteranceMood};
 
 const STUTTER_COMPLEXITY_THRESHOLD: f64 = 0.58;
 const SEASONING_COMPLEXITY_THRESHOLD: f64 = 0.65;
@@ -82,11 +82,41 @@ pub fn plan_gesture_archetypes(events: &[SequenceEvent]) -> Vec<ArchetypeSelecti
     selections
 }
 
+/// Selects a `VOICE_V7` archetype for a discourse role.
+///
+/// Whistle/yelp accents are reserved for the terminal flourish; openers stay
+/// chatter, hesitations and asides moan, and the chatty middle rotates
+/// chatter/stutter/tremble so a high-arousal utterance no longer reads as one
+/// long yelp.
+pub fn archetype_for_role(role: PhraseRole, syllable_index: usize) -> ArchetypeSelection {
+    let archetype = match role {
+        PhraseRole::TerminalFlourish => GestureArchetype::Yelp,
+        PhraseRole::Probe => GestureArchetype::Chatter,
+        PhraseRole::Hesitation | PhraseRole::Aside => GestureArchetype::Moan,
+        PhraseRole::ChattyReply => match syllable_index % 3 {
+            0 => GestureArchetype::Chatter,
+            1 => GestureArchetype::StutterBurst,
+            _ => GestureArchetype::Tremble,
+        },
+    };
+
+    ArchetypeSelection::for_archetype(syllable_index, archetype)
+}
+
 impl ArchetypeSelection {
     pub(crate) fn chatter(syllable_index: usize) -> Self {
         Self {
             syllable_index,
             archetype: GestureArchetype::Chatter,
+            servo_seasoning: false,
+            noise_tail: false,
+        }
+    }
+
+    pub(crate) fn for_archetype(syllable_index: usize, archetype: GestureArchetype) -> Self {
+        Self {
+            syllable_index,
+            archetype,
             servo_seasoning: false,
             noise_tail: false,
         }

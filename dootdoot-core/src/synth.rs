@@ -2,7 +2,15 @@
 
 use core::f64::consts::{LN_2, PI};
 
-use crate::{ArchetypeSelection, GestureArchetype, cos, exp, sin, tanh};
+use crate::{
+    ArchetypeSelection, GestureArchetype, PerformanceCurves, PhraseRole, cos, exp, sin, tanh,
+};
+
+/// Gives the maximum `VOICE_V7` curve-driven pitch-center bias in semitones.
+pub const CURVE_PITCH_BIAS_SEMITONES: f64 = 4.0;
+
+const CURVE_BRIGHTNESS_GAIN: f64 = 0.40;
+const CURVE_WHISTLE_START_FRACTION: f64 = 0.45;
 
 /// Gives the synthesis sample rate in hertz.
 pub const SYNTH_SAMPLE_RATE_HZ: u32 = 44_100;
@@ -207,6 +215,8 @@ pub(crate) struct SyllablePerformance {
     archetype: ArchetypeSelection,
     start_connection: SyllableConnection,
     end_connection: SyllableConnection,
+    role: PhraseRole,
+    curves: PerformanceCurves,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -233,6 +243,10 @@ struct SyllableRenderControls {
     subgesture_count: u32,
     final_glide: SyllableFinalGlide,
     warble_phase_offset: f64,
+    whistle_amount: f64,
+    roughness_amount: f64,
+    mouth_openness: f64,
+    mouth_front_back: f64,
     performance: SyllablePerformance,
 }
 
@@ -251,6 +265,7 @@ pub(crate) struct SyllableRenderState {
     last_pitch_hz: Option<f64>,
     last_vowel_position: Option<f64>,
     formants: FormantFilterBank,
+    mouth: MouthStage,
 }
 
 /// Filters samples through the fixed formant bank.
@@ -899,6 +914,8 @@ impl SyllablePerformance {
             archetype: ArchetypeSelection::chatter(0),
             start_connection: SyllableConnection::Detached,
             end_connection: SyllableConnection::Detached,
+            role: PhraseRole::ChattyReply,
+            curves: PerformanceCurves::neutral(),
         }
     }
 
@@ -914,6 +931,8 @@ impl SyllablePerformance {
             archetype: ArchetypeSelection::chatter(0),
             start_connection: SyllableConnection::Detached,
             end_connection: SyllableConnection::Detached,
+            role: PhraseRole::ChattyReply,
+            curves: PerformanceCurves::neutral(),
         }
     }
 
@@ -951,6 +970,30 @@ impl SyllablePerformance {
 
         self
     }
+
+    pub(crate) fn with_curves(mut self, role: PhraseRole, curves: PerformanceCurves) -> Self {
+        self.role = role;
+        self.curves = curves;
+
+        self
+    }
+
+    fn whistle_amount(self) -> f64 {
+        match self.role {
+            PhraseRole::TerminalFlourish => self.curves.archetype_tension(),
+            _ => 0.0,
+        }
+    }
+
+    fn roughness_amount(self) -> f64 {
+        let tension = self.curves.archetype_tension();
+
+        match self.role {
+            PhraseRole::Hesitation => (0.45 + (0.20 * tension)).clamp(0.0, 0.7),
+            PhraseRole::Aside => (0.30 + (0.20 * tension)).clamp(0.0, 0.6),
+            _ => (0.12 * tension).clamp(0.0, 0.3),
+        }
+    }
 }
 
 impl SyllableConnection {
@@ -973,14 +1016,27 @@ impl SyllableRenderControls {
         let vowel_bias = (performance.mood_valence * 0.16) + (performance.mood_arousal * 0.10);
         let warble_depth =
             (knobs.warble_depth() + (performance.mood_arousal * 0.35)).clamp(-1.0, 1.0);
-        let brightness_gain =
-            (1.0 + (performance.mood_arousal * 0.45) + (performance.mood_valence * 0.12))
-                .clamp(0.78, 1.55);
+        let curves = performance.curves;
+        let brightness_gain = (1.0
+            + (performance.mood_arousal * 0.45)
+            + (performance.mood_valence * 0.12)
+            + (curves.brightness_pressure() * CURVE_BRIGHTNESS_GAIN))
+            .clamp(0.78, 1.85);
         let subgesture_density =
             1.0 + (performance.mood_arousal * 0.80) + (performance.complexity * 1.20);
         let subgesture_count = complexity_subgesture_count(performance.complexity);
-        let target_pitch_hz = pitch_center_hz(knobs.pitch_center())
-            * semitone_multiplier(performance.pitch_offset_with_emphasis());
+        let whistle_amount = performance.whistle_amount();
+        let roughness_amount = performance.roughness_amount();
+        let mouth_openness = curves.mouth_openness();
+        let mouth_front_back = curves.formant_target();
+        let pitch_span = if whistle_amount > 0.0 {
+            WIDE_GESTURE_PITCH_SPAN_SEMITONES
+        } else {
+            PITCH_SEMITONE_SPAN
+        };
+        let pitch_bias_semitones = curves.pitch_center_bias() * CURVE_PITCH_BIAS_SEMITONES;
+        let target_pitch_hz = pitch_center_hz_with_span(knobs.pitch_center(), pitch_span)
+            * semitone_multiplier(performance.pitch_offset_with_emphasis() + pitch_bias_semitones);
         let start_pitch_hz = if start_pitch_hz.is_finite() && start_pitch_hz > 0.0 {
             start_pitch_hz
         } else {
@@ -1000,6 +1056,10 @@ impl SyllableRenderControls {
             subgesture_count,
             final_glide,
             warble_phase_offset,
+            whistle_amount,
+            roughness_amount,
+            mouth_openness,
+            mouth_front_back,
             performance,
         }
     }
@@ -1014,6 +1074,7 @@ impl SyllableRenderState {
             last_pitch_hz: None,
             last_vowel_position: None,
             formants: FormantFilterBank::new(),
+            mouth: MouthStage::new(),
         }
     }
 
@@ -1140,6 +1201,7 @@ fn render_performance_sample(
     let elapsed_seconds = f64::from(sample_index) / f64::from(SYNTH_SAMPLE_RATE_HZ);
     let parameters = performance_sample_parameters(controls, state, elapsed_seconds);
     let source = source_oscillator_sample(state.phase, parameters.pitch_hz);
+    let source = blend_noise_excitation(source, sample_index, controls.roughness_amount);
     let voiced = state
         .formants
         .process_sample(source, parameters.vowel_position);
@@ -1177,6 +1239,7 @@ fn render_performance_sample(
         layered
     };
     let electronic = ring_modulate(layered, elapsed_seconds);
+    let mouthed = apply_mouth_stage(electronic, sample_index, elapsed_seconds, controls, state);
 
     state.advance(
         parameters.pitch_hz,
@@ -1186,11 +1249,36 @@ fn render_performance_sample(
     );
 
     apply_connected_amplitude_envelope(
-        electronic,
+        mouthed,
         elapsed_seconds,
         controls.duration_seconds,
         controls.performance.start_connection,
         controls.performance.end_connection,
+    )
+}
+
+fn apply_mouth_stage(
+    sample: f64,
+    sample_index: u32,
+    elapsed_seconds: f64,
+    controls: SyllableRenderControls,
+    state: &mut SyllableRenderState,
+) -> f64 {
+    if controls.mouth_openness <= 0.0 {
+        return sample;
+    }
+
+    let openness =
+        controls.mouth_openness * mouth_open_envelope(elapsed_seconds, controls.duration_seconds);
+
+    state.mouth.process_sample(
+        sample,
+        sample_index,
+        MouthDrive::new(
+            openness,
+            controls.mouth_front_back,
+            controls.roughness_amount,
+        ),
     )
 }
 
@@ -1254,6 +1342,12 @@ fn performance_sample_parameters(
         elapsed_seconds,
         controls.duration_seconds,
         connected_motion_gain,
+    );
+    let pitch_hz = apply_whistle_sweep_hz(
+        pitch_hz,
+        controls.whistle_amount,
+        elapsed_seconds,
+        controls.duration_seconds,
     );
     let vowel_position = vowel_trajectory_position_for_duration(
         (controls.knobs.vowel_position() + controls.vowel_bias + (articulation * 0.65))
@@ -1440,6 +1534,28 @@ fn connected_amplitude_envelope(
 
 fn subword_connection_floor() -> f64 {
     ENVELOPE_SUSTAIN_LEVEL * 0.95
+}
+
+fn apply_whistle_sweep_hz(
+    pitch_hz: f64,
+    whistle_amount: f64,
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+) -> f64 {
+    if whistle_amount <= 0.0 {
+        return pitch_hz;
+    }
+
+    let progress = syllable_progress(elapsed_seconds, duration_seconds);
+
+    if progress < CURVE_WHISTLE_START_FRACTION {
+        return pitch_hz;
+    }
+
+    let local = ((progress - CURVE_WHISTLE_START_FRACTION) / (1.0 - CURVE_WHISTLE_START_FRACTION))
+        .clamp(0.0, 1.0);
+
+    whistle_sweep_pitch_hz(pitch_hz, whistle_amount, local)
 }
 
 fn apply_archetype_pitch_hz(

@@ -16,7 +16,8 @@ mod wav;
 
 pub use affect::{AffectAnalysis, AffectTokenScore, UtteranceMood, analyze_affect_for_text};
 pub use archetype::{
-    ArchetypeSelection, GESTURE_ARCHETYPE_PALETTE, GestureArchetype, plan_gesture_archetypes,
+    ArchetypeSelection, GESTURE_ARCHETYPE_PALETTE, GestureArchetype, archetype_for_role,
+    plan_gesture_archetypes,
 };
 pub use asset::{
     ACTIVE_VOICE, DOOT_ASSET_AXIS_COUNT, DOOT_ASSET_FILE_V1, DOOT_ASSET_HASH_BYTES,

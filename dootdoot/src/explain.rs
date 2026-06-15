@@ -3,7 +3,8 @@
 use std::fmt::Write as _;
 
 use dootdoot_core::{
-    EngineError, ExplainRow, HesitationMarker, ProsodicPunctuation, explain_rows_for_text,
+    EngineError, ExplainRow, HesitationMarker, PhraseRole, ProsodicPunctuation,
+    explain_rows_for_text,
 };
 
 const EXPLAIN_HEADER: &str = "token │ pitch │ vowel │ contour │ warble\n";
@@ -43,12 +44,13 @@ fn format_explain_rows(rows: &[ExplainRow]) -> String {
 
                 writeln!(
                     table,
-                    "{} │ {:+.3} │ {:+.3} │ {:+.3} │ {:+.3}",
+                    "{} │ {:+.3} │ {:+.3} │ {:+.3} │ {:+.3} │ role:{}",
                     token.token(),
                     knobs.pitch_center(),
                     knobs.vowel_position(),
                     knobs.contour(),
                     knobs.warble_depth(),
+                    role_name(token.role()),
                 )
                 .expect("writing to a String cannot fail");
             }
@@ -74,6 +76,16 @@ fn format_explain_rows(rows: &[ExplainRow]) -> String {
     }
 
     table
+}
+
+fn role_name(role: PhraseRole) -> &'static str {
+    match role {
+        PhraseRole::Probe => "probe",
+        PhraseRole::ChattyReply => "chatty-reply",
+        PhraseRole::Hesitation => "hesitation",
+        PhraseRole::TerminalFlourish => "terminal-flourish",
+        PhraseRole::Aside => "aside",
+    }
 }
 
 fn hesitation_name(marker: HesitationMarker) -> &'static str {

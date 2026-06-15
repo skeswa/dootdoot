@@ -513,7 +513,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       stream, punctuation, word count, and control tokens. Pin behavior with value tests and
       `insta` snapshots before wiring it into synthesis.
       Deps: T-80 · Reqs: FR-84, FR-85, FR-20, NFR-16 · Est: 3h
-- [ ] **T-87 — Localize affect/archetype and deploy gestures via the planner.** Wire the
+- [x] **T-87 — Localize affect/archetype and deploy gestures via the planner.** Wire the
       planner into synthesis so the new primitives (whistle, roughness, talkbox, pauses)
       are scheduled by role/curve. Localize affect and archetype: keep the utterance-level
       mood row but compute per-phrase/per-syllable arousal attack/hold/release and local

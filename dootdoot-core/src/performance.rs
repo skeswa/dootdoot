@@ -11,11 +11,14 @@
 use crate::{ProsodicPunctuation, SequenceEvent, SyllableEvent};
 
 /// Gives one local discourse role for a phrase of voiced syllables.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PhraseRole {
     /// A leading or question gesture: longer, rising, less dense.
     Probe,
     /// A conversational answer after a reset: shorter, denser, varied.
+    ///
+    /// Also the neutral baseline used by hand-built events.
+    #[default]
     ChattyReply,
     /// A dash/ellipsis hesitation: quiet, rounded, held.
     Hesitation,
@@ -113,6 +116,21 @@ impl PerformanceCurves {
     /// Returns the archetype tension/release in `[0, 1]`.
     pub fn archetype_tension(&self) -> f64 {
         self.archetype_tension
+    }
+
+    /// Builds the neutral curve set, where every performance channel is off.
+    ///
+    /// A syllable rendered with neutral curves is byte-identical to `VOICE_V6`,
+    /// so hand-built events and the empty chirp are unaffected; only the
+    /// engine's planner-driven text path attaches expressive curves.
+    pub fn neutral() -> Self {
+        Self::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    }
+}
+
+impl Default for PerformanceCurves {
+    fn default() -> Self {
+        Self::neutral()
     }
 }
 
@@ -212,9 +230,7 @@ fn segment_events(events: &[SequenceEvent]) -> Vec<Segment> {
 }
 
 fn syllable_is_hesitation(syllable: &SyllableEvent) -> bool {
-    let timing = syllable.timing();
-
-    timing.bridge_suppressed() && timing.pause_override().is_some()
+    syllable.timing().is_hesitation()
 }
 
 fn segment_role(segment: &Segment, is_first: bool, is_last: bool) -> PhraseRole {

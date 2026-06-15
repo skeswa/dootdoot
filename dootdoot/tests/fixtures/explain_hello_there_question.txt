@@ -1,5 +1,5 @@
 token │ pitch │ vowel │ contour │ warble
 mood │ valence:+0.000 │ arousal:+0.322 │ - │ -
-hello │ -0.561 │ -0.517 │ -0.931 │ +0.415
-there │ -0.075 │ +0.070 │ +0.312 │ +0.477
+hello │ -0.561 │ -0.517 │ -0.931 │ +0.415 │ role:terminal-flourish
+there │ -0.075 │ +0.070 │ +0.312 │ +0.477 │ role:terminal-flourish
 ? │ control:question │ - │ - │ -

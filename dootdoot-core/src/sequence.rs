@@ -5,8 +5,9 @@ use core::f64::consts::LN_2;
 use crate::{
     ArchetypeSelection, CLAUSE_SYLLABLE_SAMPLES, ComplexityAnalysis, KnobSet,
     LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES, MEDIUM_PUNCTUATION_PAUSE_SAMPLES,
-    PhraseBoundaryStrength, PhraseSyllablePlan, SENTENCE_SYLLABLE_SAMPLES,
-    TRAILING_SILENCE_SAMPLES, UtteranceMood, exp, pitch_center_hz, plan_phrase_prosody,
+    PerformanceCurves, PhraseBoundaryStrength, PhraseRole, PhraseSyllablePlan,
+    SENTENCE_SYLLABLE_SAMPLES, TRAILING_SILENCE_SAMPLES, UtteranceMood, exp, pitch_center_hz,
+    plan_phrase_prosody,
     synth::{
         BASE_SYLLABLE_SAMPLES, SyllableConnection, SyllableFinalGlide, SyllablePerformance,
         SyllableRenderState, render_syllable_with_final_glide,
@@ -51,6 +52,7 @@ pub const STAGED_REPLY_REST_MAX_SAMPLES: u32 = 3_528;
 pub struct SyllableTiming {
     pause_override: Option<u32>,
     bridge_suppressed: bool,
+    hesitation: bool,
 }
 
 impl SyllableTiming {
@@ -71,6 +73,18 @@ impl SyllableTiming {
         self
     }
 
+    /// Marks this syllable as carrying a dash/ellipsis hesitation rest.
+    ///
+    /// This is distinct from generic `suppress_bridge`: it lets the discourse
+    /// planner tell a hesitation marker apart from a staged reply rest even
+    /// after deployment has set other suppressed bridges.
+    #[must_use]
+    pub fn mark_hesitation(mut self) -> Self {
+        self.hesitation = true;
+
+        self
+    }
+
     /// Returns the explicit post-syllable gap override, if any.
     pub fn pause_override(self) -> Option<u32> {
         self.pause_override
@@ -79,6 +93,11 @@ impl SyllableTiming {
     /// Returns true when the word-boundary bridge is suppressed.
     pub fn bridge_suppressed(self) -> bool {
         self.bridge_suppressed
+    }
+
+    /// Returns true when this syllable carries a hesitation rest.
+    pub fn is_hesitation(self) -> bool {
+        self.hesitation
     }
 }
 
@@ -124,6 +143,7 @@ impl HesitationMarker {
         SyllableTiming::default()
             .with_pause_override(self.pause_samples())
             .suppress_bridge()
+            .mark_hesitation()
     }
 }
 
@@ -174,6 +194,8 @@ pub struct SyllableEvent {
     knobs: KnobSet,
     continuation: bool,
     timing: SyllableTiming,
+    role: PhraseRole,
+    curves: PerformanceCurves,
 }
 
 /// Gives one prosodic punctuation marker.
@@ -265,6 +287,8 @@ impl SyllableEvent {
             knobs,
             continuation,
             timing: SyllableTiming::default(),
+            role: PhraseRole::default(),
+            curves: PerformanceCurves::neutral(),
         }
     }
 
@@ -274,6 +298,25 @@ impl SyllableEvent {
         self.timing = timing;
 
         self
+    }
+
+    /// Returns a copy of this syllable carrying a discourse role and curves.
+    #[must_use]
+    pub fn with_performance(mut self, role: PhraseRole, curves: PerformanceCurves) -> Self {
+        self.role = role;
+        self.curves = curves;
+
+        self
+    }
+
+    /// Returns the discourse role assigned to this syllable.
+    pub fn role(&self) -> PhraseRole {
+        self.role
+    }
+
+    /// Returns the performance curves assigned to this syllable.
+    pub fn curves(&self) -> PerformanceCurves {
+        self.curves
     }
 
     /// Returns the semantic knobs for this syllable.
@@ -451,7 +494,8 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
                 mood.arousal(),
                 complexity.scalar(),
                 plan.archetype,
-            ),
+            )
+            .with_curves(syllable.role(), syllable.curves()),
             &mut synth_state,
             &mut samples,
         );
