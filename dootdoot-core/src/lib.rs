@@ -4,6 +4,7 @@ mod engine;
 mod format;
 mod mapping;
 mod mathx;
+mod phrase;
 mod sequence;
 mod synth;
 mod tokenizer;
@@ -28,6 +29,7 @@ pub use mathx::{
     SIN_COS_POLYNOMIAL_DEGREE, SIN_COS_TABLE_BITS, SIN_COS_TABLE_LEN, TANH_EXP_CLAMP, cos, exp,
     sin, tanh,
 };
+pub use phrase::{PhraseBoundaryStrength, PhrasePlan, PhraseSyllablePlan, plan_phrase_prosody};
 pub use sequence::{
     EMPTY_CHIRP_CONTOUR, EMPTY_CHIRP_PITCH_CENTER, EMPTY_CHIRP_START_PITCH_CENTER,
     EMPTY_CHIRP_VOWEL_POSITION, EMPTY_CHIRP_WARBLE_DEPTH, ProsodicPunctuation, SequenceEvent,

@@ -331,7 +331,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       document that any new channel is deterministic, bounded, and surfaced in
       `--explain` where useful.
       Deps: T-54 · Reqs: FR-38, FR-39, NFR-16 · Est: 1.5h
-- [ ] **T-65 — Add a phrase-prosody planner model.** Create a pure planner that turns the
+- [x] **T-65 — Add a phrase-prosody planner model.** Create a pure planner that turns the
       token/control-event stream into phrase metadata: boundary strength, declination
       offset, pitch reset, final lowering, pre-boundary lengthening scale, pause length,
       and sparse emphasis. Pin behavior with value tests and `insta` snapshots before
