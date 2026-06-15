@@ -315,7 +315,78 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ---
 
-## Critical path (longest dependency chain)
+## Phase 10 — FORMAT_V2 expressiveness backlog
+
+> Derived from
+> [`bb8-expressiveness-gap-analysis.md`](./research/bb8-expressiveness-gap-analysis.md).
+> This is a post-`FORMAT_V1` backlog, not part of the v1 release path. The intended order
+> follows the analysis: phrase prosody first, then licensing-safe affect, then complexity,
+> then gesture archetypes. Every sample-affecting task here requires `FORMAT_V2` and a new
+> golden fixture set.
+
+- [ ] **T-64 — Decide FORMAT_V2 contract scope and NFR-16 broadening.** Update
+      `design.md`/`spec.md` so the v2 contract can include a fixed set of deterministic,
+      bounded performance channels: semantic axes, phrase timing, affect, complexity, and
+      a small archetype dimension. Keep the four semantic axes as the learnable core and
+      document that any new channel is deterministic, bounded, and surfaced in
+      `--explain` where useful.
+      Deps: T-54 · Reqs: FR-38, FR-39, NFR-16 · Est: 1.5h
+- [ ] **T-65 — Add a phrase-prosody planner model.** Create a pure planner that turns the
+      token/control-event stream into phrase metadata: boundary strength, declination
+      offset, pitch reset, final lowering, pre-boundary lengthening scale, pause length,
+      and sparse emphasis. Pin behavior with value tests and `insta` snapshots before
+      wiring it into synthesis.
+      Deps: T-64 · Reqs: FR-20, FR-22, FR-23, FR-24, NFR-16 · Est: 2.5h
+- [ ] **T-66 — Integrate phrase prosody into sequencing and synthesis.** Apply the
+      phrase plan to variable pauses, pre-boundary lengthening, phrase-level pitch offsets,
+      and sparse emphasis. Update output-length estimation, input-limit tests, and
+      `FORMAT_V2` golden hashes once the constants are frozen.
+      Deps: T-65 · Reqs: FR-20, FR-22, FR-24, FR-36, FR-37, FR-38, FR-39, NFR-16 · Est: 3h
+- [ ] **T-67 — Add licensing-safe affect assets.** Bake VADER (MIT) valence and an
+      owned arousal proxy from punctuation density, repeated markers, all-caps,
+      hand-curated intensifiers, token count, and character/WordPiece complexity. Do not
+      commit AFINN, SentiWordNet, SUBTLEX-US, NRC-VAD, Warriner, Zipf, or VAD-derived
+      tables until an explicit asset-license policy exists.
+      Deps: T-66 · Reqs: FR-38, FR-40, FR-42, FR-43, NFR-8 · Est: 2h
+- [ ] **T-68 — Pool affect into an utterance mood.** Compute deterministic valence and
+      arousal scores per token/phrase, pool them into an utterance-level mood, and add
+      tests for punctuation/case/intensifier-driven arousal plus negative/positive
+      valence examples.
+      Deps: T-67 · Reqs: FR-38, FR-39, NFR-16 · Est: 2h
+- [ ] **T-69 — Drive prosody from affect and expose mood in `--explain`.** Map arousal to
+      rate, pitch register, pitch range, brightness, warble amount, and sub-gesture
+      density; map valence to contour direction and darker/brighter voice quality. Add
+      an `--explain` mood row and snapshots for sad, excited, calm, and alarm-like text.
+      Deps: T-66, T-68 · Reqs: FR-31, FR-32, FR-38, FR-39, NFR-16, NFR-20 · Est: 3h
+- [ ] **T-70 — Add a first-pass complexity scalar.** Start with deterministic signals the
+      project already owns: WordPiece subtoken count and character length. Gate optional
+      Zipf/frequency or iconicity inputs behind the same asset-license policy as affect.
+      Add tests showing common short words remain simple while longer/rarer shapes score
+      higher.
+      Deps: T-69 · Reqs: FR-8, FR-15, FR-38, FR-39, NFR-16 · Est: 2h
+- [ ] **T-71 — Render complexity as compound articulation.** Use the complexity scalar to
+      choose internal sub-gesture count, articulation density, and optional deterministic
+      duration scaling without changing the semantic meaning-timbre. Update synthesis,
+      output-length estimation, and golden hashes under `FORMAT_V2`.
+      Deps: T-70 · Reqs: FR-15, FR-20, FR-36, FR-37, FR-38, FR-39, NFR-16 · Est: 3h
+- [ ] **T-72 — Define the bounded archetype palette and selection rule.** Specify the
+      deterministic palette (`chatter`, `yelp`, `moan`, `stutter/burst`, `tremble`, plus
+      sparing non-vocal seasoning) and test that selection is a pure function of affect,
+      complexity, punctuation, and phrase position rather than free variation.
+      Deps: T-71 · Reqs: FR-15, FR-16, FR-17, FR-18, FR-38, FR-39, NFR-16 · Est: 2.5h
+- [ ] **T-73 — Implement archetype renderers and texture seasoning.** Add bounded yelp,
+      moan, stutter/burst, and tremble render paths plus sparse servo/noise-tail texture.
+      Keep all paths deterministic, finite, and inside the BB-8-family parameter space.
+      Deps: T-72 · Reqs: FR-16, FR-17, FR-18, NFR-3, NFR-4, NFR-16 · Est: 3h
+- [ ] **T-74 — Freeze FORMAT_V2 expressiveness and acceptance aids.** Extend the Phase 7
+      metrics workflow with contextual-clip directional checks from the expressiveness
+      analysis, run by-ear acceptance, update `--version`, regenerate v2 golden WAV
+      hashes, and document the final phrase/affect/complexity/archetype contract.
+      Deps: T-69, T-71, T-73 · Reqs: FR-33, FR-38, FR-39, NFR-17, NFR-18, NFR-20 · Est: 3h
+
+---
+
+## Critical paths
 
 ```mermaid
 flowchart LR
@@ -335,3 +406,16 @@ Owned math (T-06–T-10) and the synth primitives (T-26–T-32) proceed in paral
 converge at T-33. Tuning now runs through the BB-8 comparison/tuning breakdown
 (T-45–T-50) before the final by-ear T-51 acceptance pass. Tuning must precede freezing
 (T-54), which gates all golden-file tests (Phase 8).
+
+The `FORMAT_V2` expressiveness branch is intentionally separate from v1 packaging:
+
+```mermaid
+flowchart LR
+    T64[T-64 contract scope] --> T65[T-65 phrase model] --> T66[T-66 phrase integration]
+    T66 --> T67[T-67 safe affect assets] --> T68[T-68 mood pooling] --> T69[T-69 affect prosody]
+    T69 --> T70[T-70 complexity scalar] --> T71[T-71 compound articulation]
+    T71 --> T72[T-72 archetype palette] --> T73[T-73 archetype renderers]
+    T69 --> T74[T-74 FORMAT_V2 freeze]
+    T71 --> T74
+    T73 --> T74
+```
