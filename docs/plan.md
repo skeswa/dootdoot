@@ -248,7 +248,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       band and has more BB-8-like body plus upper-mid brightness. Preserve the semantic axis
       mapping and add regression tests for pitch/formant bounds and sample determinism.
       Deps: T-47 · Reqs: FR-13, FR-16, FR-17, FR-18, NFR-16 · Est: 2h
-- [ ] **T-49 — Replace simple sine warble with compound deterministic modulation.** Move from a
+- [x] **T-49 — Replace simple sine warble with compound deterministic modulation.** Move from a
       per-syllable 8.5 Hz sine vibrato to a richer deterministic LFO stack (slow drift + faster
       flutter) whose phase/position handling avoids every token beginning identically. The
       semantic warble knob scales amount/complexity while remaining bounded. Add tests for

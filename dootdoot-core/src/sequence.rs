@@ -4,7 +4,10 @@ use crate::{
     KnobSet, LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES,
     MEDIUM_PUNCTUATION_PAUSE_SAMPLES, TRAILING_SILENCE_SAMPLES, WORD_PAUSE_SAMPLES,
     pitch_center_hz,
-    synth::{BASE_SYLLABLE_SAMPLES, SyllableFinalGlide, render_syllable_with_final_glide},
+    synth::{
+        BASE_SYLLABLE_SAMPLES, SyllableFinalGlide, render_syllable_with_final_glide,
+        warble_phase_offset_for_syllable,
+    },
 };
 
 /// Gives the fixed empty-chirp start pitch-center knob.
@@ -164,6 +167,7 @@ pub fn render_empty_chirp() -> Vec<f64> {
         knobs,
         pitch_center_hz(EMPTY_CHIRP_START_PITCH_CENTER),
         SyllableFinalGlide::Rising,
+        0.0,
     ));
     append_silence(&mut samples, TRAILING_SILENCE_SAMPLES);
 
@@ -220,6 +224,7 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
             syllable.knobs(),
             start_pitch_hz,
             plan.final_glide,
+            warble_phase_offset_for_syllable(index),
         ));
         previous_pitch_hz = Some(target_pitch_hz);
 

@@ -70,6 +70,12 @@ pub const PORTAMENTO_SECONDS: f64 = 0.045;
 /// Gives the fixed warble LFO rate in hertz.
 pub const WARBLE_RATE_HZ: f64 = 8.5;
 
+/// Gives the fixed slow warble drift rate in hertz.
+pub const WARBLE_DRIFT_RATE_HZ: f64 = 3.1;
+
+/// Gives the fixed fast warble flutter rate in hertz.
+pub const WARBLE_FLUTTER_RATE_HZ: f64 = 15.7;
+
 /// Gives the maximum semantic warble depth in cents.
 pub const WARBLE_DEPTH_CENTS: f64 = 45.0;
 
@@ -295,22 +301,60 @@ pub fn warble_depth_cents(warble_depth: f64) -> f64 {
     ((warble_depth.clamp(-1.0, 1.0) + 1.0) * 0.5) * WARBLE_DEPTH_CENTS
 }
 
-/// Computes the fixed-rate warble pitch offset in cents.
-pub fn warble_offset_cents(warble_depth: f64, elapsed_seconds: f64) -> f64 {
+/// Computes the compound deterministic warble pitch offset in cents.
+pub fn compound_warble_offset_cents(
+    warble_depth: f64,
+    elapsed_seconds: f64,
+    phase_offset: f64,
+) -> f64 {
     if !elapsed_seconds.is_finite() {
         return 0.0;
     }
 
-    let phase = 2.0 * PI * WARBLE_RATE_HZ * elapsed_seconds;
+    let amount = (warble_depth.clamp(-1.0, 1.0) + 1.0) * 0.5;
 
-    warble_depth_cents(warble_depth) * sin(phase)
+    if amount <= 0.0 {
+        return 0.0;
+    }
+
+    let phase_offset = wrap_phase(phase_offset);
+    let slow = sin(2.0 * PI * ((WARBLE_DRIFT_RATE_HZ * elapsed_seconds) + phase_offset));
+    let primary = sin(2.0 * PI * ((WARBLE_RATE_HZ * elapsed_seconds) + (phase_offset * 0.61)));
+    let flutter =
+        sin(2.0 * PI * ((WARBLE_FLUTTER_RATE_HZ * elapsed_seconds) + (phase_offset * 1.37)));
+    let complexity = 0.55 + (0.45 * amount);
+    let shape = (0.44 * slow) + (0.42 * primary) + (0.14 * complexity * flutter);
+
+    (WARBLE_DEPTH_CENTS * amount * shape).clamp(-WARBLE_DEPTH_CENTS, WARBLE_DEPTH_CENTS)
 }
 
-/// Applies fixed-rate warble to a pitch in hertz.
-pub fn apply_warble_hz(pitch_hz: f64, warble_depth: f64, elapsed_seconds: f64) -> f64 {
-    let cents = warble_offset_cents(warble_depth, elapsed_seconds);
+/// Computes the default compound warble pitch offset in cents.
+pub fn warble_offset_cents(warble_depth: f64, elapsed_seconds: f64) -> f64 {
+    compound_warble_offset_cents(warble_depth, elapsed_seconds, 0.0)
+}
+
+/// Gives the deterministic warble phase offset for a syllable index.
+pub fn warble_phase_offset_for_syllable(syllable_index: usize) -> f64 {
+    let index = u32::try_from(syllable_index).unwrap_or(u32::MAX);
+
+    wrap_phase(f64::from(index) * 0.381_966_011_250_105_1)
+}
+
+/// Applies compound warble to a pitch in hertz.
+pub fn apply_warble_hz_with_phase(
+    pitch_hz: f64,
+    warble_depth: f64,
+    elapsed_seconds: f64,
+    phase_offset: f64,
+) -> f64 {
+    let cents = compound_warble_offset_cents(warble_depth, elapsed_seconds, phase_offset);
 
     pitch_hz * exp(LN_2 * (cents / 1_200.0))
+}
+
+/// Applies default compound warble to a pitch in hertz.
+pub fn apply_warble_hz(pitch_hz: f64, warble_depth: f64, elapsed_seconds: f64) -> f64 {
+    apply_warble_hz_with_phase(pitch_hz, warble_depth, elapsed_seconds, 0.0)
 }
 
 /// Applies the fixed faint ring modulator to a sample.
@@ -433,13 +477,14 @@ pub fn vowel_trajectory_position(vowel_position: f64, contour: f64, elapsed_seco
 
 /// Renders one fixed-duration syllable from semantic knobs.
 pub fn render_syllable(knobs: crate::KnobSet, start_pitch_hz: f64) -> Vec<f64> {
-    render_syllable_with_final_glide(knobs, start_pitch_hz, SyllableFinalGlide::Neutral)
+    render_syllable_with_final_glide(knobs, start_pitch_hz, SyllableFinalGlide::Neutral, 0.0)
 }
 
 pub(crate) fn render_syllable_with_final_glide(
     knobs: crate::KnobSet,
     start_pitch_hz: f64,
     final_glide: SyllableFinalGlide,
+    warble_phase_offset: f64,
 ) -> Vec<f64> {
     let target_pitch_hz = pitch_center_hz(knobs.pitch_center());
     let start_pitch_hz = if start_pitch_hz.is_finite() && start_pitch_hz > 0.0 {
@@ -469,7 +514,12 @@ pub(crate) fn render_syllable_with_final_glide(
         );
         let internal_pitch_hz =
             apply_internal_pitch_swoop_hz(final_glide_pitch_hz, knobs.contour(), elapsed_seconds);
-        let pitch_hz = apply_warble_hz(internal_pitch_hz, knobs.warble_depth(), elapsed_seconds);
+        let pitch_hz = apply_warble_hz_with_phase(
+            internal_pitch_hz,
+            knobs.warble_depth(),
+            elapsed_seconds,
+            warble_phase_offset,
+        );
         let source = source_oscillator_sample(phase, pitch_hz);
         let vowel_position =
             vowel_trajectory_position(knobs.vowel_position(), knobs.contour(), elapsed_seconds);

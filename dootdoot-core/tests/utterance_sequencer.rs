@@ -97,6 +97,26 @@ fn sequencer_inserts_word_pause_between_non_continuation_syllables() {
 }
 
 #[test]
+fn sequencer_offsets_warble_phase_for_repeated_identical_syllables() {
+    let output = sequence_utterance(&[
+        SequenceEvent::syllable(neutral_knobs(), false),
+        SequenceEvent::syllable(neutral_knobs(), false),
+    ]);
+    let samples = rendered_samples(&output);
+    let leading = usize::try_from(LEADING_SILENCE_SAMPLES).expect("leading silence fits usize");
+    let syllable = usize::try_from(BASE_SYLLABLE_SAMPLES).expect("syllable fits usize");
+    let word_pause = usize::try_from(WORD_PAUSE_SAMPLES).expect("word pause fits usize");
+    let probe_offset = 512;
+    let first_probe = leading + probe_offset;
+    let second_probe = leading + syllable + word_pause + probe_offset;
+
+    assert_ne!(
+        samples[first_probe].to_bits(),
+        samples[second_probe].to_bits(),
+    );
+}
+
+#[test]
 fn sequencer_connects_continuation_syllables_without_silence() {
     let output = sequence_utterance(&[
         SequenceEvent::syllable(neutral_knobs(), false),

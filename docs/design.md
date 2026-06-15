@@ -501,8 +501,9 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
   punctuation pause = 120 ms; long punctuation pause = 180 ms; leading/trailing silence =
   30/60 ms (3,528/5,292/7,938 and 1,323/2,646 samples).
 - portamento = 45 ms; internal pitch sweep/arch = 220/90 cents; internal vowel
-  sweep/bloom = 0.18/0.12; punctuation final glide = 3 semitones; warble rate = 8.5 Hz;
-  warble depth = 45 cents.
+  sweep/bloom = 0.18/0.12; punctuation final glide = 3 semitones; compound warble
+  rates = 3.1/8.5/15.7 Hz with deterministic per-syllable phase offsets; warble depth =
+  45 cents.
 - ring-mod = 72 Hz at 8% mix; envelope attack/decay/release = 12/80/25 ms with 35%
   sustain after decay.
 - attack transient = 20 ms at 7% mix; low-body layer = 11% mix in the 300-700 Hz

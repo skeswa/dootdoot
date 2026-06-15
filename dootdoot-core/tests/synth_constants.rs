@@ -12,8 +12,8 @@ use dootdoot_core::{
     PORTAMENTO_SECONDS, PUNCTUATION_GLIDE_SEMITONES, RING_MOD_FREQUENCY_HZ, RING_MOD_MIX,
     SOURCE_PULSE_MIX, SOURCE_PULSE_WIDTH, SOURCE_SAW_MIX, SYNTH_SAMPLE_RATE_HZ,
     TRAILING_SILENCE_SAMPLES, TRAILING_SILENCE_SECONDS, UPPER_MID_SPARKLE_MIX, VOWEL_LOCUS_COUNT,
-    VOWEL_TRAJECTORY_BLOOM, VOWEL_TRAJECTORY_SWEEP, WARBLE_DEPTH_CENTS, WARBLE_RATE_HZ,
-    WORD_PAUSE_SAMPLES, WORD_PAUSE_SECONDS,
+    VOWEL_TRAJECTORY_BLOOM, VOWEL_TRAJECTORY_SWEEP, WARBLE_DEPTH_CENTS, WARBLE_DRIFT_RATE_HZ,
+    WARBLE_FLUTTER_RATE_HZ, WARBLE_RATE_HZ, WORD_PAUSE_SAMPLES, WORD_PAUSE_SECONDS,
 };
 
 const DESIGN: &str = include_str!("../../docs/design.md");
@@ -37,6 +37,8 @@ fn format_v1_synthesis_constants_are_pinned() {
     assert_eq!(runtime(TRAILING_SILENCE_SAMPLES), 2_646);
     assert_eq!(bits(runtime(PORTAMENTO_SECONDS)), bits(0.045));
     assert_eq!(bits(runtime(WARBLE_RATE_HZ)), bits(8.5));
+    assert_eq!(bits(runtime(WARBLE_DRIFT_RATE_HZ)), bits(3.1));
+    assert_eq!(bits(runtime(WARBLE_FLUTTER_RATE_HZ)), bits(15.7));
     assert_eq!(bits(runtime(WARBLE_DEPTH_CENTS)), bits(45.0));
     assert_eq!(bits(runtime(INTERNAL_PITCH_SWEEP_CENTS)), bits(220.0));
     assert_eq!(bits(runtime(INTERNAL_PITCH_ARCH_CENTS)), bits(90.0));
@@ -94,7 +96,7 @@ fn design_documents_the_frozen_synthesis_constants() {
         "FORMAT_V1 synthesis constants",
         "base syllable = 150 ms",
         "word pause = 80 ms",
-        "warble rate = 8.5 Hz",
+        "compound warble\n  rates = 3.1/8.5/15.7 Hz",
         "ring-mod = 72 Hz at 8% mix",
     ] {
         assert!(
