@@ -1,7 +1,9 @@
 //! Formant filter bank tests.
 
 use dootdoot_core::{
-    FORMANT_AH_HZ, FORMANT_EE_HZ, FORMANT_OO_HZ, FormantFilterBank, formant_frequencies,
+    BASE_SYLLABLE_SECONDS, FORMANT_AH_HZ, FORMANT_EE_HZ, FORMANT_OO_HZ, FormantFilterBank,
+    VOWEL_TRAJECTORY_BLOOM, VOWEL_TRAJECTORY_SWEEP, formant_frequencies, sin,
+    vowel_trajectory_position,
 };
 
 #[test]
@@ -26,6 +28,33 @@ fn formant_frequencies_interpolate_between_vowel_loci() {
             2_725.0_f64.to_bits(),
         ],
     );
+}
+
+#[test]
+fn vowel_trajectory_moves_around_semantic_target_inside_bounds() {
+    let start = vowel_trajectory_position(0.0, 1.0, 0.0);
+    let middle = vowel_trajectory_position(0.0, 1.0, 0.5 * BASE_SYLLABLE_SECONDS);
+    let end = vowel_trajectory_position(0.0, 1.0, BASE_SYLLABLE_SECONDS);
+
+    assert_eq!(start.to_bits(), (-VOWEL_TRAJECTORY_SWEEP).to_bits());
+    assert_eq!(end.to_bits(), VOWEL_TRAJECTORY_SWEEP.to_bits());
+    let expected_middle = VOWEL_TRAJECTORY_BLOOM * sin(core::f64::consts::FRAC_PI_2);
+
+    assert_eq!(middle.to_bits(), expected_middle.to_bits());
+
+    for target in [-1.0, -0.5, 0.0, 0.5, 1.0] {
+        for contour in [-1.0, 0.0, 1.0] {
+            for progress in [0.0, 0.25, 0.5, 0.75, 1.0] {
+                let position =
+                    vowel_trajectory_position(target, contour, progress * BASE_SYLLABLE_SECONDS);
+
+                assert!(
+                    (-1.0..=1.0).contains(&position),
+                    "vowel position {position} escaped the fixed droid range",
+                );
+            }
+        }
+    }
 }
 
 #[test]

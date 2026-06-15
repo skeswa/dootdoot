@@ -230,7 +230,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       metrics are gate-dependent and that BB-8 brightness mainly lives in the 2–5 kHz upper-mid
       region, not >6 kHz. This is a tuning aid, not a golden contract.
       Deps: T-40, T-41 · Reqs: NFR-16 · Est: 1.5h
-- [ ] **T-46 — Add internal pitch and vowel trajectories.** Give every syllable a fixed
+- [x] **T-46 — Add internal pitch and vowel trajectories.** Give every syllable a fixed
       deterministic micro-gesture even when there is no neighboring token: an internal pitch
       swoop layered with existing inter-token portamento, plus a time-varying vowel/formant
       trajectory around the semantic vowel target. Add focused tests for deterministic trajectory

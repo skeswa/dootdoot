@@ -500,8 +500,9 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
 - base syllable = 150 ms (6,615 samples at 44.1 kHz); word pause = 80 ms; medium
   punctuation pause = 120 ms; long punctuation pause = 180 ms; leading/trailing silence =
   30/60 ms (3,528/5,292/7,938 and 1,323/2,646 samples).
-- portamento = 45 ms; punctuation final glide = 3 semitones; warble rate = 8.5 Hz; warble
-  depth = 45 cents.
+- portamento = 45 ms; internal pitch sweep/arch = 220/90 cents; internal vowel
+  sweep/bloom = 0.18/0.12; punctuation final glide = 3 semitones; warble rate = 8.5 Hz;
+  warble depth = 45 cents.
 - ring-mod = 72 Hz at 8% mix; envelope attack/decay/release = 12/80/25 ms with 35%
   sustain after decay.
 - pitch register bias = 880 Hz with a 7-semitone semantic span; source mix = 65% saw +

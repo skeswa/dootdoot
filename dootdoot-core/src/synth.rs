@@ -97,6 +97,18 @@ pub const PITCH_REGISTER_BIAS_HZ: f64 = 880.0;
 /// Gives the semantic pitch span around the register bias in semitones.
 pub const PITCH_SEMITONE_SPAN: f64 = 7.0;
 
+/// Gives the fixed contour-steered internal pitch sweep in cents.
+pub const INTERNAL_PITCH_SWEEP_CENTS: f64 = 220.0;
+
+/// Gives the fixed internal pitch arch in cents.
+pub const INTERNAL_PITCH_ARCH_CENTS: f64 = 90.0;
+
+/// Gives the fixed contour-steered internal vowel sweep.
+pub const VOWEL_TRAJECTORY_SWEEP: f64 = 0.18;
+
+/// Gives the fixed internal vowel opening bloom.
+pub const VOWEL_TRAJECTORY_BLOOM: f64 = 0.12;
+
 /// Gives the fixed final-glide span for prosodic punctuation in semitones.
 pub const PUNCTUATION_GLIDE_SEMITONES: f64 = 3.0;
 
@@ -250,6 +262,22 @@ pub fn portamento_pitch_hz(
     start_hz + ((target_hz - start_hz) * progress)
 }
 
+/// Computes the deterministic per-syllable pitch micro-gesture in cents.
+pub fn internal_pitch_offset_cents(contour: f64, elapsed_seconds: f64) -> f64 {
+    let progress = syllable_progress(elapsed_seconds);
+    let sweep = contour.clamp(-1.0, 1.0) * INTERNAL_PITCH_SWEEP_CENTS * (1.0 - (2.0 * progress));
+    let arch = INTERNAL_PITCH_ARCH_CENTS * sin(PI * progress);
+
+    sweep + arch
+}
+
+/// Applies the deterministic per-syllable pitch micro-gesture.
+pub fn apply_internal_pitch_swoop_hz(pitch_hz: f64, contour: f64, elapsed_seconds: f64) -> f64 {
+    let cents = internal_pitch_offset_cents(contour, elapsed_seconds);
+
+    pitch_hz * exp(LN_2 * (cents / 1_200.0))
+}
+
 /// Maps a warble-depth knob to a nonnegative vibrato depth in cents.
 pub fn warble_depth_cents(warble_depth: f64) -> f64 {
     ((warble_depth.clamp(-1.0, 1.0) + 1.0) * 0.5) * WARBLE_DEPTH_CENTS
@@ -330,6 +358,15 @@ pub fn apply_amplitude_envelope(sample: f64, elapsed_seconds: f64, duration_seco
     sample * amplitude_envelope(elapsed_seconds, duration_seconds)
 }
 
+/// Computes the deterministic per-syllable vowel trajectory.
+pub fn vowel_trajectory_position(vowel_position: f64, contour: f64, elapsed_seconds: f64) -> f64 {
+    let progress = syllable_progress(elapsed_seconds);
+    let sweep = contour.clamp(-1.0, 1.0) * VOWEL_TRAJECTORY_SWEEP * ((2.0 * progress) - 1.0);
+    let bloom = VOWEL_TRAJECTORY_BLOOM * sin(PI * progress);
+
+    (vowel_position + sweep + bloom).clamp(-1.0, 1.0)
+}
+
 /// Renders one fixed-duration syllable from semantic knobs.
 pub fn render_syllable(knobs: crate::KnobSet, start_pitch_hz: f64) -> Vec<f64> {
     render_syllable_with_final_glide(knobs, start_pitch_hz, SyllableFinalGlide::Neutral)
@@ -364,9 +401,13 @@ pub(crate) fn render_syllable_with_final_glide(
             final_glide,
             elapsed_seconds,
         );
-        let pitch_hz = apply_warble_hz(final_glide_pitch_hz, knobs.warble_depth(), elapsed_seconds);
+        let internal_pitch_hz =
+            apply_internal_pitch_swoop_hz(final_glide_pitch_hz, knobs.contour(), elapsed_seconds);
+        let pitch_hz = apply_warble_hz(internal_pitch_hz, knobs.warble_depth(), elapsed_seconds);
         let source = source_oscillator_sample(phase, pitch_hz);
-        let voiced = formants.process_sample(source, knobs.vowel_position());
+        let vowel_position =
+            vowel_trajectory_position(knobs.vowel_position(), knobs.contour(), elapsed_seconds);
+        let voiced = formants.process_sample(source, vowel_position);
         let electronic = ring_modulate(voiced, elapsed_seconds);
 
         samples.push(apply_amplitude_envelope(
@@ -457,4 +498,12 @@ fn wrap_phase(phase: f64) -> f64 {
     } else {
         wrapped
     }
+}
+
+fn syllable_progress(elapsed_seconds: f64) -> f64 {
+    if !elapsed_seconds.is_finite() {
+        return 0.0;
+    }
+
+    (elapsed_seconds / BASE_SYLLABLE_SECONDS).clamp(0.0, 1.0)
 }
