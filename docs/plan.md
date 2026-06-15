@@ -358,7 +358,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       density; map valence to contour direction and darker/brighter voice quality. Add
       an `--explain` mood row and snapshots for sad, excited, calm, and alarm-like text.
       Deps: T-66, T-68 · Reqs: FR-31, FR-32, FR-38, FR-39, NFR-16, NFR-20 · Est: 3h
-- [ ] **T-70 — Add a first-pass complexity scalar.** Start with deterministic signals the
+- [x] **T-70 — Add a first-pass complexity scalar.** Start with deterministic signals the
       project already owns: WordPiece subtoken count and character length. Gate optional
       Zipf/frequency or iconicity inputs behind the same asset-license policy as affect.
       Add tests showing common short words remain simple while longer/rarer shapes score

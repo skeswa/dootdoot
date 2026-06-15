@@ -1,6 +1,7 @@
 //! Pure deterministic engine for dootdoot.
 
 mod affect;
+mod complexity;
 mod engine;
 mod format;
 mod mapping;
@@ -12,6 +13,7 @@ mod tokenizer;
 mod wav;
 
 pub use affect::{AffectAnalysis, AffectTokenScore, UtteranceMood, analyze_affect_for_text};
+pub use complexity::{ComplexityAnalysis, analyze_complexity_for_text};
 pub use engine::{
     EngineError, ExplainMoodRow, ExplainPunctuationRow, ExplainRow, ExplainTokenRow,
     explain_rows_for_text, render_text_canonical_buffer, sequence_events_for_text,

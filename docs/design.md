@@ -683,7 +683,10 @@ allowed only as deterministic, bounded **performance channels** around that core
 - **Affect** — licensing-safe valence and arousal signals derived from fixed lexical,
   punctuation, case, token-count, and complexity rules.
 - **Complexity** — a scalar from owned WordPiece and character-shape signals that can
-  drive articulation density without changing meaning-timbre.
+  drive articulation density without changing meaning-timbre. The first-pass scalar uses
+  only non-whitespace character count and continuation `WordPiece` subtoken count; Zipf,
+  frequency, iconicity, or similar third-party tables stay out of the format until an
+  explicit asset-license policy admits them.
 - **Archetype** — a small fixed gesture palette (`chatter`, `yelp`, `moan`,
   `stutter/burst`, `tremble`, plus sparse non-vocal seasoning) selected by a pure rule.
 

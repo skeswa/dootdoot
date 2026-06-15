@@ -76,3 +76,15 @@ control row to `--explain`. Synthesis uses the utterance mood as follows:
 - valence bends contour and biases vowel/texture brighter for positive text and darker
   for negative text;
 - mood rows are stderr-only explain output and do not change output routing.
+
+## Implemented Complexity Scalar
+
+V2 complexity analysis returns a bounded `[0, 1]` scalar from inputs the project already
+owns:
+
+- non-whitespace character count;
+- continuation `WordPiece` subtoken count beyond each word's first piece.
+
+The scalar intentionally does not use Zipf/frequency, iconicity, or third-party VAD-style
+tables. Those can be considered only after the same explicit asset-license policy that
+governs affect assets admits them.

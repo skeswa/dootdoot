@@ -1,6 +1,8 @@
 //! Deterministic affect analysis for `FORMAT_V2` mood planning.
 
-use crate::{TokenizedToken, TokenizerError, embedded_tokenizer};
+use crate::{
+    TokenizedToken, TokenizerError, complexity::analyze_complexity_for_tokens, embedded_tokenizer,
+};
 
 const VADER_VALENCE: &str = include_str!("../../assets/affect/vader_valence.tsv");
 const AROUSAL_SIGNALS: &str = include_str!("../../assets/affect/arousal_signals.toml");
@@ -20,9 +22,6 @@ const BOOSTER_WEIGHT: f64 = 0.16;
 const DAMPENER_WEIGHT: f64 = -0.10;
 const TOKEN_COUNT_WEIGHT: f64 = 0.012;
 const TOKEN_COUNT_MAX: f64 = 0.20;
-const WORDPIECE_COMPLEXITY_WEIGHT: f64 = 0.04;
-const CHARACTER_COMPLEXITY_WEIGHT: f64 = 0.006;
-const COMPLEXITY_MAX: f64 = 0.25;
 const VALENCE_AROUSAL_WEIGHT: f64 = 0.20;
 const BOOSTERS: &[&str] = &[
     "absolutely",
@@ -197,7 +196,7 @@ fn pooled_arousal(text: &str, tokens: &[TokenizedToken], valence: f64) -> f64 {
     let all_caps = all_caps_arousal(text);
     let intensifiers = intensifier_arousal(text);
     let token_count = (usize_to_f64(tokens.len()) * TOKEN_COUNT_WEIGHT).min(TOKEN_COUNT_MAX);
-    let complexity = complexity_arousal(text, tokens);
+    let complexity = analyze_complexity_for_tokens(text, tokens).arousal_contribution();
     let valence_energy = valence.abs() * VALENCE_AROUSAL_WEIGHT;
 
     (BASE_AROUSAL
@@ -293,21 +292,6 @@ fn intensifier_arousal(text: &str) -> f64 {
     }
 
     score
-}
-
-fn complexity_arousal(text: &str, tokens: &[TokenizedToken]) -> f64 {
-    let wordpiece_count = tokens
-        .iter()
-        .filter(|token| token.is_continuation())
-        .count();
-    let character_count = text
-        .chars()
-        .filter(|character| !character.is_whitespace())
-        .count();
-    let score = (usize_to_f64(wordpiece_count) * WORDPIECE_COMPLEXITY_WEIGHT)
-        + (usize_to_f64(character_count) * CHARACTER_COMPLEXITY_WEIGHT);
-
-    score.min(COMPLEXITY_MAX)
 }
 
 fn normalized_words(text: &str) -> Vec<String> {

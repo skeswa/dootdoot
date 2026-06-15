@@ -184,6 +184,10 @@
 - **FR-49** `FORMAT_V2` synthesis SHALL map utterance arousal to deterministic duration
   rate, pitch lift, brightness, warble amount, and sub-gesture density, and SHALL map
   valence to contour and darker/brighter vowel/texture bias within fixed bounds.
+- **FR-50** `FORMAT_V2` complexity analysis SHALL compute a deterministic bounded scalar
+  from owned inputs only: non-whitespace character count and continuation `WordPiece`
+  subtoken count. Frequency, Zipf, iconicity, or other third-party psycholinguistic
+  assets SHALL remain excluded until an explicit asset-license policy admits them.
 
 ---
 
