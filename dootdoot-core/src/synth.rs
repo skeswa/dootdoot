@@ -109,6 +109,18 @@ pub const PITCH_REGISTER_BIAS_HZ: f64 = 760.0;
 /// Gives the semantic pitch span around the register bias in semitones.
 pub const PITCH_SEMITONE_SPAN: f64 = 10.0;
 
+/// Gives the `VOICE_V7` wider per-gesture pitch span in semitones.
+///
+/// Selected gestures use this span so they can leave the established
+/// ~0.5-1.1 kHz register, while ordinary syllables keep `PITCH_SEMITONE_SPAN`.
+pub const WIDE_GESTURE_PITCH_SPAN_SEMITONES: f64 = 16.0;
+
+/// Gives the nominal top of a `VOICE_V7` whistle sweep in hertz.
+pub const WHISTLE_TARGET_HZ: f64 = 3_400.0;
+
+/// Gives the hard ceiling for a `VOICE_V7` whistle sweep in hertz.
+pub const WHISTLE_PITCH_CEILING_HZ: f64 = 4_200.0;
+
 /// Gives the fixed contour-steered internal pitch sweep in cents.
 pub const INTERNAL_PITCH_SWEEP_CENTS: f64 = 220.0;
 
@@ -337,9 +349,64 @@ pub fn source_oscillator_sample(phase: f64, frequency_hz: f64) -> f64 {
 
 /// Maps a pitch-center knob to hertz in the fixed high register.
 pub fn pitch_center_hz(pitch_center: f64) -> f64 {
-    let semitones = pitch_center.clamp(-1.0, 1.0) * PITCH_SEMITONE_SPAN;
+    pitch_center_hz_with_span(pitch_center, PITCH_SEMITONE_SPAN)
+}
+
+/// Maps a pitch-center knob to hertz using a chosen semitone span.
+///
+/// `VOICE_V7` selected gestures pass `WIDE_GESTURE_PITCH_SPAN_SEMITONES` so
+/// they can climb above the default register; passing `PITCH_SEMITONE_SPAN`
+/// reproduces `pitch_center_hz` exactly.
+pub fn pitch_center_hz_with_span(pitch_center: f64, span_semitones: f64) -> f64 {
+    let span = if span_semitones.is_finite() {
+        span_semitones.abs()
+    } else {
+        PITCH_SEMITONE_SPAN
+    };
+    let knob = if pitch_center.is_finite() {
+        pitch_center.clamp(-1.0, 1.0)
+    } else {
+        0.0
+    };
+    let semitones = knob * span;
 
     PITCH_REGISTER_BIAS_HZ * exp((LN_2 * semitones) / 12.0)
+}
+
+/// Sweeps the oscillator fundamental into the whistle band for a chirp gesture.
+///
+/// At `progress == 0` the result is `start_hz`; with full `whistle_amount` it
+/// rises smoothly to `WHISTLE_PITCH_CEILING_HZ` at `progress == 1`. The sweep
+/// is pure IEEE arithmetic (no transcendentals), so it is bit-exact across the
+/// verified platforms, and is always finite, positive, and capped at
+/// `WHISTLE_PITCH_CEILING_HZ`.
+pub fn whistle_sweep_pitch_hz(start_hz: f64, whistle_amount: f64, progress: f64) -> f64 {
+    let start = if start_hz.is_finite() && start_hz > 0.0 {
+        start_hz
+    } else {
+        PITCH_REGISTER_BIAS_HZ
+    };
+    let amount = if whistle_amount.is_finite() {
+        whistle_amount.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    if amount <= 0.0 {
+        return start.min(WHISTLE_PITCH_CEILING_HZ);
+    }
+
+    let progress = if progress.is_finite() {
+        progress.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let shape = progress * progress * (3.0 - (2.0 * progress));
+    let target = (WHISTLE_TARGET_HZ + ((WHISTLE_PITCH_CEILING_HZ - WHISTLE_TARGET_HZ) * amount))
+        .min(WHISTLE_PITCH_CEILING_HZ);
+    let swept = start + ((target - start) * amount * shape);
+
+    swept.clamp(1.0, WHISTLE_PITCH_CEILING_HZ)
 }
 
 /// Computes shaped portamento progress for elapsed time.

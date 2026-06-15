@@ -470,7 +470,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       useful. Restate the non-goals (no global brightness raise, no unseeded randomness, no
       semantic-PCA change, no speech vocoder, no centered ring-mod, no sample libraries).
       Deps: T-78 · Reqs: FR-33, FR-38, FR-39, NFR-16 · Est: 2h
-- [ ] **T-81 — Swept-oscillator whistle/chirp gesture + wider pitch span.** Add a
+- [x] **T-81 — Swept-oscillator whistle/chirp gesture + wider pitch span.** Add a
       deterministic rising-chirp/whistle gesture that sweeps the **oscillator fundamental**
       (not just the sparkle layer) toward the 2–4 kHz region, plus a wider per-gesture
       pitch span so selected events can leave the current ~0.5–1.1 kHz band. Cap the new
