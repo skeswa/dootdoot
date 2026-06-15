@@ -293,7 +293,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       Deps: T-56, T-05 · Reqs: NFR-1, NFR-2, NFR-17 · Est: 1.5h
 - [x] **T-58 — Double-run determinism test.** Each corpus input twice → byte-identical.
       Deps: T-55 · Reqs: NFR-1, NFR-18 · Est: 1h
-- [ ] **T-59 — `--explain` snapshot test.** Golden snapshot of the table for a fixed input.
+- [x] **T-59 — `--explain` snapshot test.** Golden snapshot of the table for a fixed input.
       Deps: T-42 · Reqs: NFR-20 · Est: 1h
 - [ ] **T-60 — Cross-platform verification.** Confirm identical hashes on macOS and Linux
       in CI; investigate/fix any divergence (math path).
