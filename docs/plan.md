@@ -417,6 +417,16 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       Deps: T-76 · Reqs: FR-33, FR-39, FR-65, FR-66, FR-67, FR-68, FR-69, FR-70,
       NFR-16, NFR-17, NFR-18 · Est: 2h
 
+## Phase 14 — VOICE_V6 repeated-phrase smoothing
+
+- [x] **T-78 — Smooth repeated phrase pulsing.** Reduce tremolo-like severity in repeated
+      high-arousal word sequences by flattening bridged word connectors, keeping bridge
+      energy below syllable-body energy, damping repeated connected-word motion and
+      texture, updating `--version`, regenerating golden WAV hashes, and documenting the
+      V6 forensic analysis and acceptance check.
+      Deps: T-77 · Reqs: FR-33, FR-39, FR-71, FR-72, FR-73, FR-74, FR-75, FR-76,
+      NFR-16, NFR-17, NFR-18 · Est: 2h
+
 ---
 
 ## Critical paths
@@ -454,11 +464,12 @@ flowchart LR
 ```
 
 The `VOICE_V3` smoothing branch follows the frozen V2 expressiveness contract, and
-`VOICE_V4`/`VOICE_V5` continue the connected phrase-continuity work:
+`VOICE_V4`/`VOICE_V5`/`VOICE_V6` continue the connected phrase-continuity work:
 
 ```mermaid
 flowchart LR
     T74[T-74 VOICE_V2 freeze] --> T75[T-75 VOICE_V3 phrase continuity]
     T75 --> T76[T-76 VOICE_V4 repeated-onset smoothing]
     T76 --> T77[T-77 VOICE_V5 word-attack smoothing]
+    T77 --> T78[T-78 VOICE_V6 repeated-phrase smoothing]
 ```

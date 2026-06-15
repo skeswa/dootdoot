@@ -71,12 +71,13 @@ punctuation and word boundaries affect timing.
 ## Version Contract
 
 `dootdoot --version` surfaces the active voice identifier. The current binary reports
-`dootdoot VOICE_V5`. `VOICE_V1` is still the locked v1 contract, `VOICE_V2` is the
+`dootdoot VOICE_V6`. `VOICE_V1` is still the locked v1 contract, `VOICE_V2` is the
 locked expressiveness contract, `VOICE_V3` is the locked phrase-continuity contract, and
-`VOICE_V4` is the locked repeated-onset smoothing contract. `VOICE_V5` is the active
-word-attack smoothing contract. Any further rendered-sample change requires a new voice
-identifier and regenerated golden WAV hashes.
+`VOICE_V4` is the locked repeated-onset smoothing contract. `VOICE_V5` is the locked
+word-attack smoothing contract, and `VOICE_V6` is the active repeated-phrase smoothing
+contract. Any further rendered-sample change requires a new voice identifier and
+regenerated golden WAV hashes.
 
 The `VOICE_V*` identifier names the rendered-output contract, not the binary layout of
-the baked semantic mapping asset. The current `VOICE_V5` renderer still embeds the
+the baked semantic mapping asset. The current `VOICE_V6` renderer still embeds the
 locked `assets/format_v1.bin` token-to-axis table.

@@ -10,11 +10,11 @@
 
 <!-- Add these once the project ships: CI status, crates.io version, downloads. -->
 
-> **Status: VOICE_V5 word-attack smoothing is active.** `VOICE_V1` remains the locked
+> **Status: VOICE_V6 repeated-phrase smoothing is active.** `VOICE_V1` remains the locked
 > v1 contract, `VOICE_V2` remains the locked expressiveness contract, `VOICE_V3` remains
 > the locked phrase-continuity contract, `VOICE_V4` remains the locked repeated-onset
-> smoothing contract, and the active branch now smooths bridged word attacks. Packaging
-> work is still in
+> smoothing contract, `VOICE_V5` remains the locked word-attack smoothing contract, and
+> the active branch now smooths repeated phrase pulsing. Packaging work is still in
 > progress. See
 > [the roadmap](docs/plan.md) and
 > [packaging notes](docs/reference/packaging.md).

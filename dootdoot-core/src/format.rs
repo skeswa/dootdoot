@@ -14,11 +14,14 @@ pub const VOICE_V3: &str = "VOICE_V3";
 /// Identifies the repeated-onset-smoothed output contract.
 pub const VOICE_V4: &str = "VOICE_V4";
 
-/// Identifies the current word-attack-smoothed output contract.
+/// Identifies the word-attack-smoothed output contract.
 pub const VOICE_V5: &str = "VOICE_V5";
 
+/// Identifies the current repeated-phrase-smoothed output contract.
+pub const VOICE_V6: &str = "VOICE_V6";
+
 /// Identifies the active sample-affecting output contract.
-pub const ACTIVE_VOICE: &str = VOICE_V5;
+pub const ACTIVE_VOICE: &str = VOICE_V6;
 
 /// Identifies the baked semantic mapping artifact layout.
 pub const FORMAT_ARTIFACT_V1: &str = "format_v1.bin";

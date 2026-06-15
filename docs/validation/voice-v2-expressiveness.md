@@ -9,8 +9,8 @@ remain the learnable core; the new channels only shape bounded performance aroun
 axes.
 
 `VOICE_V3` superseded V2 by smoothing connected phrase rendering, `VOICE_V4` smoothed
-repeated connected onsets, and `VOICE_V5` is the active voice contract. V2 remains the
-frozen expressiveness checkpoint.
+repeated connected onsets, `VOICE_V5` smoothed word attacks, and `VOICE_V6` is the
+active voice contract. V2 remains the frozen expressiveness checkpoint.
 
 ## Checks
 

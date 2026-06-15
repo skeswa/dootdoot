@@ -3,8 +3,9 @@
 use dootdoot_core::{
     ACTIVE_VOICE, Format, KNOB_BOUNDS, KNOB_MODULATION_DEPTHS, KnobBounds, KnobSet, Mapping,
     MappingError, Mathx, SquashedVector, Synth, TokenVector, TokenizedInput, TokenizedToken,
-    Tokenizer, TokenizerError, VOICE_V1, VOICE_V2, VOICE_V3, VOICE_V4, VOICE_V5, WavWriter,
-    assemble_knob_sequence, assemble_knobs, embedded_mapping, embedded_tokenizer, pool_sequence,
+    Tokenizer, TokenizerError, VOICE_V1, VOICE_V2, VOICE_V3, VOICE_V4, VOICE_V5, VOICE_V6,
+    WavWriter, assemble_knob_sequence, assemble_knobs, embedded_mapping, embedded_tokenizer,
+    pool_sequence,
 };
 
 #[test]
@@ -14,7 +15,8 @@ fn public_api_exports_core_stubs() {
     assert_eq!(VOICE_V3, "VOICE_V3");
     assert_eq!(VOICE_V4, "VOICE_V4");
     assert_eq!(VOICE_V5, "VOICE_V5");
-    assert_eq!(ACTIVE_VOICE, VOICE_V5);
+    assert_eq!(VOICE_V6, "VOICE_V6");
+    assert_eq!(ACTIVE_VOICE, VOICE_V6);
     let embedded: fn() -> Result<Tokenizer, TokenizerError> = embedded_tokenizer;
     let mapping: fn() -> Result<Mapping<'static>, MappingError> = embedded_mapping;
     let pool: fn(&[TokenVector]) -> Result<dootdoot_core::PooledVector, MappingError> =

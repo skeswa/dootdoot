@@ -39,6 +39,8 @@ Evidence and proposals that informed the sound design.
   `VOICE_V2` work.
 - [`research/bb8-word-attack-forensics.md`](research/bb8-word-attack-forensics.md) —
   word-boundary onset analysis that informed `VOICE_V5`.
+- [`research/bb8-repeated-phrase-tremolo-forensics.md`](research/bb8-repeated-phrase-tremolo-forensics.md)
+  — repeated-phrase modulation analysis that informed `VOICE_V6`.
 
 ## Validation
 
@@ -54,6 +56,8 @@ Short acceptance notes for decisions that were finalized during voice freezes.
   final `VOICE_V4` repeated-onset smoothing acceptance.
 - [`validation/voice-v5-word-attack-smoothing.md`](validation/voice-v5-word-attack-smoothing.md)
   — final `VOICE_V5` word-attack smoothing acceptance.
+- [`validation/voice-v6-repeated-phrase-smoothing.md`](validation/voice-v6-repeated-phrase-smoothing.md)
+  — final `VOICE_V6` repeated-phrase smoothing acceptance.
 - [`validation/learnability-spread.md`](validation/learnability-spread.md) — final
   semantic cluster spread check.
 - [`validation/squash.md`](validation/squash.md) — finalized tanh z-score squash choice.

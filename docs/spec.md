@@ -145,7 +145,7 @@
   channels, header bytes); and the owned-math implementation version.
 - **FR-39** Any change that alters one or more output samples SHALL require bumping the
   voice identifier (e.g. `VOICE_V1` → `VOICE_V2` → `VOICE_V3` → `VOICE_V4` →
-  `VOICE_V5`).
+  `VOICE_V5` → `VOICE_V6`).
 
 ### 1.10 Build-time generation (xtask)
 
@@ -249,6 +249,23 @@
   acceptance, the surfaced `dootdoot VOICE_V5` version string, and regenerated golden
   WAV hashes.
 
+### 1.15 VOICE_V6 repeated-phrase smoothing
+
+- **FR-71** `VOICE_V6` SHALL keep `VOICE_V5` word-attack smoothing while reducing
+  regular tremolo-like pulsing in repeated high-arousal word sequences.
+- **FR-72** `VOICE_V6` word-boundary bridges SHALL remain audible connectors but SHALL
+  stay below the surrounding syllable body instead of becoming foreground pulses.
+- **FR-73** `VOICE_V6` word-boundary bridges SHALL use a flatter bounded envelope and
+  reduced source, sparkle, and warble contribution.
+- **FR-74** `VOICE_V6` connected word starts SHALL damp repeated internal pitch,
+  complexity articulation, archetype pitch, and texture motion beyond the initial
+  word-opening bloom.
+- **FR-75** `VOICE_V6` connected word starts SHALL inherit pitch state over a longer
+  bounded window than same-word subword starts.
+- **FR-76** The frozen `VOICE_V6` contract SHALL be documented with repeated-phrase
+  acceptance, the surfaced `dootdoot VOICE_V6` version string, and regenerated golden
+  WAV hashes.
+
 ---
 
 ## 2. Non-functional requirements
@@ -309,7 +326,8 @@
   deterministic, bounded phrase, affect, complexity, and archetype channels; `VOICE_V3`
   MAY additionally smooth connected phrase rendering without changing the semantic
   mapping core; `VOICE_V4` MAY additionally smooth repeated connected onsets; `VOICE_V5`
-  MAY additionally smooth bridged word-boundary attacks.
+  MAY additionally smooth bridged word-boundary attacks; `VOICE_V6` MAY additionally
+  smooth repeated-phrase bridge and motion pulsing.
 
 ### 2.5 Testing
 

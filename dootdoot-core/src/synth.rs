@@ -154,13 +154,21 @@ pub const PHRASE_EMPHASIS_PITCH_SEMITONES: f64 = 0.35;
 /// Gives the fixed amplitude lift for sparse phrase emphasis.
 pub const PHRASE_EMPHASIS_GAIN: f64 = 1.08;
 
-const TRANSITION_BRIDGE_GAIN: f64 = 0.180;
+const TRANSITION_BRIDGE_GAIN: f64 = 0.260;
+const TRANSITION_BRIDGE_ENVELOPE_FLOOR: f64 = 0.30;
+const TRANSITION_BRIDGE_ENVELOPE_SPAN: f64 = 0.08;
 const CONNECTED_PARAMETER_BLEND_SECONDS: f64 = 0.036;
+const WORD_CONNECTED_PARAMETER_BLEND_SECONDS: f64 = 0.120;
 const WORD_CONNECTION_FLOOR: f64 = ENVELOPE_SUSTAIN_LEVEL * 0.30;
 const WORD_CONNECTION_OPEN_SECONDS: f64 = 0.055;
 const WORD_ONSET_VOWEL_OPEN_SECONDS: f64 = 0.060;
 const WORD_ONSET_VOWEL_ROUNDING: f64 = 0.55;
 const WORD_ONSET_TEXTURE_START_GAIN: f64 = 0.42;
+const WORD_CONNECTED_MOTION_START_GAIN: f64 = 0.30;
+const WORD_CONNECTED_MOTION_END_GAIN: f64 = 0.52;
+const WORD_CONNECTED_TEXTURE_END_GAIN: f64 = 0.68;
+const WORD_CONNECTED_ENVELOPE_LEVEL: f64 = ENVELOPE_SUSTAIN_LEVEL * 1.05;
+const WORD_CONNECTED_ENVELOPE_CONTRAST: f64 = 0.16;
 
 /// Marks the synthesis module in the public facade.
 #[derive(Debug)]
@@ -818,7 +826,7 @@ pub(crate) fn render_transition_bridge(
 
     let contour = knobs.contour().clamp(-1.0, 1.0);
     let vowel_position = knobs.vowel_position().clamp(-1.0, 1.0);
-    let warble_depth = (knobs.warble_depth() * 0.55).clamp(-1.0, 1.0);
+    let warble_depth = (knobs.warble_depth() * 0.28).clamp(-1.0, 1.0);
 
     for sample_index in 0..duration_samples {
         let elapsed_seconds = f64::from(sample_index) / f64::from(SYNTH_SAMPLE_RATE_HZ);
@@ -827,11 +835,11 @@ pub(crate) fn render_transition_bridge(
         let pitch_hz = apply_warble_hz_with_phase(pitch_hz, warble_depth, elapsed_seconds, 0.25);
         let source = source_oscillator_sample(state.phase, pitch_hz);
         let voiced = state.formants.process_sample(source, vowel_position);
-        let layer = voiced
-            + (0.35 * source)
-            + (0.35 * body_layer_sample(state.body_phase, vowel_position))
-            + (0.25 * upper_mid_sparkle_sample(state.sparkle_phase, elapsed_seconds, warble_depth));
-        let bridge_envelope = 0.35 + (0.65 * sin(PI * progress));
+        let layer = (0.72 * voiced)
+            + (0.12 * source)
+            + (0.24 * body_layer_sample(state.body_phase, vowel_position));
+        let bridge_envelope = TRANSITION_BRIDGE_ENVELOPE_FLOOR
+            + (TRANSITION_BRIDGE_ENVELOPE_SPAN * sin(PI * progress));
         let sample = ring_modulate(
             layer * TRANSITION_BRIDGE_GAIN * bridge_envelope,
             elapsed_seconds,
@@ -858,8 +866,11 @@ fn render_performance_sample(
     } else {
         attack_transient_sample(elapsed_seconds, parameters.contour)
     };
-    let word_onset_texture_gain =
-        word_onset_texture_gain(elapsed_seconds, controls.performance.start_connection);
+    let word_onset_texture_gain = word_onset_texture_gain(
+        elapsed_seconds,
+        controls.duration_seconds,
+        controls.performance.start_connection,
+    );
     let layered = voiced
         + body_layer_sample(state.body_phase, parameters.vowel_position)
         + attack_transient
@@ -911,8 +922,17 @@ fn performance_sample_parameters(
         controls.subgesture_count,
         elapsed_seconds,
         controls.duration_seconds,
+    ) * connected_word_motion_gain(
+        elapsed_seconds,
+        controls.duration_seconds,
+        controls.performance.start_connection,
     );
     let contour = (controls.contour + articulation).clamp(-1.0, 1.0);
+    let connected_motion_gain = connected_word_motion_gain(
+        elapsed_seconds,
+        controls.duration_seconds,
+        controls.performance.start_connection,
+    );
     let glided_pitch_hz = portamento_pitch_hz(
         controls.start_pitch_hz,
         controls.target_pitch_hz,
@@ -933,11 +953,12 @@ fn performance_sample_parameters(
         elapsed_seconds,
         controls.duration_seconds,
     );
-    let internal_pitch_hz = apply_internal_pitch_swoop_hz_for_duration(
+    let internal_pitch_hz = apply_internal_pitch_swoop_hz_for_duration_with_gain(
         phrase_final_pitch_hz,
         contour,
         elapsed_seconds,
         controls.duration_seconds,
+        connected_motion_gain,
     );
     let pitch_hz = apply_warble_hz_with_phase(
         internal_pitch_hz,
@@ -950,6 +971,7 @@ fn performance_sample_parameters(
         controls.performance.archetype.archetype(),
         elapsed_seconds,
         controls.duration_seconds,
+        connected_motion_gain,
     );
     let vowel_position = vowel_trajectory_position_for_duration(
         (controls.knobs.vowel_position() + controls.vowel_bias + (articulation * 0.65))
@@ -986,14 +1008,21 @@ fn connected_parameter_value(
         return current;
     };
 
-    if !start_connection.is_connected()
-        || !elapsed_seconds.is_finite()
-        || elapsed_seconds >= CONNECTED_PARAMETER_BLEND_SECONDS
-    {
+    if !start_connection.is_connected() || !elapsed_seconds.is_finite() {
         return current;
     }
 
-    let linear = (elapsed_seconds / CONNECTED_PARAMETER_BLEND_SECONDS).clamp(0.0, 1.0);
+    let blend_seconds = match start_connection {
+        SyllableConnection::Detached => return current,
+        SyllableConnection::Subword => CONNECTED_PARAMETER_BLEND_SECONDS,
+        SyllableConnection::Word => WORD_CONNECTED_PARAMETER_BLEND_SECONDS,
+    };
+
+    if elapsed_seconds >= blend_seconds {
+        return current;
+    }
+
+    let linear = (elapsed_seconds / blend_seconds).clamp(0.0, 1.0);
     let progress = linear * linear * (3.0 - (2.0 * linear));
 
     previous + ((current - previous) * progress)
@@ -1023,17 +1052,44 @@ fn word_onset_vowel_position(current: f64, elapsed_seconds: f64) -> f64 {
     rounded_start + ((current - rounded_start) * progress)
 }
 
-fn word_onset_texture_gain(elapsed_seconds: f64, start_connection: SyllableConnection) -> f64 {
+fn word_onset_texture_gain(
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+    start_connection: SyllableConnection,
+) -> f64 {
     if start_connection != SyllableConnection::Word
         || !elapsed_seconds.is_finite()
-        || elapsed_seconds >= WORD_ONSET_VOWEL_OPEN_SECONDS
+        || !duration_seconds.is_finite()
     {
         return 1.0;
     }
 
-    let progress = smoothstep(elapsed_seconds / WORD_ONSET_VOWEL_OPEN_SECONDS);
+    if elapsed_seconds < WORD_ONSET_VOWEL_OPEN_SECONDS {
+        let progress = smoothstep(elapsed_seconds / WORD_ONSET_VOWEL_OPEN_SECONDS);
 
-    WORD_ONSET_TEXTURE_START_GAIN + ((1.0 - WORD_ONSET_TEXTURE_START_GAIN) * progress)
+        return WORD_ONSET_TEXTURE_START_GAIN
+            + ((WORD_CONNECTED_TEXTURE_END_GAIN - WORD_ONSET_TEXTURE_START_GAIN) * progress);
+    }
+
+    WORD_CONNECTED_TEXTURE_END_GAIN
+        + ((1.0 - WORD_CONNECTED_TEXTURE_END_GAIN) * smoothstep(elapsed_seconds / duration_seconds))
+}
+
+fn connected_word_motion_gain(
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+    start_connection: SyllableConnection,
+) -> f64 {
+    if start_connection != SyllableConnection::Word
+        || !elapsed_seconds.is_finite()
+        || !duration_seconds.is_finite()
+    {
+        return 1.0;
+    }
+
+    WORD_CONNECTED_MOTION_START_GAIN
+        + ((WORD_CONNECTED_MOTION_END_GAIN - WORD_CONNECTED_MOTION_START_GAIN)
+            * smoothstep(elapsed_seconds / duration_seconds))
 }
 
 fn apply_connected_amplitude_envelope(
@@ -1080,6 +1136,15 @@ fn connected_amplitude_envelope(
         SyllableConnection::Detached | SyllableConnection::Subword | SyllableConnection::Word => {}
     }
 
+    if matches!(
+        (start_connection, end_connection),
+        (SyllableConnection::Word, _) | (_, SyllableConnection::Word),
+    ) && elapsed_seconds < release_start
+    {
+        return WORD_CONNECTED_ENVELOPE_LEVEL
+            + ((base - WORD_CONNECTED_ENVELOPE_LEVEL) * WORD_CONNECTED_ENVELOPE_CONTRAST);
+    }
+
     if elapsed_seconds >= release_start {
         return match end_connection {
             SyllableConnection::Detached => base,
@@ -1100,6 +1165,7 @@ fn apply_archetype_pitch_hz(
     archetype: GestureArchetype,
     elapsed_seconds: f64,
     duration_seconds: f64,
+    motion_gain: f64,
 ) -> f64 {
     let progress = syllable_progress(elapsed_seconds, duration_seconds);
     let semitones = match archetype {
@@ -1110,7 +1176,7 @@ fn apply_archetype_pitch_hz(
         GestureArchetype::Tremble => 0.18 * sin(2.0 * PI * 29.0 * elapsed_seconds),
     };
 
-    pitch_hz * semitone_multiplier(semitones)
+    pitch_hz * semitone_multiplier(semitones * motion_gain.clamp(0.0, 1.0))
 }
 
 fn archetype_amplitude_gain(selection: ArchetypeSelection, elapsed_seconds: f64) -> f64 {
@@ -1259,14 +1325,16 @@ fn smoothstep(progress: f64) -> f64 {
     progress * progress * (3.0 - (2.0 * progress))
 }
 
-fn apply_internal_pitch_swoop_hz_for_duration(
+fn apply_internal_pitch_swoop_hz_for_duration_with_gain(
     pitch_hz: f64,
     contour: f64,
     elapsed_seconds: f64,
     duration_seconds: f64,
+    motion_gain: f64,
 ) -> f64 {
     let cents =
-        internal_pitch_offset_cents_for_duration(contour, elapsed_seconds, duration_seconds);
+        internal_pitch_offset_cents_for_duration(contour, elapsed_seconds, duration_seconds)
+            * motion_gain.clamp(0.0, 1.0);
 
     pitch_hz * exp(LN_2 * (cents / 1_200.0))
 }

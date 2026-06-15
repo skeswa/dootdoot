@@ -555,7 +555,7 @@ removes the remaining connected-token onset roughness heard in repeated subword 
 - connected envelope starts ramp through the early body instead of replaying the full
   attack peak.
 
-The active acceptance note is
+The V4 acceptance note is
 [`voice-v4-onset-smoothing.md`](./validation/voice-v4-onset-smoothing.md). The committed
 golden WAV hashes are regenerated under `VOICE_V4`.
 
@@ -571,9 +571,26 @@ splits connected starts into two renderer cases:
 - upper-mid sparkle and archetype texture are damped during that word-opening bloom,
   then return to their normal level.
 
-The active acceptance note is
+The V5 acceptance note is
 [`voice-v5-word-attack-smoothing.md`](./validation/voice-v5-word-attack-smoothing.md).
 The committed golden WAV hashes are regenerated under `VOICE_V5`.
+
+**VOICE_V6 repeated-phrase smoothing.** V6 keeps the V5 word-boundary bloom, then
+reduces the regular tremolo-like pulse heard in repeated high-arousal phrases:
+
+- word bridges remain audible but become flatter, lower connectors instead of
+  foreground bridge syllables;
+- bridge source, sparkle, and warble contribution are reduced;
+- word-connected pitch inherits prior state over a longer bounded window than subword
+  starts;
+- repeated internal pitch, complexity articulation, archetype pitch, and texture motion
+  are damped across connected word starts;
+- connected-word envelope contrast is reduced so syllables do not keep firing the same
+  local loudness lobe.
+
+The active acceptance note is
+[`voice-v6-repeated-phrase-smoothing.md`](./validation/voice-v6-repeated-phrase-smoothing.md).
+The committed golden WAV hashes are regenerated under `VOICE_V6`.
 
 ---
 
@@ -716,14 +733,15 @@ _Serialization_
 - the **WAV serialization choices** (44.1 kHz, 16-bit signed PCM, mono, and the exact
   header bytes) — these define the file the golden hashes are taken over.
 
-The active voice is surfaced by `--version`. **Any change that alters a single output sample
-bumps the identifier** (`VOICE_V1` → `VOICE_V2` → `VOICE_V3` → `VOICE_V4` → `VOICE_V5`, etc.). This gives users the guarantee: _same text + same voice version =
-same sound, forever, on every verified platform (§8.1)_, while letting the voice evolve
-deliberately.
+The active voice is surfaced by `--version`. **Any change that alters a single output
+sample bumps the identifier** (`VOICE_V1` → `VOICE_V2` → `VOICE_V3` → `VOICE_V4` →
+`VOICE_V5` → `VOICE_V6`, etc.). This gives users the guarantee: _same text + same voice
+version = same sound, forever, on every verified platform (§8.1)_, while letting the
+voice evolve deliberately.
 
 The `VOICE_V*` identifier is the rendered-output contract, not the on-disk layout version
-of the baked mapping artifact. `VOICE_V5` still uses the locked `assets/format_v1.bin`
-token-to-axis table; V5 exists because word-attack rendering changed the generated
+of the baked mapping artifact. `VOICE_V6` still uses the locked `assets/format_v1.bin`
+token-to-axis table; V6 exists because repeated-phrase rendering changed the generated
 samples.
 
 ### 8.3 Decision: `VOICE_V2` broadens performance channels, not the semantic core
@@ -804,8 +822,26 @@ subword connections from word-boundary connections, gives bridged word starts a 
 opening envelope floor, shapes those starts through a rounded `oo`-leaning vowel
 pre-shape, and dampens upper-mid texture during the opening bloom.
 
-The active CLI version string is `VOICE_V5`. The V5 acceptance note records the
+The V5 CLI version string was `VOICE_V5`. The V5 acceptance note records the
 word-start/body level and roughness check plus regenerated golden WAV hashes.
+
+### 8.7 Decision: `VOICE_V6` smooths repeated phrase pulsing
+
+`VOICE_V6` is a sample-affecting renderer change prompted by repeated high-arousal
+phrases such as `I am so excited I am so excited I am so excited I am so excited`.
+V5 made word starts smoother, but the bridge itself often became a foreground pulse. The
+word cycle was about 270 ms, so syllable-body plus bridge peaks created a regular
+two-pulse modulation around 7.4 Hz. That read as tremolo-like rapid bowing.
+
+V6 keeps V5's word-opening bloom but changes connected word rendering. Word bridges use
+a flatter low bed with reduced direct source, upper-mid sparkle, and warble. Connected
+word starts inherit pitch for longer and damp repeated internal pitch, complexity
+articulation, archetype pitch, and texture motion, so repeated phrases flow as one
+utterance instead of re-firing the same local gesture every word.
+
+The active CLI version string is `VOICE_V6`. The V6 acceptance note records the
+bridge/syllable level check and low-rate envelope check plus regenerated golden WAV
+hashes.
 
 ---
 

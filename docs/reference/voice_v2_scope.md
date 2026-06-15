@@ -135,6 +135,7 @@ The BB-8 contextual clip workflow is a directional aid for phrase-level listenin
 the committed golden WAV hashes remain the sample-level voice contract.
 
 `VOICE_V3` superseded V2 by smoothing connected phrase rendering. `VOICE_V4` then
-smoothed repeated connected onsets. `VOICE_V5` is now the active CLI contract by
-smoothing bridged word attacks. V2 remains the frozen expressiveness checkpoint; V3,
-V4, and V5 keep those performance channels.
+smoothed repeated connected onsets, `VOICE_V5` smoothed bridged word attacks, and
+`VOICE_V6` is now the active CLI contract by smoothing repeated phrase pulsing. V2
+remains the frozen expressiveness checkpoint; V3 through V6 keep those performance
+channels.

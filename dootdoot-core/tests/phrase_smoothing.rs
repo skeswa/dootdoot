@@ -122,6 +122,76 @@ fn word_boundary_connections_open_as_smooth_vowel_blooms() {
     );
 }
 
+#[test]
+fn repeated_excited_phrase_does_not_tremolo_between_words() {
+    let text = "I am so excited I am so excited I am so excited I am so excited";
+    let buffer = render_text_canonical_buffer(text).expect("phrase should render");
+    let events = sequence_events_for_text(text).expect("phrase should sequence");
+    let syllable_count = syllable_count(&events);
+    let word_boundary_count = word_boundary_count(&events);
+
+    assert_eq!(
+        syllable_count, 16,
+        "fixture should keep the reported repeated phrase shape",
+    );
+    assert_eq!(
+        word_boundary_count, 15,
+        "fixture should exercise bridged word boundaries only",
+    );
+
+    let leading = usize::try_from(LEADING_SILENCE_SAMPLES).expect("leading silence fits usize");
+    let trailing = usize::try_from(TRAILING_SILENCE_SAMPLES).expect("trailing silence fits usize");
+    let word_pause = usize::try_from(WORD_PAUSE_SAMPLES).expect("word pause fits usize");
+    let voiced_samples = buffer
+        .len()
+        .checked_sub(leading + trailing + (word_boundary_count * word_pause))
+        .expect("fixture render should contain voiced samples");
+
+    assert_eq!(
+        voiced_samples % syllable_count,
+        0,
+        "fixture syllables should have uniform duration",
+    );
+
+    let syllable_samples = voiced_samples / syllable_count;
+    let mut bridge_level_ratios = Vec::new();
+    let mut position = leading;
+
+    for boundary_index in 0..word_boundary_count {
+        let syllable = &buffer[position..position + syllable_samples];
+        let bridge_start = position + syllable_samples;
+        let bridge = &buffer[bridge_start..bridge_start + word_pause];
+
+        bridge_level_ratios.push(rms(bridge) / rms(syllable).max(0.000_001));
+        position = bridge_start + word_pause;
+
+        assert!(
+            boundary_index + 1 < syllable_count,
+            "fixture should not count a boundary after the final syllable",
+        );
+    }
+
+    bridge_level_ratios.sort_by(f64::total_cmp);
+
+    let median_bridge_ratio = bridge_level_ratios[bridge_level_ratios.len() / 2];
+    let cycle_seconds =
+        usize_to_f64(syllable_samples + word_pause) / f64::from(SYNTH_SAMPLE_RATE_HZ);
+    let word_cycle_hz = 1.0 / cycle_seconds;
+    let double_cycle_hz = 2.0 * word_cycle_hz;
+    let body = &buffer[leading..buffer.len() - trailing];
+    let word_cycle_energy = envelope_modulation_strength(body, word_cycle_hz);
+    let double_cycle_energy = envelope_modulation_strength(body, double_cycle_hz);
+
+    assert!(
+        median_bridge_ratio <= 0.75,
+        "word bridges are too foreground; median bridge/syllable RMS ratio was {median_bridge_ratio:.2}",
+    );
+    assert!(
+        double_cycle_energy <= word_cycle_energy * 0.85,
+        "two-pulse word-cycle tremolo is too strong; {double_cycle_hz:.2} Hz energy was {double_cycle_energy:.2} vs {word_cycle_hz:.2} Hz energy {word_cycle_energy:.2}",
+    );
+}
+
 fn voiced_body(buffer: &[i16]) -> &[i16] {
     let start = buffer
         .iter()
@@ -260,6 +330,32 @@ fn connected_syllable_starts(events: &[SequenceEvent]) -> Vec<usize> {
         .collect()
 }
 
+fn syllable_count(events: &[SequenceEvent]) -> usize {
+    events
+        .iter()
+        .filter(|event| matches!(event, SequenceEvent::Syllable(_)))
+        .count()
+}
+
+fn word_boundary_count(events: &[SequenceEvent]) -> usize {
+    let continuations = syllable_continuations(events);
+
+    continuations.windows(2).filter(|window| !window[1]).count()
+}
+
+fn syllable_continuations(events: &[SequenceEvent]) -> Vec<bool> {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            SequenceEvent::Syllable(syllable) => Some(syllable.is_continuation()),
+            SequenceEvent::Mood(_)
+            | SequenceEvent::Complexity(_)
+            | SequenceEvent::Archetype(_)
+            | SequenceEvent::Punctuation(_) => None,
+        })
+        .collect()
+}
+
 fn continuous_syllable_duration_samples(events: &[SequenceEvent]) -> usize {
     let syllable_count = events
         .iter()
@@ -296,4 +392,52 @@ fn derivative_rms(samples: &[i16]) -> f64 {
     let count = u32::try_from(samples.len().saturating_sub(1)).expect("window length fits u32");
 
     (sum / f64::from(count)).sqrt()
+}
+
+fn envelope_modulation_strength(samples: &[i16], frequency_hz: f64) -> f64 {
+    let frame_samples =
+        usize::try_from((SYNTH_SAMPLE_RATE_HZ * 20) / 1_000).expect("frame length fits usize");
+    let hop_samples =
+        usize::try_from((SYNTH_SAMPLE_RATE_HZ * 5) / 1_000).expect("hop length fits usize");
+    let frames = rms_frames(samples, frame_samples, hop_samples);
+    let peak = frames.iter().copied().fold(0.0_f64, f64::max);
+    let active_threshold = peak * 0.08;
+    let mut active = Vec::new();
+
+    for (index, value) in frames.iter().copied().enumerate() {
+        if value >= active_threshold {
+            active.push((
+                usize_to_f64(index * hop_samples) / f64::from(SYNTH_SAMPLE_RATE_HZ),
+                value,
+            ));
+        }
+    }
+
+    if active.is_empty() {
+        return 0.0;
+    }
+
+    let mean = active
+        .iter()
+        .map(|(_, value)| (value + 0.000_000_001).ln())
+        .sum::<f64>()
+        / usize_to_f64(active.len());
+    let mut real = 0.0;
+    let mut imaginary = 0.0;
+    let mut norm = 0.0;
+
+    for (time_seconds, value) in active {
+        let centered = (value + 0.000_000_001).ln() - mean;
+        let angle = 2.0 * core::f64::consts::PI * frequency_hz * time_seconds;
+
+        real += centered * angle.cos();
+        imaginary -= centered * angle.sin();
+        norm += centered * centered;
+    }
+
+    ((real * real) + (imaginary * imaginary)).sqrt() / norm.sqrt().max(0.000_001)
+}
+
+fn usize_to_f64(value: usize) -> f64 {
+    u32::try_from(value).map_or(f64::from(u32::MAX), f64::from)
 }

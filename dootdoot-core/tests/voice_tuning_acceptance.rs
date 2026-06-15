@@ -5,6 +5,7 @@ const VOICE_V2: &str = include_str!("../../docs/validation/voice-v2-expressivene
 const VOICE_V3: &str = include_str!("../../docs/validation/voice-v3-smoothing.md");
 const VOICE_V4: &str = include_str!("../../docs/validation/voice-v4-onset-smoothing.md");
 const VOICE_V5: &str = include_str!("../../docs/validation/voice-v5-word-attack-smoothing.md");
+const VOICE_V6: &str = include_str!("../../docs/validation/voice-v6-repeated-phrase-smoothing.md");
 
 #[test]
 fn integrated_tuning_acceptance_records_phase_seven_decision() {
@@ -99,6 +100,24 @@ fn voice_v5_word_attack_smoothing_acceptance_records_word_boundary_decision() {
         assert!(
             VOICE_V5.contains(expected),
             "VOICE_V5 acceptance note should mention {expected}",
+        );
+    }
+}
+
+#[test]
+fn voice_v6_repeated_phrase_smoothing_acceptance_records_tremolo_decision() {
+    for expected in [
+        "Accepted for VOICE_V6",
+        "dootdoot VOICE_V6",
+        "repeated high-arousal",
+        "Word bridges",
+        "double-cycle",
+        "bridge/syllable",
+        "golden WAV hashes",
+    ] {
+        assert!(
+            VOICE_V6.contains(expected),
+            "VOICE_V6 acceptance note should mention {expected}",
         );
     }
 }

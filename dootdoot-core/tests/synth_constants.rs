@@ -98,6 +98,7 @@ fn design_documents_the_frozen_synthesis_constants() {
         "VOICE_V3 phrase-continuity smoothing",
         "VOICE_V4 repeated-onset smoothing",
         "VOICE_V5 word-attack smoothing",
+        "VOICE_V6 repeated-phrase smoothing",
         "base syllable = 170 ms",
         "word pause = 110 ms",
         "active sustain level is 34%",
