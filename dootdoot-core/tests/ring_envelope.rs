@@ -1,9 +1,9 @@
 //! Ring modulation and envelope tests.
 
 use dootdoot_core::{
-    BASE_SYLLABLE_SECONDS, ENVELOPE_ATTACK_SECONDS, ENVELOPE_DECAY_SECONDS, ENVELOPE_SUSTAIN_LEVEL,
-    RING_MOD_FREQUENCY_HZ, RING_MOD_MIX, amplitude_envelope, apply_amplitude_envelope,
-    ring_modulate, sin,
+    BASE_SYLLABLE_SECONDS, ENVELOPE_ATTACK_SECONDS, ENVELOPE_DECAY_SECONDS,
+    ENVELOPE_RELEASE_SECONDS, ENVELOPE_SUSTAIN_LEVEL, RING_MOD_FREQUENCY_HZ, RING_MOD_MIX,
+    amplitude_envelope, apply_amplitude_envelope, ring_modulate, sin,
 };
 
 #[test]
@@ -25,7 +25,7 @@ fn ring_modulation_uses_fixed_frequency_and_mix() {
 }
 
 #[test]
-fn amplitude_envelope_pins_attack_decay_sustain_and_release() {
+fn amplitude_envelope_has_droid_gesture_pulse_dip_and_tail() {
     assert_eq!(
         amplitude_envelope(0.0, BASE_SYLLABLE_SECONDS).to_bits(),
         0.0_f64.to_bits(),
@@ -34,14 +34,25 @@ fn amplitude_envelope_pins_attack_decay_sustain_and_release() {
         amplitude_envelope(ENVELOPE_ATTACK_SECONDS, BASE_SYLLABLE_SECONDS).to_bits(),
         1.0_f64.to_bits(),
     );
-    assert_eq!(
-        amplitude_envelope(
-            ENVELOPE_ATTACK_SECONDS + ENVELOPE_DECAY_SECONDS,
-            BASE_SYLLABLE_SECONDS,
-        )
-        .to_bits(),
-        ENVELOPE_SUSTAIN_LEVEL.to_bits(),
+
+    let pulse = amplitude_envelope(ENVELOPE_ATTACK_SECONDS + 0.012, BASE_SYLLABLE_SECONDS);
+    let dip = amplitude_envelope(
+        ENVELOPE_ATTACK_SECONDS + ENVELOPE_DECAY_SECONDS,
+        BASE_SYLLABLE_SECONDS,
     );
+    let recovery = amplitude_envelope(
+        ENVELOPE_ATTACK_SECONDS + ENVELOPE_DECAY_SECONDS + 0.026,
+        BASE_SYLLABLE_SECONDS,
+    );
+    let tail = amplitude_envelope(
+        BASE_SYLLABLE_SECONDS - (ENVELOPE_RELEASE_SECONDS * 0.5),
+        BASE_SYLLABLE_SECONDS,
+    );
+
+    assert!(pulse > recovery);
+    assert!(dip < recovery);
+    assert!(tail > 0.0);
+    assert!(tail < ENVELOPE_SUSTAIN_LEVEL);
     assert_eq!(
         amplitude_envelope(BASE_SYLLABLE_SECONDS, BASE_SYLLABLE_SECONDS).to_bits(),
         0.0_f64.to_bits(),

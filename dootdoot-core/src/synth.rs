@@ -29,28 +29,28 @@ pub const FORMANT_Q: [f64; FORMANT_COUNT] = [5.5, 7.0, 8.0];
 pub const FORMANT_GAINS: [f64; FORMANT_COUNT] = [0.52, 0.42, 0.78];
 
 /// Gives the fixed base syllable duration in seconds.
-pub const BASE_SYLLABLE_SECONDS: f64 = 0.150;
+pub const BASE_SYLLABLE_SECONDS: f64 = 0.170;
 
 /// Gives the fixed base syllable duration in samples.
-pub const BASE_SYLLABLE_SAMPLES: u32 = 6_615;
+pub const BASE_SYLLABLE_SAMPLES: u32 = 7_497;
 
 /// Gives the fixed pause between separate words in seconds.
-pub const WORD_PAUSE_SECONDS: f64 = 0.080;
+pub const WORD_PAUSE_SECONDS: f64 = 0.110;
 
 /// Gives the fixed pause between separate words in samples.
-pub const WORD_PAUSE_SAMPLES: u32 = 3_528;
+pub const WORD_PAUSE_SAMPLES: u32 = 4_851;
 
 /// Gives the pause for comma/semicolon/colon prosody in seconds.
-pub const MEDIUM_PUNCTUATION_PAUSE_SECONDS: f64 = 0.120;
+pub const MEDIUM_PUNCTUATION_PAUSE_SECONDS: f64 = 0.150;
 
 /// Gives the pause for comma/semicolon/colon prosody in samples.
-pub const MEDIUM_PUNCTUATION_PAUSE_SAMPLES: u32 = 5_292;
+pub const MEDIUM_PUNCTUATION_PAUSE_SAMPLES: u32 = 6_615;
 
 /// Gives the pause for question/period/exclamation prosody in seconds.
-pub const LONG_PUNCTUATION_PAUSE_SECONDS: f64 = 0.180;
+pub const LONG_PUNCTUATION_PAUSE_SECONDS: f64 = 0.240;
 
 /// Gives the pause for question/period/exclamation prosody in samples.
-pub const LONG_PUNCTUATION_PAUSE_SAMPLES: u32 = 7_938;
+pub const LONG_PUNCTUATION_PAUSE_SAMPLES: u32 = 10_584;
 
 /// Gives the fixed leading silence in seconds.
 pub const LEADING_SILENCE_SECONDS: f64 = 0.030;
@@ -59,10 +59,10 @@ pub const LEADING_SILENCE_SECONDS: f64 = 0.030;
 pub const LEADING_SILENCE_SAMPLES: u32 = 1_323;
 
 /// Gives the fixed trailing silence in seconds.
-pub const TRAILING_SILENCE_SECONDS: f64 = 0.060;
+pub const TRAILING_SILENCE_SECONDS: f64 = 0.090;
 
 /// Gives the fixed trailing silence in samples.
-pub const TRAILING_SILENCE_SAMPLES: u32 = 2_646;
+pub const TRAILING_SILENCE_SAMPLES: u32 = 3_969;
 
 /// Gives the fixed portamento glide time in seconds.
 pub const PORTAMENTO_SECONDS: f64 = 0.045;
@@ -86,16 +86,16 @@ pub const RING_MOD_FREQUENCY_HZ: f64 = 72.0;
 pub const RING_MOD_MIX: f64 = 0.08;
 
 /// Gives the fixed envelope attack in seconds.
-pub const ENVELOPE_ATTACK_SECONDS: f64 = 0.012;
+pub const ENVELOPE_ATTACK_SECONDS: f64 = 0.006;
 
 /// Gives the fixed envelope decay in seconds.
-pub const ENVELOPE_DECAY_SECONDS: f64 = 0.080;
+pub const ENVELOPE_DECAY_SECONDS: f64 = 0.050;
 
 /// Gives the fixed envelope release in seconds.
-pub const ENVELOPE_RELEASE_SECONDS: f64 = 0.025;
+pub const ENVELOPE_RELEASE_SECONDS: f64 = 0.060;
 
 /// Gives the fixed envelope sustain level after decay.
-pub const ENVELOPE_SUSTAIN_LEVEL: f64 = 0.35;
+pub const ENVELOPE_SUSTAIN_LEVEL: f64 = 0.24;
 
 /// Gives the high-register pitch bias in hertz.
 pub const PITCH_REGISTER_BIAS_HZ: f64 = 760.0;
@@ -381,19 +381,13 @@ pub fn amplitude_envelope(elapsed_seconds: f64, duration_seconds: f64) -> f64 {
     }
 
     if elapsed_seconds <= ENVELOPE_ATTACK_SECONDS {
-        return (elapsed_seconds / ENVELOPE_ATTACK_SECONDS).clamp(0.0, 1.0);
+        let progress = (elapsed_seconds / ENVELOPE_ATTACK_SECONDS).clamp(0.0, 1.0);
+
+        return progress * progress;
     }
 
-    let decay_end = ENVELOPE_ATTACK_SECONDS + ENVELOPE_DECAY_SECONDS;
-
-    if elapsed_seconds <= decay_end {
-        let progress =
-            ((elapsed_seconds - ENVELOPE_ATTACK_SECONDS) / ENVELOPE_DECAY_SECONDS).clamp(0.0, 1.0);
-
-        return 1.0 + ((ENVELOPE_SUSTAIN_LEVEL - 1.0) * progress);
-    }
-
-    let release_start = (duration_seconds - ENVELOPE_RELEASE_SECONDS).max(decay_end);
+    let release_start = (duration_seconds - ENVELOPE_RELEASE_SECONDS)
+        .max(ENVELOPE_ATTACK_SECONDS + ENVELOPE_DECAY_SECONDS);
 
     if elapsed_seconds >= release_start {
         let release_seconds = duration_seconds - release_start;
@@ -402,11 +396,25 @@ pub fn amplitude_envelope(elapsed_seconds: f64, duration_seconds: f64) -> f64 {
             return 0.0;
         }
 
-        return ENVELOPE_SUSTAIN_LEVEL
-            * ((duration_seconds - elapsed_seconds) / release_seconds).clamp(0.0, 1.0);
+        let progress = ((duration_seconds - elapsed_seconds) / release_seconds).clamp(0.0, 1.0);
+
+        return ENVELOPE_SUSTAIN_LEVEL * progress * progress;
     }
 
-    ENVELOPE_SUSTAIN_LEVEL
+    let decay_progress =
+        ((elapsed_seconds - ENVELOPE_ATTACK_SECONDS) / ENVELOPE_DECAY_SECONDS).clamp(0.0, 1.0);
+    let inverse_decay = 1.0 - decay_progress;
+    let body =
+        ENVELOPE_SUSTAIN_LEVEL + ((1.0 - ENVELOPE_SUSTAIN_LEVEL) * inverse_decay * inverse_decay);
+    let pulse = 0.22 * triangle_window(elapsed_seconds, ENVELOPE_ATTACK_SECONDS + 0.012, 0.018);
+    let dip = 0.30
+        * triangle_window(
+            elapsed_seconds,
+            ENVELOPE_ATTACK_SECONDS + ENVELOPE_DECAY_SECONDS,
+            0.020,
+        );
+
+    (body + pulse - dip).clamp(0.0, 1.0)
 }
 
 /// Applies the fixed per-syllable amplitude envelope to a sample.
@@ -590,6 +598,16 @@ fn interpolate_formants(
     amount: f64,
 ) -> [f64; FORMANT_COUNT] {
     std::array::from_fn(|index| from[index] + ((to[index] - from[index]) * amount))
+}
+
+fn triangle_window(elapsed_seconds: f64, center_seconds: f64, half_width_seconds: f64) -> f64 {
+    if half_width_seconds <= 0.0 {
+        return 0.0;
+    }
+
+    let distance = (elapsed_seconds - center_seconds).abs();
+
+    (1.0 - (distance / half_width_seconds)).clamp(0.0, 1.0)
 }
 
 impl BandpassFilter {

@@ -497,15 +497,15 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
 
 **FORMAT_V1 synthesis constants.** Initial frozen values:
 
-- base syllable = 150 ms (6,615 samples at 44.1 kHz); word pause = 80 ms; medium
-  punctuation pause = 120 ms; long punctuation pause = 180 ms; leading/trailing silence =
-  30/60 ms (3,528/5,292/7,938 and 1,323/2,646 samples).
+- base syllable = 170 ms (7,497 samples at 44.1 kHz); word pause = 110 ms; medium
+  punctuation pause = 150 ms; long punctuation pause = 240 ms; leading/trailing silence =
+  30/90 ms (4,851/6,615/10,584 and 1,323/3,969 samples).
 - portamento = 45 ms; internal pitch sweep/arch = 220/90 cents; internal vowel
   sweep/bloom = 0.18/0.12; punctuation final glide = 3 semitones; compound warble
   rates = 3.1/8.5/15.7 Hz with deterministic per-syllable phase offsets; warble depth =
   45 cents.
-- ring-mod = 72 Hz at 8% mix; envelope attack/decay/release = 12/80/25 ms with 35%
-  sustain after decay.
+- ring-mod = 72 Hz at 8% mix; gesture envelope attack/decay/release = 6/50/60 ms with
+  24% tail sustain, an internal pulse, and a deterministic dip/recovery.
 - attack transient = 20 ms at 7% mix; low-body layer = 11% mix in the 300-700 Hz
   region; upper-mid sparkle = 5.5% mix in the 2-5 kHz region.
 - pitch register bias = 760 Hz with a 10-semitone semantic span; source mix = 55% saw +

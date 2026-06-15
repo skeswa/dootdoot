@@ -254,7 +254,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       semantic warble knob scales amount/complexity while remaining bounded. Add tests for
       deterministic phase behavior and knob-range limits.
       Deps: T-48 · Reqs: FR-16, FR-18, NFR-3, NFR-16 · Est: 2h
-- [ ] **T-50 — Rework envelope and phrasing templates.** Replace the simple ADSR-like gate with
+- [x] **T-50 — Rework envelope and phrasing templates.** Replace the simple ADSR-like gate with
       a droid gesture envelope: asymmetric attack, internal pulse/dip, and deterministic tail.
       Adjust fixed syllable/pause/tail timing only as needed to reduce active density and create
       more phrase air; update exact sample-count estimation and input-limit tests for any timing
