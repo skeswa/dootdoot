@@ -125,3 +125,11 @@ uses those rows to choose finite texture paths:
 - `stutter/burst` adds deterministic gated pulses;
 - `tremble` adds bounded pitch and amplitude tremor;
 - servo and noise-tail seasoning use deterministic oscillators, never randomness.
+
+## Frozen Contract
+
+`FORMAT_V2` is frozen once the phrase, affect, complexity, and archetype channels above
+are present together. The final acceptance note is
+[`validation/format-v2-expressiveness.md`](../validation/format-v2-expressiveness.md).
+The BB-8 contextual clip workflow is a directional aid for phrase-level listening checks;
+the committed golden WAV hashes remain the sample-level format contract.

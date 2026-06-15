@@ -4,23 +4,41 @@ set -euo pipefail
 reference_dir="${1:-/Users/skeswa/repos/anddav87/bb8-sounds}"
 output_dir="${2:-target/bb8-metrics}"
 decoded_dir="${output_dir}/reference-wav"
+contextual_source_dir="${reference_dir}/bb8-clips"
+contextual_decoded_dir="${output_dir}/contextual-wav"
+contextual_output_dir="${output_dir}/contextual"
+
+decode_mp3_dir() {
+  local source_dir="$1"
+  local destination_dir="$2"
+
+  mkdir -p "${destination_dir}"
+
+  while IFS= read -r -d '' source_file; do
+    file_name="$(basename "${source_file%.*}").wav"
+    ffmpeg -hide_banner -loglevel error -y \
+      -i "${source_file}" \
+      -ac 1 \
+      -ar 44100 \
+      "${destination_dir}/${file_name}"
+  done < <(find "${source_dir}" -maxdepth 1 -type f -name '*.mp3' -print0 | sort -z)
+}
 
 if ! command -v ffmpeg >/dev/null 2>&1; then
   echo "error: ffmpeg is required to decode BB-8 MP3 clips" >&2
   exit 1
 fi
 
-mkdir -p "${decoded_dir}"
-
-while IFS= read -r -d '' source_file; do
-  file_name="$(basename "${source_file%.*}").wav"
-  ffmpeg -hide_banner -loglevel error -y \
-    -i "${source_file}" \
-    -ac 1 \
-    -ar 44100 \
-    "${decoded_dir}/${file_name}"
-done < <(find "${reference_dir}" -maxdepth 1 -type f -name '*.mp3' -print0 | sort -z)
+decode_mp3_dir "${reference_dir}" "${decoded_dir}"
 
 cargo run -p xtask -- bb8-metrics \
   --reference-wav-dir "${decoded_dir}" \
   --output-dir "${output_dir}"
+
+if [ -d "${contextual_source_dir}" ]; then
+  decode_mp3_dir "${contextual_source_dir}" "${contextual_decoded_dir}"
+
+  cargo run -p xtask -- bb8-metrics \
+    --reference-wav-dir "${contextual_decoded_dir}" \
+    --output-dir "${contextual_output_dir}"
+fi

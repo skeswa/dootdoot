@@ -10,9 +10,10 @@
 
 <!-- Add these once the project ships: CI status, crates.io version, downloads. -->
 
-> **Status: FORMAT_V2 expressiveness work is in progress.** `FORMAT_V1` remains the
-> locked v1 contract; the active branch is adding deterministic V2 performance channels.
-> Packaging work is still in progress. See [the roadmap](docs/plan.md) and
+> **Status: FORMAT_V2 expressiveness is frozen.** `FORMAT_V1` remains the locked v1
+> contract; the active branch now surfaces deterministic V2 phrase, affect, complexity,
+> and archetype performance channels. Packaging work is still in progress. See
+> [the roadmap](docs/plan.md) and
 > [packaging notes](docs/reference/packaging.md).
 
 `dootdoot` reads text and emits short bursts of warbly droid chatter. It's a small,
@@ -60,9 +61,9 @@ hello │ +0.185 │ -0.340 │ +0.512 │ -0.118
 ? │ control:question │ - │ - │ -
 ```
 
-The exact numbers depend on the frozen `FORMAT_V1` mapping. Punctuation rows are
-control markers: they shape the preceding syllable and pause, but do not produce their
-own voiced token.
+The exact numbers depend on the frozen mapping and active format. Punctuation and V2
+performance rows are control markers: they shape neighboring voiced syllables and pauses,
+but do not produce their own voiced tokens.
 
 ## Documented behavior
 

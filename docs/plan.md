@@ -378,7 +378,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       moan, stutter/burst, and tremble render paths plus sparse servo/noise-tail texture.
       Keep all paths deterministic, finite, and inside the BB-8-family parameter space.
       Deps: T-72 · Reqs: FR-16, FR-17, FR-18, NFR-3, NFR-4, NFR-16 · Est: 3h
-- [ ] **T-74 — Freeze FORMAT_V2 expressiveness and acceptance aids.** Extend the Phase 7
+- [x] **T-74 — Freeze FORMAT_V2 expressiveness and acceptance aids.** Extend the Phase 7
       metrics workflow with contextual-clip directional checks from the expressiveness
       analysis, run by-ear acceptance, update `--version`, regenerate v2 golden WAV
       hashes, and document the final phrase/affect/complexity/archetype contract.

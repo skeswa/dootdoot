@@ -12,6 +12,9 @@ fn bb8_metrics_script_decodes_references_and_runs_xtask_report() {
         "-ac 1",
         "-ar 44100",
         "bb8-metrics",
+        "bb8-clips",
+        "contextual-wav",
+        "contextual",
         "/Users/skeswa/repos/anddav87/bb8-sounds",
     ] {
         assert!(

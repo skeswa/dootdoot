@@ -198,6 +198,9 @@
 - **FR-53** `FORMAT_V2` synthesis SHALL render selected gesture archetypes with bounded,
   deterministic yelp, moan, stutter/burst, and tremble texture paths plus sparse servo
   and noise-tail seasoning, all inside finite BB-8-family parameter bounds.
+- **FR-54** The frozen `FORMAT_V2` contract SHALL be documented with final
+  phrase/affect/complexity/archetype acceptance, contextual-clip directional checks,
+  the surfaced `dootdoot FORMAT_V2` version string, and regenerated golden WAV hashes.
 
 ---
 

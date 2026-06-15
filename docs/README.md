@@ -40,10 +40,12 @@ Evidence and proposals that informed the sound design.
 
 ## Validation
 
-Short acceptance notes for decisions that were finalized during the `FORMAT_V1` freeze.
+Short acceptance notes for decisions that were finalized during format freezes.
 
 - [`validation/voice-tuning.md`](validation/voice-tuning.md) — final Phase 7 voice tuning
   acceptance.
+- [`validation/format-v2-expressiveness.md`](validation/format-v2-expressiveness.md) —
+  final `FORMAT_V2` phrase/affect/complexity/archetype acceptance.
 - [`validation/learnability-spread.md`](validation/learnability-spread.md) — final
   semantic cluster spread check.
 - [`validation/squash.md`](validation/squash.md) — finalized tanh z-score squash choice.

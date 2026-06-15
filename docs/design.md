@@ -705,6 +705,11 @@ Where useful for learnability, `--explain` may add rows for phrase, mood, comple
 archetype decisions. These rows are still stderr-only control/performance rows; they do
 not affect output routing and are part of the versioned snapshot contract.
 
+`FORMAT_V2` is frozen by the acceptance note in
+[`docs/validation/format-v2-expressiveness.md`](validation/format-v2-expressiveness.md):
+contextual BB-8 clips guide phrase-level listening checks, and the committed golden WAV
+hashes remain the byte-level contract.
+
 ---
 
 ## 9. Architecture

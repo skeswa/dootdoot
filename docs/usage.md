@@ -58,8 +58,8 @@ pause, but they do not create a separate voiced syllable.
   `[UNK]` is deliberately kept and voiced.
 - Prosodic punctuation is limited to `.`, `!`, `?`, `,`, `;`, and `:`. Other symbols are
   voiced normally when the tokenizer produces a voiced token.
-- Non-Latin scripts and emoji are accepted, but `FORMAT_V1` is English-oriented and often
-  maps them to `[UNK]` or repetitive subword shapes.
+- Non-Latin scripts and emoji are accepted, but the embedded English-oriented semantic
+  mapping often routes them through `[UNK]` or repetitive subword shapes.
 
 ## Limits
 
@@ -70,6 +70,7 @@ punctuation and word boundaries affect timing.
 
 ## Version Contract
 
-`dootdoot --version` surfaces the active format identifier. `FORMAT_V1` is locked: any
-change that alters a rendered sample requires a new identifier and regenerated golden WAV
-hashes.
+`dootdoot --version` surfaces the active format identifier. The current binary reports
+`dootdoot FORMAT_V2`. `FORMAT_V1` is still the locked v1 contract, and `FORMAT_V2` is the
+locked expressiveness contract; any further rendered-sample change requires a new
+identifier and regenerated golden WAV hashes.
