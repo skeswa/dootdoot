@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **`docs/design.md`** — full rationale + the end-to-end pipeline (§2) and runtime/build split (§9).
 - **`docs/spec.md`** — normative requirements (`FR-*`, `NFR-*`).
-- **`docs/plan.md`** — tasks `T-01…T-57`, dependencies, critical path.
+- **`docs/plan.md`** — the phased `T-NN` task breakdown with dependencies and the
+  critical path; its checkboxes are the live source of truth for what's built vs. pending.
+  (Task IDs are stable but the set grows/renumbers — cite specific tasks by ID, not by range.)
 - **`docs/style.md`** — the **mandatory, enforced** Rust style guide (backed by committed config + blocking CI).
 
 Keep these in sync with any code you write.

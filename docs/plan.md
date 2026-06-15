@@ -15,7 +15,7 @@
 > "done" means the behavior is covered by a passing test at the appropriate level (value
 > test, `proptest` invariant, `insta` snapshot, or golden-WAV hash — see
 > [`style.md`](./style.md) §9). Where a task's deliverable _is_ a test harness or fixture
-> (e.g. T-09/T-10, T-25, T-49–T-53), that test is the red step for the code it guards.
+> (e.g. T-09/T-10, T-25, T-55–T-60), that test is the red step for the code it guards.
 > Aim for roughly one red-green cycle per `jj` revision.
 
 > **Progress tracking.** Every task is a checkbox. Check it off (`- [ ]` → `- [x]`) only
@@ -79,7 +79,7 @@
 - [x] **T-12 — Load model & extract all token embeddings.** Use `model2vec-rs` to read the
       ~30k × ~256 embedding matrix and per-token weights.
       Deps: T-11 · Reqs: FR-40 · Est: 2h
-- [ ] **T-13 — Compute top-4 PCA projection.** Center, SVD/PCA via `nalgebra`/`linfa`, keep
+- [x] **T-13 — Compute top-4 PCA projection.** Center, SVD/PCA via `nalgebra`/`linfa`, keep
       4 components.
       Deps: T-12 · Reqs: FR-40 · Est: 2.5h
 - [x] **T-14 — Canonicalize component signs.** Deterministic rule (largest-magnitude
@@ -87,7 +87,7 @@
       Deps: T-13 · Reqs: FR-41 · Est: 1h
 - [x] **T-15 — Choose squash function + compute per-axis stats.** Select the squash
       (tanh vs percentile-clamp) **here** — it determines which stats the header carries —
-      and derive the per-axis stats over the full vocab. Document the choice; T-46 may revise
+      and derive the per-axis stats over the full vocab. Document the choice; T-52 may revise
       it and regenerate the artifact before the freeze.
       Deps: T-14 · Reqs: FR-12 · Est: 1.5h
 - [x] **T-16 — Define `format_v1.bin` binary layout.** Little-endian. Header (magic,
@@ -199,7 +199,9 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-40 — Output routing.** Implement no-`-o`→play, `-o`→write, `-o --play`→both.
       Deps: T-38, T-36, T-37 · Reqs: FR-26, FR-27, FR-28 · Est: 1h
 - [x] **T-41 — Live playback via `rodio`.** Stream the canonical buffer; CoreAudio on Mac.
-      Deps: T-36 · Reqs: FR-27, FR-30, NFR-12 · Est: 1.5h
+      Sub-second time-to-first-sound is an architectural guarantee of the no-tensor-runtime
+      design (embedded table, no model load), not a tuned hot path.
+      Deps: T-36 · Reqs: FR-27, FR-30, NFR-12, NFR-13 · Est: 1.5h
 - [x] **T-42 — `--explain` table.** Per-token `token │ pitch │ vowel │ contour │ warble`
       to stderr, with prosodic punctuation shown as distinct control rows.
       Deps: T-24, T-38 · Reqs: FR-31, FR-32, FR-23a · Est: 1.5h
@@ -214,102 +216,102 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ## Phase 7 — Voice tuning (freeze the sound)
 
-> **Tuning decomposition.** T-58…T-63 were appended after
+> **Tuning decomposition.** T-45…T-50 were inserted after
 > [`bb8-sound-signature-analysis.md`](./bb8-sound-signature-analysis.md) to split the
 > original broad T-45 tuning pass into implementation-sized, testable voice-DNA changes
-> without renumbering the existing future tasks. Metrics are directional aids only; by-ear
-> review remains the final acceptance gate for T-45.
+> while keeping completed task IDs stable. Metrics are directional aids only; by-ear review
+> remains the final acceptance gate for T-51.
 
-- [ ] **T-58 — Establish BB-8 comparison corpus + metrics harness.** Keep a small local
-      reference/dootdoot comparison workflow for T-45 tuning: decode the downloaded BB-8 clips to
+- [ ] **T-45 — Establish BB-8 comparison corpus + metrics harness.** Keep a small local
+      reference/dootdoot comparison workflow for Phase 7 tuning: decode the downloaded BB-8 clips to
       mono 44.1 kHz, render a fixed dootdoot phrase corpus, and report the directional metrics
       from the analysis doc (active fraction/islands, magnitude-spectrum centroid/85% rolloff,
       dominant-peak motion, harmonicity, and broad power bands). Document that the active-island
       metrics are gate-dependent and that BB-8 brightness mainly lives in the 2–5 kHz upper-mid
       region, not >6 kHz. This is a tuning aid, not a golden contract.
       Deps: T-40, T-41 · Reqs: NFR-16 · Est: 1.5h
-- [ ] **T-59 — Add internal pitch and vowel trajectories.** Give every syllable a fixed
+- [ ] **T-46 — Add internal pitch and vowel trajectories.** Give every syllable a fixed
       deterministic micro-gesture even when there is no neighboring token: an internal pitch
       swoop layered with existing inter-token portamento, plus a time-varying vowel/formant
       trajectory around the semantic vowel target. Add focused tests for deterministic trajectory
       endpoints/ranges and keep all motion inside the fixed droid parameter space.
-      Deps: T-32, T-33, T-58 · Reqs: FR-15, FR-16, FR-18, FR-19, NFR-16 · Est: 2.5h
-- [ ] **T-60 — Add deterministic transient/body/upper-mid layers.** Keep the pitched
+      Deps: T-32, T-33, T-45 · Reqs: FR-15, FR-16, FR-18, FR-19, NFR-16 · Est: 2.5h
+- [ ] **T-47 — Add deterministic transient/body/upper-mid layers.** Keep the pitched
       formant core, but add bounded deterministic layers that make each gesture less like a single
       clean oscillator: attack transient/noise, optional low body around the 300–700 Hz region,
       and gesture-shaped upper-mid sparkle primarily in the 2–5 kHz band. Avoid unseeded
       randomness and keep >6 kHz content modest because the references carry little energy there.
       Add tests for determinism, bounded output, and no silent/NaN paths.
-      Deps: T-59 · Reqs: FR-16, FR-17, NFR-3, NFR-4, NFR-16 · Est: 2.5h
-- [ ] **T-61 — Rebalance register, pitch span, and formants.** Tune the fixed pitch bias/span,
+      Deps: T-46 · Reqs: FR-16, FR-17, NFR-3, NFR-4, NFR-16 · Est: 2.5h
+- [ ] **T-48 — Rebalance register, pitch span, and formants.** Tune the fixed pitch bias/span,
       formant gains/Q/loci, and source mix so dootdoot no longer over-focuses the 500–2000 Hz
       band and has more BB-8-like body plus upper-mid brightness. Preserve the semantic axis
       mapping and add regression tests for pitch/formant bounds and sample determinism.
-      Deps: T-60 · Reqs: FR-13, FR-16, FR-17, FR-18, NFR-16 · Est: 2h
-- [ ] **T-62 — Replace simple sine warble with compound deterministic modulation.** Move from a
+      Deps: T-47 · Reqs: FR-13, FR-16, FR-17, FR-18, NFR-16 · Est: 2h
+- [ ] **T-49 — Replace simple sine warble with compound deterministic modulation.** Move from a
       per-syllable 8.5 Hz sine vibrato to a richer deterministic LFO stack (slow drift + faster
       flutter) whose phase/position handling avoids every token beginning identically. The
       semantic warble knob scales amount/complexity while remaining bounded. Add tests for
       deterministic phase behavior and knob-range limits.
-      Deps: T-61 · Reqs: FR-16, FR-18, NFR-3, NFR-16 · Est: 2h
-- [ ] **T-63 — Rework envelope and phrasing templates.** Replace the simple ADSR-like gate with
+      Deps: T-48 · Reqs: FR-16, FR-18, NFR-3, NFR-16 · Est: 2h
+- [ ] **T-50 — Rework envelope and phrasing templates.** Replace the simple ADSR-like gate with
       a droid gesture envelope: asymmetric attack, internal pulse/dip, and deterministic tail.
       Adjust fixed syllable/pause/tail timing only as needed to reduce active density and create
       more phrase air; update exact sample-count estimation and input-limit tests for any timing
       changes. Preserve deterministic timing templates, not runtime randomness.
-      Deps: T-62, T-43 · Reqs: FR-20, FR-21, FR-22, FR-24, FR-36, FR-37, NFR-16 · Est: 2h
-- [ ] **T-45 — Final integrated BB-8 tuning pass.** Tune by ear across varied text and the local
-      BB-8 reference clips after the layered voice changes land. Use the T-58 metrics to confirm
+      Deps: T-49, T-43 · Reqs: FR-20, FR-21, FR-22, FR-24, FR-36, FR-37, NFR-16 · Est: 2h
+- [ ] **T-51 — Final integrated BB-8 tuning pass.** Tune by ear across varied text and the local
+      BB-8 reference clips after the layered voice changes land. Use the T-45 metrics to confirm
       directionally improved body, upper-mid brightness, gesture motion, harmonicity, and phrase
       air, but accept/reject by listening for reliable BB-8-family identity.
-      Deps: T-58, T-59, T-60, T-61, T-62, T-63 · Reqs: NFR-16 · Est: 3h
-- [ ] **T-46 — Validate/finalize squash; regenerate artifact if changed.** Confirm the
+      Deps: T-45, T-46, T-47, T-48, T-49, T-50 · Reqs: NFR-16 · Est: 3h
+- [ ] **T-52 — Validate/finalize squash; regenerate artifact if changed.** Confirm the
       squash chosen at T-15 still lands tastefully after by-ear tuning; if it (or its stats)
       changes, **re-run `xtask` to regenerate `format_v1.bin`** (header stats only — baked
       vectors are pre-squash) before the freeze. Lock into `FORMAT_V1`.
-      Deps: T-45, T-23, T-15 · Reqs: FR-12, FR-39 · Est: 1.5h
-- [ ] **T-47 — Validate learnability spread.** Spot-check that distinct semantic clusters
+      Deps: T-51, T-23, T-15 · Reqs: FR-12, FR-39 · Est: 1.5h
+- [ ] **T-53 — Validate learnability spread.** Spot-check that distinct semantic clusters
       are audibly distinct and similar ones audibly similar; adjust axis ranges if needed.
-      Deps: T-45 · Reqs: NFR-14, NFR-15, NFR-16 · Est: 2h
-- [ ] **T-48 — Lock `FORMAT_V1`.** Finalize all constants/hashes; assert version surfaced
+      Deps: T-51 · Reqs: NFR-14, NFR-15, NFR-16 · Est: 2h
+- [ ] **T-54 — Lock `FORMAT_V1`.** Finalize all constants/hashes; assert version surfaced
       by `--version`; document that further output changes require `V2`.
-      Deps: T-46, T-47 · Reqs: FR-38, FR-39 · Est: 1h
+      Deps: T-52, T-53 · Reqs: FR-38, FR-39 · Est: 1h
 
 ---
 
 ## Phase 8 — Test suite & determinism contract
 
-- [ ] **T-49 — Define golden corpus.** Fix inputs: `""`, `"hello"`, `"hello there"`,
+- [ ] **T-55 — Define golden corpus.** Fix inputs: `""`, `"hello"`, `"hello there"`,
       `"playing"`, `"cat"`, `"dog"`, `"airplane"`, `"?"`, punctuation, `[UNK]` triggers,
       a long input.
-      Deps: T-48 · Reqs: NFR-17 · Est: 1h
-- [ ] **T-50 — Generate & commit golden WAV hashes.** SHA-256 of each corpus output (after
+      Deps: T-54 · Reqs: NFR-17 · Est: 1h
+- [ ] **T-56 — Generate & commit golden WAV hashes.** SHA-256 of each corpus output (after
       freeze).
-      Deps: T-49 · Reqs: NFR-17 · Est: 1h
-- [ ] **T-51 — Golden-WAV hash test.** Assert outputs match committed hashes; wire into CI
+      Deps: T-55 · Reqs: NFR-17 · Est: 1h
+- [ ] **T-57 — Golden-WAV hash test.** Assert outputs match committed hashes; wire into CI
       on macOS + Linux.
-      Deps: T-50, T-05 · Reqs: NFR-1, NFR-2, NFR-17 · Est: 1.5h
-- [ ] **T-52 — Double-run determinism test.** Each corpus input twice → byte-identical.
-      Deps: T-49 · Reqs: NFR-1, NFR-18 · Est: 1h
-- [ ] **T-53 — `--explain` snapshot test.** Golden snapshot of the table for a fixed input.
+      Deps: T-56, T-05 · Reqs: NFR-1, NFR-2, NFR-17 · Est: 1.5h
+- [ ] **T-58 — Double-run determinism test.** Each corpus input twice → byte-identical.
+      Deps: T-55 · Reqs: NFR-1, NFR-18 · Est: 1h
+- [ ] **T-59 — `--explain` snapshot test.** Golden snapshot of the table for a fixed input.
       Deps: T-42 · Reqs: NFR-20 · Est: 1h
-- [ ] **T-54 — Cross-platform verification.** Confirm identical hashes on macOS and Linux
+- [ ] **T-60 — Cross-platform verification.** Confirm identical hashes on macOS and Linux
       in CI; investigate/fix any divergence (math path).
-      Deps: T-51 · Reqs: NFR-2, NFR-3, NFR-5 · Est: 2h
+      Deps: T-57 · Reqs: NFR-2, NFR-3, NFR-5 · Est: 2h
 
 ---
 
 ## Phase 9 — Documentation & packaging
 
-- [ ] **T-55 — README + usage docs.** Examples, the documented behaviors (uncased,
+- [ ] **T-61 — README + usage docs.** Examples, the documented behaviors (uncased,
       English-oriented, "?" chirp, limits), and `--explain` walkthrough.
       Deps: T-44 · Reqs: NFR-21 · Est: 2h
-- [ ] **T-56 — Asset regeneration guide.** How to re-run `xtask` and when a `V2` bump is
+- [ ] **T-62 — Asset regeneration guide.** How to re-run `xtask` and when a `V2` bump is
       required.
-      Deps: T-18, T-48 · Reqs: FR-39, FR-40 · Est: 1h
-- [ ] **T-57 — Packaging.** `cargo install` support; optional Homebrew formula / prebuilt
+      Deps: T-18, T-54 · Reqs: FR-39, FR-40 · Est: 1h
+- [ ] **T-63 — Packaging.** `cargo install` support; optional Homebrew formula / prebuilt
       release binaries; choose license.
-      Deps: T-54 · Reqs: NFR-11 · Est: 2.5h
+      Deps: T-60 · Reqs: NFR-11 · Est: 2.5h
 
 ---
 
@@ -320,10 +322,10 @@ flowchart LR
     T01[T-01] --> T04[T-04] --> T11[T-11] --> T12[T-12] --> T13[T-13]
     T13 --> T14[T-14] --> T15[T-15] --> T16[T-16] --> T17[T-17] --> T18[T-18]
     T18 --> T1920["T-19 / T-20"] --> T21[T-21] --> T22[T-22] --> T23[T-23] --> T24[T-24]
-    T24 --> T33[T-33] --> T36[T-36] --> T40[T-40] --> T58[T-58] --> T59[T-59]
-    T59 --> T60[T-60] --> T61[T-61] --> T62[T-62] --> T63[T-63] --> T45[T-45]
-    T45 --> T4647["T-46 / T-47"]
-    T4647 --> T48[T-48] --> T49[T-49] --> T50[T-50] --> T51[T-51] --> T54[T-54] --> T57[T-57]
+    T24 --> T33[T-33] --> T36[T-36] --> T40[T-40] --> T45[T-45] --> T46[T-46]
+    T46 --> T47[T-47] --> T48[T-48] --> T49[T-49] --> T50[T-50] --> T51[T-51]
+    T51 --> T5253["T-52 / T-53"]
+    T5253 --> T54[T-54] --> T55[T-55] --> T56[T-56] --> T57[T-57] --> T60[T-60] --> T63[T-63]
 
     OM["T-06 … T-10<br/>owned math"] --> T33
     SP["T-26 … T-32<br/>synth primitives"] --> T33
@@ -331,5 +333,5 @@ flowchart LR
 
 Owned math (T-06–T-10) and the synth primitives (T-26–T-32) proceed in parallel and
 converge at T-33. Tuning now runs through the BB-8 comparison/tuning breakdown
-(T-58–T-63) before the final by-ear T-45 acceptance pass. Tuning must precede freezing
-(T-48), which gates all golden-file tests (Phase 8).
+(T-45–T-50) before the final by-ear T-51 acceptance pass. Tuning must precede freezing
+(T-54), which gates all golden-file tests (Phase 8).
