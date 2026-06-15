@@ -8,14 +8,17 @@ pub const VOICE_V1: &str = "VOICE_V1";
 /// Identifies the second frozen sample-affecting output contract.
 pub const VOICE_V2: &str = "VOICE_V2";
 
-/// Identifies the current phrase-continuous output contract.
+/// Identifies the phrase-continuous output contract.
 pub const VOICE_V3: &str = "VOICE_V3";
 
-/// Identifies the current repeated-onset-smoothed output contract.
+/// Identifies the repeated-onset-smoothed output contract.
 pub const VOICE_V4: &str = "VOICE_V4";
 
+/// Identifies the current word-attack-smoothed output contract.
+pub const VOICE_V5: &str = "VOICE_V5";
+
 /// Identifies the active sample-affecting output contract.
-pub const ACTIVE_VOICE: &str = VOICE_V4;
+pub const ACTIVE_VOICE: &str = VOICE_V5;
 
 /// Identifies the baked semantic mapping artifact layout.
 pub const FORMAT_ARTIFACT_V1: &str = "format_v1.bin";

@@ -1,8 +1,10 @@
 //! Phrase-continuity regression tests.
 
 use dootdoot_core::{
-    LEADING_SILENCE_SAMPLES, SYNTH_SAMPLE_RATE_HZ, SequenceEvent, TRAILING_SILENCE_SAMPLES,
-    estimate_utterance_sample_count, render_text_canonical_buffer, sequence_events_for_text,
+    BASE_SYLLABLE_SAMPLES, KnobSet, LEADING_SILENCE_SAMPLES, SYNTH_SAMPLE_RATE_HZ, SequenceEvent,
+    SquashedVector, TRAILING_SILENCE_SAMPLES, WORD_PAUSE_SAMPLES, assemble_knobs,
+    estimate_utterance_sample_count, render_canonical_buffer, render_text_canonical_buffer,
+    sequence_events_for_text,
 };
 
 #[test]
@@ -73,6 +75,53 @@ fn repeated_connected_subwords_do_not_fire_hard_onsets() {
     );
 }
 
+#[test]
+fn word_boundary_connections_open_as_smooth_vowel_blooms() {
+    let events = [
+        SequenceEvent::syllable(test_knobs([0.05, -0.20, -0.10, 0.10]), false),
+        SequenceEvent::syllable(test_knobs([-0.30, 0.10, 0.15, 0.65]), false),
+        SequenceEvent::syllable(test_knobs([0.15, -0.15, -0.45, 0.20]), false),
+        SequenceEvent::syllable(test_knobs([-0.60, 0.05, 0.05, -0.05]), false),
+    ];
+    let buffer = render_canonical_buffer(&events);
+    let leading = usize::try_from(LEADING_SILENCE_SAMPLES).expect("leading silence fits usize");
+    let syllable_stride = usize::try_from(BASE_SYLLABLE_SAMPLES + WORD_PAUSE_SAMPLES)
+        .expect("word syllable stride fits usize");
+    let onset_window =
+        usize::try_from((SYNTH_SAMPLE_RATE_HZ * 18) / 1_000).expect("onset window fits usize");
+    let body_offset =
+        usize::try_from((SYNTH_SAMPLE_RATE_HZ * 45) / 1_000).expect("body offset fits usize");
+    let body_window =
+        usize::try_from((SYNTH_SAMPLE_RATE_HZ * 40) / 1_000).expect("body window fits usize");
+    let mut onset_body_ratios = Vec::new();
+    let mut onset_roughness_ratios = Vec::new();
+
+    for syllable_index in 1..events.len() {
+        let start = leading + (syllable_index * syllable_stride);
+        let onset = &buffer[start..start + onset_window];
+        let body_start = start + body_offset;
+        let body = &buffer[body_start..body_start + body_window];
+
+        onset_body_ratios.push(rms(onset) / rms(body).max(0.000_001));
+        onset_roughness_ratios.push(derivative_rms(onset) / derivative_rms(body).max(0.000_001));
+    }
+
+    onset_body_ratios.sort_by(f64::total_cmp);
+    onset_roughness_ratios.sort_by(f64::total_cmp);
+
+    let median_level_ratio = onset_body_ratios[onset_body_ratios.len() / 2];
+    let median_roughness_ratio = onset_roughness_ratios[onset_roughness_ratios.len() / 2];
+
+    assert!(
+        median_level_ratio <= 1.65,
+        "word starts are too blocky; median onset/body level ratio was {median_level_ratio:.2}",
+    );
+    assert!(
+        median_roughness_ratio <= 1.90,
+        "word starts are too sharp; median onset/body roughness ratio was {median_roughness_ratio:.2}",
+    );
+}
+
 fn voiced_body(buffer: &[i16]) -> &[i16] {
     let start = buffer
         .iter()
@@ -84,6 +133,13 @@ fn voiced_body(buffer: &[i16]) -> &[i16] {
         .expect("rendered phrase should contain non-zero audio");
 
     &buffer[start..=end]
+}
+
+fn test_knobs(axes: [f64; 4]) -> KnobSet {
+    assemble_knobs(
+        SquashedVector::new([0.0, 0.0, 0.0, 0.0]),
+        SquashedVector::new(axes),
+    )
 }
 
 fn active_island_count(samples: &[i16]) -> usize {

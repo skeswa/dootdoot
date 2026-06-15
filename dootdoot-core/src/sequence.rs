@@ -8,9 +8,10 @@ use crate::{
     PhraseBoundaryStrength, PhraseSyllablePlan, SENTENCE_SYLLABLE_SAMPLES,
     TRAILING_SILENCE_SAMPLES, UtteranceMood, exp, pitch_center_hz, plan_phrase_prosody,
     synth::{
-        BASE_SYLLABLE_SAMPLES, SyllableFinalGlide, SyllablePerformance, SyllableRenderState,
-        render_syllable_with_final_glide, render_syllable_with_performance_into,
-        render_transition_bridge, warble_phase_offset_for_syllable,
+        BASE_SYLLABLE_SAMPLES, SyllableConnection, SyllableFinalGlide, SyllablePerformance,
+        SyllableRenderState, render_syllable_with_final_glide,
+        render_syllable_with_performance_into, render_transition_bridge,
+        warble_phase_offset_for_syllable,
     },
 };
 
@@ -264,12 +265,17 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
             Some(previous_pitch_hz) => previous_pitch_hz,
             None => target_pitch_hz,
         };
-        let starts_connected = index > 0
-            && phrase_plan
-                .syllables()
-                .get(index - 1)
-                .is_some_and(|previous| boundary_connects_to_next(*previous));
-        let ends_connected = index + 1 < plans.len() && boundary_connects_to_next(phrase_syllable);
+        let start_connection = phrase_plan
+            .syllables()
+            .get(index.saturating_sub(1))
+            .copied()
+            .filter(|_| index > 0)
+            .map_or(SyllableConnection::Detached, start_connection_from_previous);
+        let end_connection = if index + 1 < plans.len() {
+            end_connection_from_boundary(phrase_syllable)
+        } else {
+            SyllableConnection::Detached
+        };
 
         render_syllable_with_performance_into(
             syllable.knobs(),
@@ -282,7 +288,7 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
                 phrase_syllable.final_lowering_semitones(),
                 phrase_syllable.is_emphasized(),
             )
-            .with_connections(starts_connected, ends_connected)
+            .with_connections(start_connection, end_connection)
             .with_expression(
                 mood.valence(),
                 mood.arousal(),
@@ -360,11 +366,18 @@ fn pitch_with_offset(knobs: KnobSet, offset_semitones: f64) -> f64 {
     pitch_center_hz(knobs.pitch_center()) * exp((LN_2 * offset_semitones) / 12.0)
 }
 
-fn boundary_connects_to_next(phrase_syllable: PhraseSyllablePlan) -> bool {
-    matches!(
-        phrase_syllable.boundary_strength(),
-        PhraseBoundaryStrength::None | PhraseBoundaryStrength::Word
-    )
+fn start_connection_from_previous(phrase_syllable: PhraseSyllablePlan) -> SyllableConnection {
+    end_connection_from_boundary(phrase_syllable)
+}
+
+fn end_connection_from_boundary(phrase_syllable: PhraseSyllablePlan) -> SyllableConnection {
+    match phrase_syllable.boundary_strength() {
+        PhraseBoundaryStrength::None => SyllableConnection::Subword,
+        PhraseBoundaryStrength::Word => SyllableConnection::Word,
+        PhraseBoundaryStrength::Clause | PhraseBoundaryStrength::Sentence => {
+            SyllableConnection::Detached
+        }
+    }
 }
 
 fn next_target_pitch_hz(

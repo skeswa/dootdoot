@@ -37,6 +37,8 @@ Evidence and proposals that informed the sound design.
 - [`research/bb8-expressiveness-gap-analysis.md`](research/bb8-expressiveness-gap-analysis.md)
   — phrase, affect, word-complexity, and gesture-palette gaps that informed
   `VOICE_V2` work.
+- [`research/bb8-word-attack-forensics.md`](research/bb8-word-attack-forensics.md) —
+  word-boundary onset analysis that informed `VOICE_V5`.
 
 ## Validation
 
@@ -50,6 +52,8 @@ Short acceptance notes for decisions that were finalized during voice freezes.
   `VOICE_V3` phrase-continuity acceptance.
 - [`validation/voice-v4-onset-smoothing.md`](validation/voice-v4-onset-smoothing.md) —
   final `VOICE_V4` repeated-onset smoothing acceptance.
+- [`validation/voice-v5-word-attack-smoothing.md`](validation/voice-v5-word-attack-smoothing.md)
+  — final `VOICE_V5` word-attack smoothing acceptance.
 - [`validation/learnability-spread.md`](validation/learnability-spread.md) — final
   semantic cluster spread check.
 - [`validation/squash.md`](validation/squash.md) — finalized tanh z-score squash choice.

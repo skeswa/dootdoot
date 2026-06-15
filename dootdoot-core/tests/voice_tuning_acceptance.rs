@@ -4,6 +4,7 @@ const TUNING: &str = include_str!("../../docs/validation/voice-tuning.md");
 const VOICE_V2: &str = include_str!("../../docs/validation/voice-v2-expressiveness.md");
 const VOICE_V3: &str = include_str!("../../docs/validation/voice-v3-smoothing.md");
 const VOICE_V4: &str = include_str!("../../docs/validation/voice-v4-onset-smoothing.md");
+const VOICE_V5: &str = include_str!("../../docs/validation/voice-v5-word-attack-smoothing.md");
 
 #[test]
 fn integrated_tuning_acceptance_records_phase_seven_decision() {
@@ -80,6 +81,24 @@ fn voice_v4_onset_smoothing_acceptance_records_repeated_subword_decision() {
         assert!(
             VOICE_V4.contains(expected),
             "VOICE_V4 acceptance note should mention {expected}",
+        );
+    }
+}
+
+#[test]
+fn voice_v5_word_attack_smoothing_acceptance_records_word_boundary_decision() {
+    for expected in [
+        "Accepted for VOICE_V5",
+        "dootdoot VOICE_V5",
+        "word-boundary",
+        "rounded",
+        "Upper-mid sparkle",
+        "word-start/body level ratio",
+        "golden WAV hashes",
+    ] {
+        assert!(
+            VOICE_V5.contains(expected),
+            "VOICE_V5 acceptance note should mention {expected}",
         );
     }
 }

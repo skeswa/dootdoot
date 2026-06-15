@@ -126,7 +126,7 @@
   derived pre-synthesis check. (These are operational limits, not sample-affecting, so
   they are NOT part of `VOICE_V1`.)
 
-### 1.9 Format contract & versioning
+### 1.9 Voice contract & versioning
 
 - **FR-38** `VOICE_V1` SHALL bundle **every** parameter or rule that can affect an
   output sample, including: the model hash; the tokenizer configuration (the
@@ -144,7 +144,8 @@
   float→i16 rounding rule; the WAV serialization choices (sample rate, bit depth,
   channels, header bytes); and the owned-math implementation version.
 - **FR-39** Any change that alters one or more output samples SHALL require bumping the
-  voice identifier (e.g. `VOICE_V1` → `VOICE_V2` → `VOICE_V3` → `VOICE_V4`).
+  voice identifier (e.g. `VOICE_V1` → `VOICE_V2` → `VOICE_V3` → `VOICE_V4` →
+  `VOICE_V5`).
 
 ### 1.10 Build-time generation (xtask)
 
@@ -231,6 +232,23 @@
   acceptance, the surfaced `dootdoot VOICE_V4` version string, and regenerated golden
   WAV hashes.
 
+### 1.14 VOICE_V5 word-attack smoothing
+
+- **FR-65** `VOICE_V5` SHALL keep `VOICE_V4` repeated-subword smoothing while
+  distinguishing subword connections from word-boundary connections in the renderer.
+- **FR-66** `VOICE_V5` word-boundary starts SHALL ramp from a lower bridge-matched
+  envelope floor rather than reusing the high subword connection floor.
+- **FR-67** `VOICE_V5` word-boundary vowel openings SHALL begin from a rounded
+  `oo`-leaning pre-shape and open into the semantic vowel target over a bounded
+  deterministic window.
+- **FR-68** `VOICE_V5` word-boundary starts SHALL damp upper-mid sparkle and selected
+  archetype texture during the opening bloom.
+- **FR-69** `VOICE_V5` SHALL preserve the `VOICE_V4` repeated connected-subword
+  roughness acceptance behavior.
+- **FR-70** The frozen `VOICE_V5` contract SHALL be documented with word-attack
+  acceptance, the surfaced `dootdoot VOICE_V5` version string, and regenerated golden
+  WAV hashes.
+
 ---
 
 ## 2. Non-functional requirements
@@ -290,7 +308,8 @@
   this by varying only the four bounded semantic axes; `VOICE_V2` MAY additionally vary
   deterministic, bounded phrase, affect, complexity, and archetype channels; `VOICE_V3`
   MAY additionally smooth connected phrase rendering without changing the semantic
-  mapping core; `VOICE_V4` MAY additionally smooth repeated connected onsets.
+  mapping core; `VOICE_V4` MAY additionally smooth repeated connected onsets; `VOICE_V5`
+  MAY additionally smooth bridged word-boundary attacks.
 
 ### 2.5 Testing
 

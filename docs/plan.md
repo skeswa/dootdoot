@@ -406,6 +406,17 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       Deps: T-75 · Reqs: FR-33, FR-39, FR-60, FR-61, FR-62, FR-63, FR-64, NFR-16,
       NFR-17, NFR-18 · Est: 2h
 
+## Phase 13 — VOICE_V5 word-attack smoothing
+
+- [x] **T-77 — Smooth bridged word attacks.** Reduce blocky, staccato-y word starts in
+      repeated phrases by distinguishing subword vs word-boundary connections, ramping
+      bridged word starts from a lower bridge-matched floor, adding a rounded vowel
+      pre-shape for word openings, damping upper-mid/archetype texture during the bloom,
+      updating `--version`, regenerating golden WAV hashes, and documenting the V5
+      forensic analysis and acceptance check.
+      Deps: T-76 · Reqs: FR-33, FR-39, FR-65, FR-66, FR-67, FR-68, FR-69, FR-70,
+      NFR-16, NFR-17, NFR-18 · Est: 2h
+
 ---
 
 ## Critical paths
@@ -443,10 +454,11 @@ flowchart LR
 ```
 
 The `VOICE_V3` smoothing branch follows the frozen V2 expressiveness contract, and
-`VOICE_V4` follows the connected phrase-continuity work:
+`VOICE_V4`/`VOICE_V5` continue the connected phrase-continuity work:
 
 ```mermaid
 flowchart LR
     T74[T-74 VOICE_V2 freeze] --> T75[T-75 VOICE_V3 phrase continuity]
     T75 --> T76[T-76 VOICE_V4 repeated-onset smoothing]
+    T76 --> T77[T-77 VOICE_V5 word-attack smoothing]
 ```

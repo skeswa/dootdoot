@@ -559,6 +559,22 @@ The active acceptance note is
 [`voice-v4-onset-smoothing.md`](./validation/voice-v4-onset-smoothing.md). The committed
 golden WAV hashes are regenerated under `VOICE_V4`.
 
+**VOICE_V5 word-attack smoothing.** V5 keeps the V4 repeated-subword behavior, then
+splits connected starts into two renderer cases:
+
+- subword connections keep the high nonzero floor that makes one word flow as one
+  gesture;
+- word-boundary connections ramp from a lower bridge-matched floor, so the next word
+  blooms from the quiet transition instead of jumping into a blocky onset;
+- word-boundary vowels start from a rounded `oo`-leaning pre-shape and open into the
+  semantic vowel target over a bounded window;
+- upper-mid sparkle and archetype texture are damped during that word-opening bloom,
+  then return to their normal level.
+
+The active acceptance note is
+[`voice-v5-word-attack-smoothing.md`](./validation/voice-v5-word-attack-smoothing.md).
+The committed golden WAV hashes are regenerated under `VOICE_V5`.
+
 ---
 
 ## 7. Sound → output
@@ -659,7 +675,7 @@ turns "deterministic" into a demonstrable claim. Adding Windows is a matter of e
 the CI matrix and committing identical hashes; until then, the guarantee is scoped to
 macOS + Linux.
 
-### 8.2 Decision: the versioned FORMAT contract
+### 8.2 Decision: the versioned voice contract
 
 Everything that can affect a single output sample is bundled under one identifier,
 **`VOICE_V1`**. If a change can move one sample, it is in this list — and changing it
@@ -701,13 +717,13 @@ _Serialization_
   header bytes) — these define the file the golden hashes are taken over.
 
 The active voice is surfaced by `--version`. **Any change that alters a single output sample
-bumps the identifier** (`VOICE_V1` → `VOICE_V2` → `VOICE_V3` → `VOICE_V4`, etc.). This gives users the guarantee: _same text + same voice version =
+bumps the identifier** (`VOICE_V1` → `VOICE_V2` → `VOICE_V3` → `VOICE_V4` → `VOICE_V5`, etc.). This gives users the guarantee: _same text + same voice version =
 same sound, forever, on every verified platform (§8.1)_, while letting the voice evolve
 deliberately.
 
 The `VOICE_V*` identifier is the rendered-output contract, not the on-disk layout version
-of the baked mapping artifact. `VOICE_V4` still uses the locked `assets/format_v1.bin`
-token-to-axis table; V4 exists because connected-onset rendering changed the generated
+of the baked mapping artifact. `VOICE_V5` still uses the locked `assets/format_v1.bin`
+token-to-axis table; V5 exists because word-attack rendering changed the generated
 samples.
 
 ### 8.3 Decision: `VOICE_V2` broadens performance channels, not the semantic core
@@ -771,8 +787,25 @@ to sound click-like. V4 keeps the V3 semantic and phrase-continuity design, but 
 connected syllable openings so they inherit prior pitch/vowel state, skip the explicit
 attack transient, and ramp through the early body instead of firing a fresh attack peak.
 
-The active CLI version string is `VOICE_V4`. The V4 acceptance note records the repeated
+The V4 CLI version string was `VOICE_V4`. The V4 acceptance note records the repeated
 subword roughness check plus regenerated golden WAV hashes.
+
+### 8.6 Decision: `VOICE_V5` smooths bridged word attacks
+
+`VOICE_V5` is a sample-affecting renderer change prompted by repeated word-boundary
+phrases such as `I am so excited I am so excited`: V4 smoothed repeated subword starts,
+but word starts after quiet bridges still jumped to the same high connected envelope
+floor used for within-word continuity. That made the first few milliseconds of each word
+sound sharper and less vowel-like than the BB-8 reference clip
+`inquisitive-then-chatty.mp3`.
+
+V5 keeps the V4 connected phrase state and repeated-subword smoothing. It distinguishes
+subword connections from word-boundary connections, gives bridged word starts a lower
+opening envelope floor, shapes those starts through a rounded `oo`-leaning vowel
+pre-shape, and dampens upper-mid texture during the opening bloom.
+
+The active CLI version string is `VOICE_V5`. The V5 acceptance note records the
+word-start/body level and roughness check plus regenerated golden WAV hashes.
 
 ---
 

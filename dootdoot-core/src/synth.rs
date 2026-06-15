@@ -156,6 +156,11 @@ pub const PHRASE_EMPHASIS_GAIN: f64 = 1.08;
 
 const TRANSITION_BRIDGE_GAIN: f64 = 0.180;
 const CONNECTED_PARAMETER_BLEND_SECONDS: f64 = 0.036;
+const WORD_CONNECTION_FLOOR: f64 = ENVELOPE_SUSTAIN_LEVEL * 0.30;
+const WORD_CONNECTION_OPEN_SECONDS: f64 = 0.055;
+const WORD_ONSET_VOWEL_OPEN_SECONDS: f64 = 0.060;
+const WORD_ONSET_VOWEL_ROUNDING: f64 = 0.55;
+const WORD_ONSET_TEXTURE_START_GAIN: f64 = 0.42;
 
 /// Marks the synthesis module in the public facade.
 #[derive(Debug)]
@@ -180,8 +185,18 @@ pub(crate) struct SyllablePerformance {
     mood_arousal: f64,
     complexity: f64,
     archetype: ArchetypeSelection,
-    starts_connected: bool,
-    ends_connected: bool,
+    start_connection: SyllableConnection,
+    end_connection: SyllableConnection,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SyllableConnection {
+    /// Starts or ends against silence or a punctuation reset.
+    Detached,
+    /// Starts or ends against another subword in the same word.
+    Subword,
+    /// Starts or ends across a bridged word boundary.
+    Word,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -592,8 +607,8 @@ impl SyllablePerformance {
             mood_arousal: 0.0,
             complexity: 0.0,
             archetype: ArchetypeSelection::chatter(0),
-            starts_connected: false,
-            ends_connected: false,
+            start_connection: SyllableConnection::Detached,
+            end_connection: SyllableConnection::Detached,
         }
     }
 
@@ -607,8 +622,8 @@ impl SyllablePerformance {
             mood_arousal: 0.0,
             complexity: 0.0,
             archetype: ArchetypeSelection::chatter(0),
-            starts_connected: false,
-            ends_connected: false,
+            start_connection: SyllableConnection::Detached,
+            end_connection: SyllableConnection::Detached,
         }
     }
 
@@ -636,11 +651,21 @@ impl SyllablePerformance {
         self
     }
 
-    pub(crate) fn with_connections(mut self, starts_connected: bool, ends_connected: bool) -> Self {
-        self.starts_connected = starts_connected;
-        self.ends_connected = ends_connected;
+    pub(crate) fn with_connections(
+        mut self,
+        start_connection: SyllableConnection,
+        end_connection: SyllableConnection,
+    ) -> Self {
+        self.start_connection = start_connection;
+        self.end_connection = end_connection;
 
         self
+    }
+}
+
+impl SyllableConnection {
+    fn is_connected(self) -> bool {
+        !matches!(self, Self::Detached)
     }
 }
 
@@ -828,15 +853,18 @@ fn render_performance_sample(
     let voiced = state
         .formants
         .process_sample(source, parameters.vowel_position);
-    let attack_transient = if controls.performance.starts_connected {
+    let attack_transient = if controls.performance.start_connection.is_connected() {
         0.0
     } else {
         attack_transient_sample(elapsed_seconds, parameters.contour)
     };
+    let word_onset_texture_gain =
+        word_onset_texture_gain(elapsed_seconds, controls.performance.start_connection);
     let layered = voiced
         + body_layer_sample(state.body_phase, parameters.vowel_position)
         + attack_transient
         + (controls.brightness_gain
+            * word_onset_texture_gain
             * upper_mid_sparkle_sample(
                 state.sparkle_phase,
                 elapsed_seconds * controls.subgesture_density,
@@ -847,7 +875,7 @@ fn render_performance_sample(
             controls.performance.archetype,
             elapsed_seconds,
             controls.duration_seconds,
-        );
+        ) * word_onset_texture_gain;
     let layered =
         layered * archetype_amplitude_gain(controls.performance.archetype, elapsed_seconds);
     let layered = if controls.performance.emphasized {
@@ -868,8 +896,8 @@ fn render_performance_sample(
         electronic,
         elapsed_seconds,
         controls.duration_seconds,
-        controls.performance.starts_connected,
-        controls.performance.ends_connected,
+        controls.performance.start_connection,
+        controls.performance.end_connection,
     )
 }
 
@@ -936,13 +964,13 @@ fn performance_sample_parameters(
             pitch_hz,
             state.last_pitch_hz,
             elapsed_seconds,
-            controls.performance.starts_connected,
+            controls.performance.start_connection,
         ),
-        vowel_position: connected_parameter_value(
+        vowel_position: connected_vowel_position(
             vowel_position,
             state.last_vowel_position,
             elapsed_seconds,
-            controls.performance.starts_connected,
+            controls.performance.start_connection,
         ),
         contour,
     }
@@ -952,13 +980,13 @@ fn connected_parameter_value(
     current: f64,
     previous: Option<f64>,
     elapsed_seconds: f64,
-    starts_connected: bool,
+    start_connection: SyllableConnection,
 ) -> f64 {
     let Some(previous) = previous else {
         return current;
     };
 
-    if !starts_connected
+    if !start_connection.is_connected()
         || !elapsed_seconds.is_finite()
         || elapsed_seconds >= CONNECTED_PARAMETER_BLEND_SECONDS
     {
@@ -971,46 +999,100 @@ fn connected_parameter_value(
     previous + ((current - previous) * progress)
 }
 
+fn connected_vowel_position(
+    current: f64,
+    previous: Option<f64>,
+    elapsed_seconds: f64,
+    start_connection: SyllableConnection,
+) -> f64 {
+    if start_connection == SyllableConnection::Word {
+        return word_onset_vowel_position(current, elapsed_seconds);
+    }
+
+    connected_parameter_value(current, previous, elapsed_seconds, start_connection)
+}
+
+fn word_onset_vowel_position(current: f64, elapsed_seconds: f64) -> f64 {
+    if !elapsed_seconds.is_finite() || elapsed_seconds >= WORD_ONSET_VOWEL_OPEN_SECONDS {
+        return current;
+    }
+
+    let rounded_start = (current + WORD_ONSET_VOWEL_ROUNDING).clamp(-1.0, 1.0);
+    let progress = smoothstep(elapsed_seconds / WORD_ONSET_VOWEL_OPEN_SECONDS);
+
+    rounded_start + ((current - rounded_start) * progress)
+}
+
+fn word_onset_texture_gain(elapsed_seconds: f64, start_connection: SyllableConnection) -> f64 {
+    if start_connection != SyllableConnection::Word
+        || !elapsed_seconds.is_finite()
+        || elapsed_seconds >= WORD_ONSET_VOWEL_OPEN_SECONDS
+    {
+        return 1.0;
+    }
+
+    let progress = smoothstep(elapsed_seconds / WORD_ONSET_VOWEL_OPEN_SECONDS);
+
+    WORD_ONSET_TEXTURE_START_GAIN + ((1.0 - WORD_ONSET_TEXTURE_START_GAIN) * progress)
+}
+
 fn apply_connected_amplitude_envelope(
     sample: f64,
     elapsed_seconds: f64,
     duration_seconds: f64,
-    starts_connected: bool,
-    ends_connected: bool,
+    start_connection: SyllableConnection,
+    end_connection: SyllableConnection,
 ) -> f64 {
     sample
         * connected_amplitude_envelope(
             elapsed_seconds,
             duration_seconds,
-            starts_connected,
-            ends_connected,
+            start_connection,
+            end_connection,
         )
 }
 
 fn connected_amplitude_envelope(
     elapsed_seconds: f64,
     duration_seconds: f64,
-    starts_connected: bool,
-    ends_connected: bool,
+    start_connection: SyllableConnection,
+    end_connection: SyllableConnection,
 ) -> f64 {
     let base = amplitude_envelope(elapsed_seconds, duration_seconds);
-    let connection_floor = ENVELOPE_SUSTAIN_LEVEL * 0.95;
     let attack_connection_end = ENVELOPE_ATTACK_SECONDS + 0.018;
     let release_start = (duration_seconds - ENVELOPE_RELEASE_SECONDS)
         .max(ENVELOPE_ATTACK_SECONDS + ENVELOPE_DECAY_SECONDS);
 
-    if starts_connected && elapsed_seconds <= attack_connection_end {
-        let target = amplitude_envelope(attack_connection_end, duration_seconds);
-        let progress = smoothstep(elapsed_seconds / attack_connection_end);
+    match start_connection {
+        SyllableConnection::Subword if elapsed_seconds <= attack_connection_end => {
+            let connection_floor = subword_connection_floor();
+            let target = amplitude_envelope(attack_connection_end, duration_seconds);
+            let progress = smoothstep(elapsed_seconds / attack_connection_end);
 
-        return connection_floor + ((target - connection_floor) * progress);
+            return connection_floor + ((target - connection_floor) * progress);
+        }
+        SyllableConnection::Word if elapsed_seconds <= WORD_CONNECTION_OPEN_SECONDS => {
+            let target = amplitude_envelope(WORD_CONNECTION_OPEN_SECONDS, duration_seconds);
+            let progress = smoothstep(elapsed_seconds / WORD_CONNECTION_OPEN_SECONDS);
+
+            return WORD_CONNECTION_FLOOR + ((target - WORD_CONNECTION_FLOOR) * progress);
+        }
+        SyllableConnection::Detached | SyllableConnection::Subword | SyllableConnection::Word => {}
     }
 
-    if ends_connected && elapsed_seconds >= release_start {
-        return base.max(connection_floor);
+    if elapsed_seconds >= release_start {
+        return match end_connection {
+            SyllableConnection::Detached => base,
+            SyllableConnection::Subword => base.max(subword_connection_floor()),
+            SyllableConnection::Word => base.max(WORD_CONNECTION_FLOOR),
+        };
     }
 
     base
+}
+
+fn subword_connection_floor() -> f64 {
+    ENVELOPE_SUSTAIN_LEVEL * 0.95
 }
 
 fn apply_archetype_pitch_hz(
