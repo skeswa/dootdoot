@@ -1,0 +1,75 @@
+# Usage Guide
+
+`dootdoot` turns text into deterministic droid sound. The same text and format version
+produce the same canonical 44.1 kHz, 16-bit, mono buffer used for both playback and WAV
+output.
+
+## Commands
+
+```sh
+cargo run -p dootdoot -- "hello there"
+cargo run -p dootdoot -- "hello there" -o hello.wav
+cargo run -p dootdoot -- "hello there" -o hello.wav --play
+echo "piped text" | cargo run -p dootdoot --
+cargo run -p dootdoot -- "curious?" --explain
+```
+
+Installed binaries use the same arguments without `cargo run -p dootdoot --`.
+
+Output routing is fixed:
+
+| Arguments        | Behavior                     |
+| ---------------- | ---------------------------- |
+| no `-o`          | Plays the canonical buffer.  |
+| `-o FILE`        | Writes a WAV file only.      |
+| `-o FILE --play` | Writes the WAV and plays it. |
+
+## `--explain`
+
+`--explain` prints to stderr and does not affect audio output. The table gives one row
+per voiced token and one control row for prosodic punctuation.
+
+```text
+token │ pitch │ vowel │ contour │ warble
+hello │ +0.185 │ -0.340 │ +0.512 │ -0.118
+? │ control:question │ - │ - │ -
+```
+
+The four numeric columns are the fixed semantic sound knobs:
+
+| Column    | Meaning                    |
+| --------- | -------------------------- |
+| `pitch`   | Pitch-center offset.       |
+| `vowel`   | Formant/vowel position.    |
+| `contour` | Glide direction and shape. |
+| `warble`  | Vibrato and flutter depth. |
+
+Prosodic punctuation rows are control-only. They can shape the preceding syllable and
+pause, but they do not create a separate voiced syllable.
+
+## Edge Cases
+
+- Empty or whitespace-only input renders the fixed inquisitive `?` chirp and exits 0.
+- No positional text with an interactive stdin also routes to the empty chirp in the
+  current shell implementation.
+- `Hello` and `hello` tokenize identically because the embedded model tokenizer is
+  uncased.
+- Literal `[PAD]`, `[CLS]`, `[SEP]`, and `[MASK]` are filtered out after tokenization.
+  `[UNK]` is deliberately kept and voiced.
+- Prosodic punctuation is limited to `.`, `!`, `?`, `,`, `;`, and `:`. Other symbols are
+  voiced normally when the tokenizer produces a voiced token.
+- Non-Latin scripts and emoji are accepted, but `FORMAT_V1` is English-oriented and often
+  maps them to `[UNK]` or repetitive subword shapes.
+
+## Limits
+
+The CLI estimates rendered output size before synthesis. It warns after about 8 minutes
+of audio, then refuses to render before the fixed 30 minute / 160 MB ceiling. The byte and
+duration limits are normative; token-count descriptions are only rough shorthand because
+punctuation and word boundaries affect timing.
+
+## Version Contract
+
+`dootdoot --version` surfaces the active format identifier. `FORMAT_V1` is locked: any
+change that alters a rendered sample requires a new identifier and regenerated golden WAV
+hashes.

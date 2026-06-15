@@ -303,7 +303,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ## Phase 9 — Documentation & packaging
 
-- [ ] **T-61 — README + usage docs.** Examples, the documented behaviors (uncased,
+- [x] **T-61 — README + usage docs.** Examples, the documented behaviors (uncased,
       English-oriented, "?" chirp, limits), and `--explain` walkthrough.
       Deps: T-44 · Reqs: NFR-21 · Est: 2h
 - [ ] **T-62 — Asset regeneration guide.** How to re-run `xtask` and when a `V2` bump is

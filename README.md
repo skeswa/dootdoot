@@ -10,8 +10,9 @@
 
 <!-- Add these once the project ships: CI status, crates.io version, downloads. -->
 
-> **Status: early development.** The design is complete; implementation is in progress.
-> Expect things to change. See [the roadmap](docs/plan.md).
+> **Status: FORMAT_V1 is locked.** The v1 sound contract is frozen; future
+> sample-affecting changes require a new format version. Packaging work is still in
+> progress. See [the roadmap](docs/plan.md).
 
 `dootdoot` reads text and emits short bursts of warbly droid chatter. It's a small,
 learnable sound language with three defining properties:
@@ -42,6 +43,33 @@ dootdoot "hello there" -o out.wav --play   # do both
 echo "piped text" | dootdoot         # read from stdin
 dootdoot "curious?" --explain        # print the per-token sound breakdown
 ```
+
+`--explain` writes a table to stderr so it never pollutes file output or shell
+pipelines. The columns are the four learnable sound knobs:
+
+```text
+token │ pitch │ vowel │ contour │ warble
+hello │ +0.185 │ -0.340 │ +0.512 │ -0.118
+? │ control:question │ - │ - │ -
+```
+
+The exact numbers depend on the frozen `FORMAT_V1` mapping. Punctuation rows are
+control markers: they shape the preceding syllable and pause, but do not produce their
+own voiced token.
+
+## Documented behavior
+
+- `Hello` and `hello` sound the same because the embedded `potion-base-8M` tokenizer is
+  uncased.
+- Empty or whitespace-only input emits the fixed inquisitive `?` chirp and exits 0.
+- Literal `[PAD]`, `[CLS]`, `[SEP]`, and `[MASK]` are dropped. `[UNK]` is kept and voiced
+  with its own mapping.
+- Prosodic punctuation (`.`, `!`, `?`, `,`, `;`, `:`) is control-only; other symbols are
+  tokenized and voiced normally.
+- Non-Latin text and emoji are accepted, but v1 is English-oriented and will often route
+  through `[UNK]` or repetitive WordPiece shapes.
+- Very large input warns past about 8 minutes of rendered audio and errors before the
+  fixed 30 minute / 160 MB ceiling.
 
 ## How it works
 
