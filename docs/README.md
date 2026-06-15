@@ -17,6 +17,8 @@ Supporting documents live below:
 Stable contracts and low-level implementation notes.
 
 - [`usage.md`](usage.md) — CLI examples, `--explain`, edge cases, and input limits.
+- [`reference/asset_regeneration.md`](reference/asset_regeneration.md) — safe `xtask`
+  regeneration flow and format-bump rules.
 - [`reference/format_v1.md`](reference/format_v1.md) — committed `format_v1.bin` layout.
 - [`reference/mathx.md`](reference/mathx.md) — owned transcendental math contract.
 - [`reference/cross-platform-determinism.md`](reference/cross-platform-determinism.md)

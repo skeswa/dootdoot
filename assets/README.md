@@ -24,3 +24,7 @@ To regenerate the mapping after an intentional format or mapping change:
 2. Run `cargo run -p xtask`.
 3. Copy `target/generated/format_v1.bin` to `assets/format_v1.bin`.
 4. Copy the pinned source `tokenizer.json` to `assets/tokenizer.json`.
+
+See the full [`docs/reference/asset_regeneration.md`](../docs/reference/asset_regeneration.md)
+guide before committing regenerated assets. `FORMAT_V1` is locked, so any regeneration
+that changes rendered samples must happen under a new format identifier.

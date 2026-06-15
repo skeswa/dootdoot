@@ -306,7 +306,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 - [x] **T-61 — README + usage docs.** Examples, the documented behaviors (uncased,
       English-oriented, "?" chirp, limits), and `--explain` walkthrough.
       Deps: T-44 · Reqs: NFR-21 · Est: 2h
-- [ ] **T-62 — Asset regeneration guide.** How to re-run `xtask` and when a `V2` bump is
+- [x] **T-62 — Asset regeneration guide.** How to re-run `xtask` and when a `V2` bump is
       required.
       Deps: T-18, T-54 · Reqs: FR-39, FR-40 · Est: 1h
 - [ ] **T-63 — Packaging.** `cargo install` support; optional Homebrew formula / prebuilt
