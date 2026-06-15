@@ -124,6 +124,18 @@ pub const SOURCE_PULSE_WIDTH: f64 = 0.42;
 /// Gives the maximum additive harmonics used by the source oscillator.
 pub const SOURCE_MAX_HARMONICS: u32 = 48;
 
+/// Gives the fixed attack transient duration in seconds.
+pub const ATTACK_TRANSIENT_SECONDS: f64 = 0.020;
+
+/// Gives the fixed attack transient wet mix.
+pub const ATTACK_TRANSIENT_MIX: f64 = 0.07;
+
+/// Gives the fixed low-body layer wet mix.
+pub const BODY_LAYER_MIX: f64 = 0.11;
+
+/// Gives the fixed upper-mid sparkle wet mix.
+pub const UPPER_MID_SPARKLE_MIX: f64 = 0.055;
+
 /// Marks the synthesis module in the public facade.
 #[derive(Debug)]
 pub struct Synth;
@@ -358,6 +370,58 @@ pub fn apply_amplitude_envelope(sample: f64, elapsed_seconds: f64, duration_seco
     sample * amplitude_envelope(elapsed_seconds, duration_seconds)
 }
 
+/// Computes the deterministic attack transient layer sample.
+pub fn attack_transient_sample(elapsed_seconds: f64, contour: f64) -> f64 {
+    if !elapsed_seconds.is_finite()
+        || elapsed_seconds <= 0.0
+        || elapsed_seconds >= ATTACK_TRANSIENT_SECONDS
+    {
+        return 0.0;
+    }
+
+    let progress = (elapsed_seconds / ATTACK_TRANSIENT_SECONDS).clamp(0.0, 1.0);
+    let envelope = (1.0 - progress) * (1.0 - progress);
+    let contour_shift_hz = contour.clamp(-1.0, 1.0) * 180.0;
+    let first = sin(2.0 * PI * (3_170.0 + contour_shift_hz) * elapsed_seconds);
+    let second = sin(2.0 * PI * (4_310.0 - contour_shift_hz) * elapsed_seconds);
+    let transient = ((0.65 * first) + (0.35 * second)) * envelope * ATTACK_TRANSIENT_MIX;
+
+    transient.clamp(-ATTACK_TRANSIENT_MIX, ATTACK_TRANSIENT_MIX)
+}
+
+/// Computes the low-body layer frequency in hertz.
+pub fn body_layer_frequency_hz(pitch_hz: f64) -> f64 {
+    if !pitch_hz.is_finite() || pitch_hz <= 0.0 {
+        return 440.0;
+    }
+
+    (pitch_hz * 0.5).clamp(300.0, 700.0)
+}
+
+/// Computes the deterministic low-body layer sample.
+pub fn body_layer_sample(phase: f64, vowel_position: f64) -> f64 {
+    let vowel_weight = 1.0 - (0.25 * vowel_position.clamp(-1.0, 1.0).abs());
+
+    BODY_LAYER_MIX * vowel_weight * sin(2.0 * PI * wrap_phase(phase))
+}
+
+/// Computes the upper-mid sparkle layer frequency in hertz.
+pub fn upper_mid_sparkle_frequency_hz(warble_depth: f64, contour: f64) -> f64 {
+    let warble_amount = (warble_depth.clamp(-1.0, 1.0) + 1.0) * 0.5;
+
+    (3_150.0 + (650.0 * warble_amount) + (280.0 * contour.clamp(-1.0, 1.0))).clamp(2_000.0, 5_000.0)
+}
+
+/// Computes the deterministic upper-mid sparkle layer sample.
+pub fn upper_mid_sparkle_sample(phase: f64, elapsed_seconds: f64, warble_depth: f64) -> f64 {
+    let warble_amount = (warble_depth.clamp(-1.0, 1.0) + 1.0) * 0.5;
+    let amount = 0.35 + (0.65 * warble_amount);
+    let gesture = 0.75 + (0.25 * sin(2.0 * PI * 19.0 * elapsed_seconds));
+    let sparkle = UPPER_MID_SPARKLE_MIX * amount * gesture * sin(2.0 * PI * wrap_phase(phase));
+
+    sparkle.clamp(-UPPER_MID_SPARKLE_MIX, UPPER_MID_SPARKLE_MIX)
+}
+
 /// Computes the deterministic per-syllable vowel trajectory.
 pub fn vowel_trajectory_position(vowel_position: f64, contour: f64, elapsed_seconds: f64) -> f64 {
     let progress = syllable_progress(elapsed_seconds);
@@ -384,6 +448,8 @@ pub(crate) fn render_syllable_with_final_glide(
         target_pitch_hz
     };
     let mut phase = 0.0;
+    let mut body_phase = 0.0;
+    let mut sparkle_phase = 0.0;
     let mut formants = FormantFilterBank::new();
     let mut samples = Vec::new();
 
@@ -408,7 +474,11 @@ pub(crate) fn render_syllable_with_final_glide(
         let vowel_position =
             vowel_trajectory_position(knobs.vowel_position(), knobs.contour(), elapsed_seconds);
         let voiced = formants.process_sample(source, vowel_position);
-        let electronic = ring_modulate(voiced, elapsed_seconds);
+        let layered = voiced
+            + body_layer_sample(body_phase, vowel_position)
+            + attack_transient_sample(elapsed_seconds, knobs.contour())
+            + upper_mid_sparkle_sample(sparkle_phase, elapsed_seconds, knobs.warble_depth());
+        let electronic = ring_modulate(layered, elapsed_seconds);
 
         samples.push(apply_amplitude_envelope(
             electronic,
@@ -417,6 +487,14 @@ pub(crate) fn render_syllable_with_final_glide(
         ));
 
         phase = wrap_phase(phase + (pitch_hz / f64::from(SYNTH_SAMPLE_RATE_HZ)));
+        body_phase = wrap_phase(
+            body_phase + (body_layer_frequency_hz(pitch_hz) / f64::from(SYNTH_SAMPLE_RATE_HZ)),
+        );
+        sparkle_phase = wrap_phase(
+            sparkle_phase
+                + (upper_mid_sparkle_frequency_hz(knobs.warble_depth(), knobs.contour())
+                    / f64::from(SYNTH_SAMPLE_RATE_HZ)),
+        );
     }
 
     samples

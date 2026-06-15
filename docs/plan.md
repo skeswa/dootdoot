@@ -236,7 +236,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       trajectory around the semantic vowel target. Add focused tests for deterministic trajectory
       endpoints/ranges and keep all motion inside the fixed droid parameter space.
       Deps: T-32, T-33, T-45 · Reqs: FR-15, FR-16, FR-18, FR-19, NFR-16 · Est: 2.5h
-- [ ] **T-47 — Add deterministic transient/body/upper-mid layers.** Keep the pitched
+- [x] **T-47 — Add deterministic transient/body/upper-mid layers.** Keep the pitched
       formant core, but add bounded deterministic layers that make each gesture less like a single
       clean oscillator: attack transient/noise, optional low body around the 300–700 Hz region,
       and gesture-shaped upper-mid sparkle primarily in the 2–5 kHz band. Avoid unseeded

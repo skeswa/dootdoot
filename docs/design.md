@@ -505,6 +505,8 @@ output is unmistakably the same droid (goal 3), while the knobs carry meaning (g
   warble depth = 45 cents.
 - ring-mod = 72 Hz at 8% mix; envelope attack/decay/release = 12/80/25 ms with 35%
   sustain after decay.
+- attack transient = 20 ms at 7% mix; low-body layer = 11% mix in the 300-700 Hz
+  region; upper-mid sparkle = 5.5% mix in the 2-5 kHz region.
 - pitch register bias = 880 Hz with a 7-semitone semantic span; source mix = 65% saw +
   35% pulse at 42% pulse width.
 - empty chirp knobs = start pitch center −0.35, target pitch center +0.45, vowel +0.15,
