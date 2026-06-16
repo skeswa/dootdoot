@@ -8,11 +8,20 @@ use dootdoot::explain_table_for_text;
 fn explain_table_includes_semantic_and_control_rows() {
     let table = explain_table_for_text("hello?").expect("explain table should render");
 
+    // Utterance summary, the per-token header, and the curves header are all
+    // present.
+    assert!(
+        table
+            .lines()
+            .any(|line| line.starts_with("mood") && line.contains("arousal:"))
+    );
+    assert!(table.lines().any(|line| line.starts_with("complexity")));
     let header = table
         .lines()
-        .next()
-        .expect("explain table should have a header");
-    assert!(header.starts_with("token") && header.contains("pitch") && header.contains("role"));
+        .find(|line| line.starts_with("token"))
+        .expect("explain table should have a token header");
+    assert!(header.contains("pitch") && header.contains("role") && header.contains("archetype"));
+    assert!(table.lines().any(|line| line.starts_with("curves")));
     assert!(
         table
             .lines()
@@ -40,7 +49,8 @@ fn binary_writes_explain_table_to_stderr_only() {
 
     assert!(output.status.success());
     assert!(stdout.is_empty());
-    assert!(stderr.starts_with("token"));
+    assert!(stderr.starts_with("mood"));
+    assert!(stderr.lines().any(|line| line.starts_with("token")));
     assert!(
         stderr
             .lines()

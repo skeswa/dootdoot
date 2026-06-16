@@ -111,7 +111,11 @@
 ### 1.7 CLI & UX
 
 - **FR-31** The tool SHALL provide `--explain`, printing a per-token table
-  (`token │ pitch │ vowel │ contour │ warble │ role`, aligned into a tidy grid) to stderr.
+  to stderr that is a complete account of the sound profile: an utterance-level `mood` and
+  `complexity` summary; an aligned per-token grid
+  (`token │ pitch │ vowel │ contour │ warble │ role │ archetype`); a per-token `curves`
+  grid of the planner's bounded performance curves; and the glide/pause each control
+  marker imposes.
 - **FR-32** `--explain` output SHALL go to stderr only and SHALL NOT appear in any
   piped audio or file output.
 - **FR-33** The tool SHALL provide `--version`, which SHALL surface the active voice

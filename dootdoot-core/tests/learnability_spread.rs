@@ -53,7 +53,10 @@ fn first_knobs(text: &str) -> [f64; 4] {
         .into_iter()
         .find_map(|row| match row {
             ExplainRow::Token(token) => Some(token.knobs().axes()),
-            ExplainRow::Mood(_) | ExplainRow::Punctuation(_) | ExplainRow::Hesitation(_) => None,
+            ExplainRow::Mood(_)
+            | ExplainRow::Complexity(_)
+            | ExplainRow::Punctuation(_)
+            | ExplainRow::Hesitation(_) => None,
         })
         .expect("fixture text should have a voiced token")
 }

@@ -757,11 +757,15 @@ So audio plays only when `--play` is set, or on a bare render with neither `-o` 
 
 **Learnability feature:**
 
-- `--explain` → per-token table to **stderr**, aligned into a tidy grid:
-  `token │ pitch │ vowel │ contour │ warble │ role` (so users _see_ the 4 axes plus the
-  planner's per-phrase role and build intuition). On stderr so it never pollutes piped
-  audio. Because it is an inspection mode, it does not play audio unless `--play` is also
-  given.
+- `--explain` → a **complete account of the sound profile** to **stderr**: an
+  utterance-level `mood`/`complexity` summary, an aligned per-token grid
+  (`token │ pitch │ vowel │ contour │ warble │ role │ archetype`), a per-token `curves`
+  grid of the planner's bounded performance curves, and the glide/pause each control marker
+  imposes (so users _see_ every channel that shaped the sound, not only the 4 semantic
+  axes). On stderr so it never pollutes piped audio. Because it is an inspection mode, it
+  does not play audio unless `--play` is also given. (The four knob columns are a pure
+  function of the words, so punctuation-only differences share them while the role,
+  archetype, curve, mood, and control rows expose why the renders still differ.)
 
 **Empty / whitespace-only input:** always emit a **fixed inquisitive "?" chirp**
 (a rising-glide warble, the droid going "hm?"), exit 0. The chirp is a fixed gesture,

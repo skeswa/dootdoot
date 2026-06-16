@@ -3,12 +3,12 @@
 use thiserror::Error;
 
 use crate::{
-    ComplexityAnalysis, HesitationMarker, KnobSet, MappingError, PerformanceCurves,
-    PerformanceSyllable, PhraseRole, ProsodicPunctuation, SequenceEvent, SyllableEvent,
-    SyllableTiming, TokenVector, TokenizerError, UtteranceMood, analyze_affect_for_text,
-    analyze_complexity_for_text, archetype_for_role, assemble_knobs, embedded_mapping,
-    embedded_tokenizer, plan_discourse_performance, plan_gesture_archetypes, pool_sequence,
-    render_canonical_buffer, role_long_pause_samples, staged_reply_rest_samples,
+    ComplexityAnalysis, GestureArchetype, HesitationMarker, KnobSet, MappingError,
+    PerformanceCurves, PerformanceSyllable, PhraseRole, ProsodicPunctuation, SequenceEvent,
+    SyllableEvent, SyllableTiming, TokenVector, TokenizerError, UtteranceMood,
+    analyze_affect_for_text, analyze_complexity_for_text, archetype_for_role, assemble_knobs,
+    embedded_mapping, embedded_tokenizer, plan_discourse_performance, plan_gesture_archetypes,
+    pool_sequence, render_canonical_buffer, role_long_pause_samples, staged_reply_rest_samples,
 };
 
 /// Reports why text could not be rendered.
@@ -60,7 +60,9 @@ struct TextAnalysis {
 pub enum ExplainRow {
     /// A whole-utterance mood row.
     Mood(ExplainMoodRow),
-    /// A voiced token row with semantic knobs.
+    /// A whole-utterance complexity row.
+    Complexity(ExplainComplexityRow),
+    /// A voiced token row with its full sound profile.
     Token(ExplainTokenRow),
     /// A control-only prosodic punctuation row.
     Punctuation(ExplainPunctuationRow),
@@ -69,12 +71,19 @@ pub enum ExplainRow {
 }
 
 /// Gives one voiced token row in the `--explain` table.
+///
+/// Carries the full per-token sound profile: the four semantic knobs plus every
+/// `VOICE_V7` performance channel that affects the rendered samples (discourse
+/// role, gesture archetype, planner performance curves, and deployed timing).
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExplainTokenRow {
     token: String,
     knobs: KnobSet,
     continuation: bool,
     role: PhraseRole,
+    archetype: GestureArchetype,
+    curves: PerformanceCurves,
+    timing: SyllableTiming,
 }
 
 /// Gives one prosodic punctuation row in the `--explain` table.
@@ -88,6 +97,12 @@ pub struct ExplainPunctuationRow {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ExplainMoodRow {
     mood: UtteranceMood,
+}
+
+/// Gives one whole-utterance complexity row in the `--explain` table.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ExplainComplexityRow {
+    complexity: ComplexityAnalysis,
 }
 
 /// Gives one control-only hesitation marker row in the `--explain` table.
@@ -197,7 +212,7 @@ fn empty_analysis(
         SequenceEvent::mood(mood),
         SequenceEvent::complexity(complexity),
     ];
-    let mut explain_rows = vec![ExplainRow::mood(mood)];
+    let mut explain_rows = vec![ExplainRow::mood(mood), ExplainRow::complexity(complexity)];
 
     for template in &parsed.templates {
         match template {
@@ -254,7 +269,7 @@ fn voiced_analysis(
         SequenceEvent::mood(mood),
         SequenceEvent::complexity(complexity),
     ];
-    let mut explain_rows = vec![ExplainRow::mood(mood)];
+    let mut explain_rows = vec![ExplainRow::mood(mood), ExplainRow::complexity(complexity)];
 
     for template in &parsed.templates {
         match template {
@@ -284,8 +299,9 @@ fn voiced_analysis(
                 let curves = plan_rows
                     .get(*index)
                     .map_or_else(PerformanceCurves::neutral, PerformanceSyllable::curves);
+                let archetype = archetype_for_role(role, *index);
 
-                events.push(SequenceEvent::archetype(archetype_for_role(role, *index)));
+                events.push(SequenceEvent::archetype(archetype));
                 events.push(SequenceEvent::Syllable(
                     SyllableEvent::new(knobs, token.continuation)
                         .with_timing(deployed[*index])
@@ -296,6 +312,9 @@ fn voiced_analysis(
                     knobs,
                     token.continuation,
                     role,
+                    archetype.archetype(),
+                    curves,
+                    deployed[*index],
                 ));
             }
         }
@@ -355,12 +374,27 @@ impl ExplainRow {
         Self::Mood(ExplainMoodRow { mood })
     }
 
-    fn token(token: String, knobs: KnobSet, continuation: bool, role: PhraseRole) -> Self {
+    fn complexity(complexity: ComplexityAnalysis) -> Self {
+        Self::Complexity(ExplainComplexityRow { complexity })
+    }
+
+    fn token(
+        token: String,
+        knobs: KnobSet,
+        continuation: bool,
+        role: PhraseRole,
+        archetype: GestureArchetype,
+        curves: PerformanceCurves,
+        timing: SyllableTiming,
+    ) -> Self {
         Self::Token(ExplainTokenRow {
             token,
             knobs,
             continuation,
             role,
+            archetype,
+            curves,
+            timing,
         })
     }
 
@@ -489,6 +523,13 @@ impl ExplainMoodRow {
     }
 }
 
+impl ExplainComplexityRow {
+    /// Returns the utterance complexity analysis for this control row.
+    pub fn complexity(&self) -> ComplexityAnalysis {
+        self.complexity
+    }
+}
+
 impl ExplainTokenRow {
     /// Returns the tokenizer text for this voiced row.
     pub fn token(&self) -> &str {
@@ -508,6 +549,21 @@ impl ExplainTokenRow {
     /// Returns the discourse role assigned to this voiced row.
     pub fn role(&self) -> PhraseRole {
         self.role
+    }
+
+    /// Returns the gesture archetype selected for this voiced row.
+    pub fn archetype(&self) -> GestureArchetype {
+        self.archetype
+    }
+
+    /// Returns the planner performance curves for this voiced row.
+    pub fn curves(&self) -> PerformanceCurves {
+        self.curves
+    }
+
+    /// Returns the deployed timing directive for this voiced row.
+    pub fn timing(&self) -> SyllableTiming {
+        self.timing
     }
 }
 

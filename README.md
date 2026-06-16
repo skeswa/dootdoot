@@ -55,21 +55,29 @@ echo "piped text" | dootdoot         # read from stdin
 dootdoot "curious?" --explain        # print the per-token sound breakdown
 ```
 
-`--explain` writes an aligned table to stderr so it never pollutes file output or shell
-pipelines. It is an inspection mode, so it does **not** play audio (pass `--play` if you
-also want to hear it). The numeric columns are the four learnable sound knobs; the `role`
-column shows the per-phrase discourse role the planner assigned:
+`--explain` writes a full account of the sound profile to stderr so it never pollutes file
+output or shell pipelines. It is an inspection mode, so it does **not** play audio (pass
+`--play` if you also want to hear it). It reports every channel that affects the rendered
+samples: the utterance-level `mood` and `complexity`; per voiced token the four learnable
+knobs, the discourse `role`, and the gesture `archetype`; the planner's continuous
+performance `curves`; and the glide/pause each control marker imposes:
 
 ```text
-token   │  pitch │  vowel │ contour │ warble │ role
-mood    │ valence:+0.325  arousal:+0.357
-curious │ -0.660 │ +0.058 │  -0.390 │ +0.762 │ terminal-flourish
-?       │ control:question
+mood        valence:+0.325  arousal:+0.357
+complexity  scalar:+0.192  subtokens:0  chars:8
+
+token   │  pitch │  vowel │ contour │ warble │ role              │ archetype
+curious │ -0.660 │ +0.058 │  -0.390 │ +0.762 │ terminal-flourish │ yelp
+?       │ control:question · rising glide · pause 240 ms
+
+curves  │ p.bias │  p.vel │  f.tgt │  f.vel │ bright │  mouth │   tens │ gap
+curious │ +0.350 │ +0.550 │ +0.300 │ +0.350 │  0.550 │  0.550 │  0.600 │ -
 ```
 
-The exact numbers depend on the frozen mapping and active voice. The `mood` row and the
-`control:` rows are control markers: they shape neighboring voiced syllables and pauses,
-but do not produce their own voiced tokens.
+The four knob columns depend only on the words (the learnable semantic core), so two
+inputs that differ only in punctuation share them — but their `role`, `archetype`, `curves`,
+`mood`, and control rows reveal why they still sound different. The `mood`, `complexity`,
+and `control:` rows are not voiced tokens; they shape neighboring syllables and pauses.
 
 ## Documented behavior
 

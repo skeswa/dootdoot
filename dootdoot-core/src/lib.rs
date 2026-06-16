@@ -28,8 +28,9 @@ pub use asset::{
 };
 pub use complexity::{ComplexityAnalysis, analyze_complexity_for_text};
 pub use engine::{
-    EngineError, ExplainHesitationRow, ExplainMoodRow, ExplainPunctuationRow, ExplainRow,
-    ExplainTokenRow, explain_rows_for_text, render_text_canonical_buffer, sequence_events_for_text,
+    EngineError, ExplainComplexityRow, ExplainHesitationRow, ExplainMoodRow, ExplainPunctuationRow,
+    ExplainRow, ExplainTokenRow, explain_rows_for_text, render_text_canonical_buffer,
+    sequence_events_for_text,
 };
 pub use mapping::{
     KNOB_BOUNDS, KNOB_MODULATION_DEPTHS, KnobBounds, KnobSet, Mapping, MappingError, PooledVector,

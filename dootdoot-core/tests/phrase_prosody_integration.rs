@@ -57,7 +57,10 @@ fn phrase_test_knobs() -> KnobSet {
         .expect("fixture text should analyze")
         .into_iter()
         .find_map(|row| match row {
-            ExplainRow::Mood(_) | ExplainRow::Punctuation(_) | ExplainRow::Hesitation(_) => None,
+            ExplainRow::Mood(_)
+            | ExplainRow::Complexity(_)
+            | ExplainRow::Punctuation(_)
+            | ExplainRow::Hesitation(_) => None,
             ExplainRow::Token(token) => Some(token.knobs()),
         })
         .expect("fixture text should have a token row")
