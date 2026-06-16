@@ -55,7 +55,7 @@ fn sparkle_event_gain_is_bounded_and_finite() {
 
             assert!(value.is_finite());
             assert!(
-                (0.0..=1.5).contains(&value),
+                (0.0..=1.8).contains(&value),
                 "sparkle gain out of range: {value}"
             );
         }

@@ -12,6 +12,22 @@ pub const CURVE_PITCH_BIAS_SEMITONES: f64 = 4.0;
 const CURVE_BRIGHTNESS_GAIN: f64 = 0.40;
 const CURVE_WHISTLE_START_FRACTION: f64 = 0.45;
 
+/// Gives the `VOICE_V8` archetype-tension above which a non-flourish body
+/// syllable (chatty reply / probe) engages the whistle sweep. The planner only
+/// drives tension this high on a semantic accent, so neutral text reaches the
+/// whistle band on its accent syllables without punctuation.
+const WHISTLE_ACCENT_TENSION_THRESHOLD: f64 = 0.75;
+
+/// Gives the `VOICE_V8` whistle scale applied to body-syllable accents, keeping
+/// them slightly under a dedicated terminal flourish.
+const WHISTLE_ACCENT_SCALE: f64 = 0.85;
+
+/// Gives the `VOICE_V8` always-on roughness floor for engaged (planner-driven)
+/// body syllables, so neutral text is not pinned to a pure periodic tone. It is
+/// gated on non-neutral curves, so hand-built events and the empty chirp stay
+/// byte-identical (clean) under neutral curves.
+const ROUGHNESS_BODY_FLOOR: f64 = 0.18;
+
 /// Gives the synthesis sample rate in hertz.
 pub const SYNTH_SAMPLE_RATE_HZ: u32 = 44_100;
 
@@ -665,10 +681,13 @@ pub fn sparkle_event_gain(
         return 1.0;
     }
 
+    // VOICE_V8: a sharper envelope (sin^2) with a lower floor and a steeper
+    // brightness slope turns the upper-mid sparkle from a constant bed into an
+    // event. Ordinary low-brightness syllables stay dim; bright accents burst.
     let envelope = sin(PI * syllable_progress(elapsed_seconds, duration_seconds));
-    let reserve = 0.35 + (0.9 * brightness);
+    let reserve = 0.08 + (1.5 * brightness);
 
-    (envelope * reserve).clamp(0.0, 1.5)
+    (envelope * envelope * reserve).clamp(0.0, 1.8)
 }
 
 /// Computes a bounded deterministic per-gesture tape-speed detune in cents.
@@ -1026,19 +1045,43 @@ impl SyllablePerformance {
     }
 
     fn whistle_amount(self) -> f64 {
+        let tension = self.curves.archetype_tension();
+
         match self.role {
-            PhraseRole::TerminalFlourish => self.curves.archetype_tension(),
+            PhraseRole::TerminalFlourish => tension,
+            // VOICE_V8: a semantic accent in the body of an utterance (the
+            // planner drives tension past the threshold only on accents) reaches
+            // the whistle band even without terminal punctuation.
+            PhraseRole::ChattyReply | PhraseRole::Probe
+                if tension >= WHISTLE_ACCENT_TENSION_THRESHOLD =>
+            {
+                let above = (tension - WHISTLE_ACCENT_TENSION_THRESHOLD)
+                    / (1.0 - WHISTLE_ACCENT_TENSION_THRESHOLD);
+
+                (above.clamp(0.0, 1.0) * WHISTLE_ACCENT_SCALE).clamp(0.0, 1.0)
+            }
             _ => 0.0,
         }
     }
 
     fn roughness_amount(self) -> f64 {
         let tension = self.curves.archetype_tension();
+        // VOICE_V8: only engaged (planner-driven) *body* syllables carry the small
+        // always-on roughness floor, so neutral text swings off pure periodicity.
+        // Neutral curves (hand-built events, empty chirp) keep a zero floor, and
+        // the terminal flourish keeps its V7 floor-free roughness so a trailing
+        // "!" does not pile breath noise onto an already-intense whistle gesture.
+        let engaged = self.curves.brightness_pressure() > 0.0 || tension > 0.0;
 
         match self.role {
             PhraseRole::Hesitation => (0.45 + (0.20 * tension)).clamp(0.0, 0.7),
             PhraseRole::Aside => (0.30 + (0.20 * tension)).clamp(0.0, 0.6),
-            _ => (0.12 * tension).clamp(0.0, 0.3),
+            PhraseRole::ChattyReply | PhraseRole::Probe => {
+                let floor = if engaged { ROUGHNESS_BODY_FLOOR } else { 0.0 };
+
+                (floor + (0.12 * tension)).clamp(0.0, 0.4)
+            }
+            PhraseRole::TerminalFlourish => (0.12 * tension).clamp(0.0, 0.3),
         }
     }
 }
