@@ -643,6 +643,53 @@ pub fn upper_mid_sparkle_frequency_hz(warble_depth: f64, contour: f64) -> f64 {
     (3_150.0 + (650.0 * warble_amount) + (280.0 * contour.clamp(-1.0, 1.0))).clamp(2_000.0, 5_000.0)
 }
 
+/// Computes the `VOICE_V7` event-based gain on the upper-mid sparkle layer.
+///
+/// At `brightness_pressure == 0` (neutral curves: the empty chirp and
+/// hand-built events) the gain is exactly `1.0`, preserving the `VOICE_V6`
+/// always-on sparkle. For brightness-driven engine syllables the sparkle
+/// becomes an event: a shaped attack/decay scaled so flourishes reserve more
+/// brightness than ordinary chatter.
+pub fn sparkle_event_gain(
+    brightness_pressure: f64,
+    elapsed_seconds: f64,
+    duration_seconds: f64,
+) -> f64 {
+    let brightness = if brightness_pressure.is_finite() {
+        brightness_pressure.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    if brightness <= 0.0 {
+        return 1.0;
+    }
+
+    let envelope = sin(PI * syllable_progress(elapsed_seconds, duration_seconds));
+    let reserve = 0.35 + (0.9 * brightness);
+
+    (envelope * reserve).clamp(0.0, 1.5)
+}
+
+/// Computes a bounded deterministic per-gesture tape-speed detune in cents.
+///
+/// At `tension == 0` (neutral curves) the detune is exactly `0.0`. For
+/// expressive engine syllables it adds a small authored imperfection that
+/// varies by syllable (via the warble phase offset), bounded to `±6` cents.
+pub fn imperfection_detune_cents(tension: f64, warble_phase_offset: f64) -> f64 {
+    let tension = if tension.is_finite() {
+        tension.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    if tension <= 0.0 {
+        return 0.0;
+    }
+
+    (6.0 * tension * sin(2.0 * PI * wrap_phase(warble_phase_offset))).clamp(-6.0, 6.0)
+}
+
 /// Computes the deterministic upper-mid sparkle layer sample.
 pub fn upper_mid_sparkle_sample(phase: f64, elapsed_seconds: f64, warble_depth: f64) -> f64 {
     let warble_amount = (warble_depth.clamp(-1.0, 1.0) + 1.0) * 0.5;
@@ -1220,6 +1267,11 @@ fn render_performance_sample(
         + attack_transient
         + (controls.brightness_gain
             * word_onset_texture_gain
+            * sparkle_event_gain(
+                controls.performance.curves.brightness_pressure(),
+                elapsed_seconds,
+                controls.duration_seconds,
+            )
             * upper_mid_sparkle_sample(
                 state.sparkle_phase,
                 elapsed_seconds * controls.subgesture_density,
@@ -1348,6 +1400,11 @@ fn performance_sample_parameters(
         controls.whistle_amount,
         elapsed_seconds,
         controls.duration_seconds,
+    );
+    let pitch_hz = apply_imperfection_detune_hz(
+        pitch_hz,
+        controls.performance.curves.archetype_tension(),
+        controls.warble_phase_offset,
     );
     let vowel_position = vowel_trajectory_position_for_duration(
         (controls.knobs.vowel_position() + controls.vowel_bias + (articulation * 0.65))
@@ -1534,6 +1591,16 @@ fn connected_amplitude_envelope(
 
 fn subword_connection_floor() -> f64 {
     ENVELOPE_SUSTAIN_LEVEL * 0.95
+}
+
+fn apply_imperfection_detune_hz(pitch_hz: f64, tension: f64, warble_phase_offset: f64) -> f64 {
+    let cents = imperfection_detune_cents(tension, warble_phase_offset);
+
+    if cents == 0.0 {
+        return pitch_hz;
+    }
+
+    pitch_hz * exp(LN_2 * (cents / 1_200.0))
 }
 
 fn apply_whistle_sweep_hz(

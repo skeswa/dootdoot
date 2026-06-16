@@ -523,7 +523,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       Add snapshots for the reference phrase and for `probe`/`chatty_reply` staging.
       Deps: T-86, T-81, T-82, T-83, T-84, T-85 · Reqs: FR-84, FR-86, FR-87, FR-31, FR-32,
       NFR-16, NFR-20 · Est: 3h
-- [ ] **T-88 — Event-based droid mechanisms + deterministic imperfection.** Convert the
+- [x] **T-88 — Event-based droid mechanisms + deterministic imperfection.** Convert the
       always-on upper-mid sparkle into an event-based gesture resource (lower default mix,
       shaped attack/decay, reserved for chirps/flourishes/selected chatter), and add sparse
       phrase-aware seasoning families one at a time: self-oscillating/sine-resonator chirps,
