@@ -1,24 +1,32 @@
 //! Phrase-continuity regression tests.
 
 use dootdoot_core::{
-    BASE_SYLLABLE_SAMPLES, KnobSet, LEADING_SILENCE_SAMPLES, SYNTH_SAMPLE_RATE_HZ, SequenceEvent,
-    SquashedVector, TRAILING_SILENCE_SAMPLES, WORD_PAUSE_SAMPLES, assemble_knobs,
-    estimate_utterance_sample_count, render_canonical_buffer, render_text_canonical_buffer,
-    sequence_events_for_text,
+    BASE_SYLLABLE_SAMPLES, KnobSet, LEADING_SILENCE_SAMPLES, STAGED_REPLY_REST_MAX_SAMPLES,
+    SYNTH_SAMPLE_RATE_HZ, SequenceEvent, SquashedVector, TRAILING_SILENCE_SAMPLES,
+    WORD_PAUSE_SAMPLES, assemble_knobs, estimate_utterance_sample_count, render_canonical_buffer,
+    render_text_canonical_buffer, sequence_events_for_text, staged_reply_rest_samples,
 };
 
+/// Gives the `VOICE_V8` neutral word-rest amount used by `deploy_one_timing`.
+const NEUTRAL_WORD_REST_AMOUNT: f64 = 0.2;
+
 #[test]
-fn excited_phrase_has_no_hard_zero_holes_inside_the_voiced_body() {
+fn excited_phrase_holes_are_bounded_word_rests() {
+    // VOICE_V8: a trailing "!" flourishes only the terminal syllable, so the
+    // exclamation's chatty lead-in de-bridges into short word rests (the same
+    // staging the plain statement uses). The voiced body may therefore contain
+    // intentional silences, but none should exceed a staged word rest — there
+    // must be no glitchy hard hole beyond a deliberate inter-word rest.
     let buffer =
         render_text_canonical_buffer("I am so excited wooohooo!").expect("phrase should render");
     let body = voiced_body(&buffer);
     let maximum_zero_run = longest_zero_run(body);
-    let five_ms = usize::try_from((SYNTH_SAMPLE_RATE_HZ * 5) / 1_000)
-        .expect("sample-rate threshold fits usize");
+    let rest_ceiling =
+        usize::try_from(STAGED_REPLY_REST_MAX_SAMPLES).expect("rest ceiling fits usize");
 
     assert!(
-        maximum_zero_run < five_ms,
-        "phrase body contains a hard zero hole of {maximum_zero_run} samples",
+        maximum_zero_run <= rest_ceiling,
+        "phrase body has a {maximum_zero_run}-sample hole, larger than a staged word rest",
     );
 }
 
@@ -123,7 +131,11 @@ fn word_boundary_connections_open_as_smooth_vowel_blooms() {
 }
 
 #[test]
-fn repeated_excited_phrase_does_not_tremolo_between_words() {
+fn repeated_neutral_phrase_de_bridges_into_silent_word_rests() {
+    // VOICE_V8: a plain, unpunctuated repeated phrase no longer bridges every
+    // word boundary with foreground tone. Instead each word boundary becomes a
+    // short, near-silent rest, so the phrase reads as rest-separated islands and
+    // there is no two-pulse bridge tremolo between words.
     let text = "I am so excited I am so excited I am so excited I am so excited";
     let buffer = render_text_canonical_buffer(text).expect("phrase should render");
     let events = sequence_events_for_text(text).expect("phrase should sequence");
@@ -136,15 +148,16 @@ fn repeated_excited_phrase_does_not_tremolo_between_words() {
     );
     assert_eq!(
         word_boundary_count, 15,
-        "fixture should exercise bridged word boundaries only",
+        "fixture should exercise neutral word boundaries only",
     );
 
     let leading = usize::try_from(LEADING_SILENCE_SAMPLES).expect("leading silence fits usize");
     let trailing = usize::try_from(TRAILING_SILENCE_SAMPLES).expect("trailing silence fits usize");
-    let word_pause = usize::try_from(WORD_PAUSE_SAMPLES).expect("word pause fits usize");
+    let word_rest = usize::try_from(staged_reply_rest_samples(NEUTRAL_WORD_REST_AMOUNT))
+        .expect("word rest fits usize");
     let voiced_samples = buffer
         .len()
-        .checked_sub(leading + trailing + (word_boundary_count * word_pause))
+        .checked_sub(leading + trailing + (word_boundary_count * word_rest))
         .expect("fixture render should contain voiced samples");
 
     assert_eq!(
@@ -154,16 +167,16 @@ fn repeated_excited_phrase_does_not_tremolo_between_words() {
     );
 
     let syllable_samples = voiced_samples / syllable_count;
-    let mut bridge_level_ratios = Vec::new();
+    let mut rest_level_ratios = Vec::new();
     let mut position = leading;
 
     for boundary_index in 0..word_boundary_count {
         let syllable = &buffer[position..position + syllable_samples];
-        let bridge_start = position + syllable_samples;
-        let bridge = &buffer[bridge_start..bridge_start + word_pause];
+        let rest_start = position + syllable_samples;
+        let rest = &buffer[rest_start..rest_start + word_rest];
 
-        bridge_level_ratios.push(rms(bridge) / rms(syllable).max(0.000_001));
-        position = bridge_start + word_pause;
+        rest_level_ratios.push(rms(rest) / rms(syllable).max(0.000_001));
+        position = rest_start + word_rest;
 
         assert!(
             boundary_index + 1 < syllable_count,
@@ -171,11 +184,11 @@ fn repeated_excited_phrase_does_not_tremolo_between_words() {
         );
     }
 
-    bridge_level_ratios.sort_by(f64::total_cmp);
+    rest_level_ratios.sort_by(f64::total_cmp);
 
-    let median_bridge_ratio = bridge_level_ratios[bridge_level_ratios.len() / 2];
+    let median_rest_ratio = rest_level_ratios[rest_level_ratios.len() / 2];
     let cycle_seconds =
-        usize_to_f64(syllable_samples + word_pause) / f64::from(SYNTH_SAMPLE_RATE_HZ);
+        usize_to_f64(syllable_samples + word_rest) / f64::from(SYNTH_SAMPLE_RATE_HZ);
     let word_cycle_hz = 1.0 / cycle_seconds;
     let double_cycle_hz = 2.0 * word_cycle_hz;
     let body = &buffer[leading..buffer.len() - trailing];
@@ -183,8 +196,8 @@ fn repeated_excited_phrase_does_not_tremolo_between_words() {
     let double_cycle_energy = envelope_modulation_strength(body, double_cycle_hz);
 
     assert!(
-        median_bridge_ratio <= 0.75,
-        "word bridges are too foreground; median bridge/syllable RMS ratio was {median_bridge_ratio:.2}",
+        median_rest_ratio <= 0.20,
+        "neutral word boundaries should be near-silent rests, not bridges; median rest/syllable RMS ratio was {median_rest_ratio:.2}",
     );
     assert!(
         double_cycle_energy <= word_cycle_energy * 0.85,

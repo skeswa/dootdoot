@@ -22,6 +22,14 @@ pub enum EngineError {
     Mapping(#[from] MappingError),
 }
 
+/// Gives the staged-reply word-rest amount for structured utterances (~55 ms).
+const STAGED_REPLY_REST_AMOUNT: f64 = 0.5;
+
+/// Gives the `VOICE_V8` neutral word-rest amount for plain statements (~40 ms),
+/// so unpunctuated multi-word input gets short inter-word rests instead of a
+/// fully bridged single island.
+const NEUTRAL_WORD_REST_AMOUNT: f64 = 0.2;
+
 #[derive(Debug, Clone, Copy)]
 enum EventTemplate {
     Voiced(usize),
@@ -501,12 +509,21 @@ fn deploy_one_timing(
             }
         }
         PhraseRole::ChattyReply => {
-            if has_structure
-                && next_role == Some(PhraseRole::ChattyReply)
+            if next_role == Some(PhraseRole::ChattyReply)
                 && next_continuation == Some(false)
                 && base.pause_override().is_none()
             {
-                base.with_pause_override(staged_reply_rest_samples(0.5))
+                // VOICE_V8: insert a short word-boundary rest even on a plain,
+                // structure-less statement so neutral multi-word input stops
+                // fully bridging into one long island. Staged replies (utterances
+                // that already have discourse structure) keep their longer rest.
+                let amount = if has_structure {
+                    STAGED_REPLY_REST_AMOUNT
+                } else {
+                    NEUTRAL_WORD_REST_AMOUNT
+                };
+
+                base.with_pause_override(staged_reply_rest_samples(amount))
                     .suppress_bridge()
             } else {
                 base
