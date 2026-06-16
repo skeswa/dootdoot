@@ -6,6 +6,7 @@ const VOICE_V3: &str = include_str!("../../docs/validation/voice-v3-smoothing.md
 const VOICE_V4: &str = include_str!("../../docs/validation/voice-v4-onset-smoothing.md");
 const VOICE_V5: &str = include_str!("../../docs/validation/voice-v5-word-attack-smoothing.md");
 const VOICE_V6: &str = include_str!("../../docs/validation/voice-v6-repeated-phrase-smoothing.md");
+const VOICE_V7: &str = include_str!("../../docs/validation/voice-v7-contextual-performance.md");
 
 #[test]
 fn integrated_tuning_acceptance_records_phase_seven_decision() {
@@ -118,6 +119,26 @@ fn voice_v6_repeated_phrase_smoothing_acceptance_records_tremolo_decision() {
         assert!(
             VOICE_V6.contains(expected),
             "VOICE_V6 acceptance note should mention {expected}",
+        );
+    }
+}
+
+#[test]
+fn voice_v7_contextual_performance_acceptance_records_decision() {
+    for expected in [
+        "Accepted for VOICE_V7",
+        "dootdoot VOICE_V7",
+        "inquisitive-then-chatty",
+        "Max internal gap",
+        "Dominant peak range",
+        "Active frame fraction",
+        "control-only",
+        "discourse-performance planner",
+        "golden WAV hashes",
+    ] {
+        assert!(
+            VOICE_V7.contains(expected),
+            "VOICE_V7 acceptance note should mention {expected}",
         );
     }
 }

@@ -533,7 +533,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       timing, mouth, and planner baselines are stable. Keep >6 kHz modest; no single family
       dominant. Add tests for determinism, bounded output, and sparsity.
       Deps: T-87 · Reqs: FR-87, FR-88, NFR-3, NFR-4, NFR-16 · Est: 3h
-- [ ] **T-89 — Freeze VOICE_V7 + contextual acceptance doc.** Regenerate the exact
+- [x] **T-89 — Freeze VOICE_V7 + contextual acceptance doc.** Regenerate the exact
       `inquisitive-then-chatty` comparison, write a V7 forensic/acceptance note tracking the
       directional metrics (max internal gap, active-island sequence shape, dominant peak
       range and fraction of active frames above ~1.1 kHz, active frame fraction, harmonicity
