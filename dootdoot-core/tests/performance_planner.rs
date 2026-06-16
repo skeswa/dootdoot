@@ -64,6 +64,94 @@ fn plain_statement_is_a_chatty_reply() {
 }
 
 #[test]
+fn neutral_phrase_engages_a_semantic_accent() {
+    // VOICE_V8: a punctuation-less phrase still earns one expressive accent,
+    // driven by semantics rather than punctuation. Roles stay ChattyReply, but
+    // one syllable's curves climb into whistle/roughness-engaging territory.
+    let events = sequence_events_for_text("cat dog airplane bird").expect("sequence");
+    let plan = plan_discourse_performance(&events);
+    let tensions = plan
+        .syllables()
+        .iter()
+        .map(|syllable| syllable.curves().archetype_tension())
+        .collect::<Vec<_>>();
+
+    assert!(
+        tensions.iter().copied().fold(0.0_f64, f64::max) > 0.70,
+        "a neutral phrase should engage at least one high-tension accent, got {tensions:?}",
+    );
+}
+
+#[test]
+fn long_final_phrase_reserves_the_flourish_for_its_tail() {
+    // Regression: a trailing "!" on a long closing phrase made every syllable
+    // whistle (shrill). The flourish is a terminal accent, so only the tail of a
+    // long final segment flourishes; the lead-in stays a chatty body, and the
+    // flourish curves are never engagement-amplified.
+    let plan = {
+        let events = sequence_events_for_text("the weather is great!").expect("sequence");
+        plan_discourse_performance(&events)
+    };
+    let roles = plan
+        .syllables()
+        .iter()
+        .map(PerformanceSyllable::role)
+        .collect::<Vec<_>>();
+    let flourish_count = roles
+        .iter()
+        .filter(|role| **role == PhraseRole::TerminalFlourish)
+        .count();
+
+    assert!(
+        roles.len() > flourish_count,
+        "a long final phrase should keep a chatty lead-in, got all flourish: {roles:?}",
+    );
+    assert!(
+        flourish_count <= 2,
+        "only the tail should flourish, got {flourish_count} flourish syllables",
+    );
+    assert_eq!(
+        roles.last(),
+        Some(&PhraseRole::TerminalFlourish),
+        "the final syllable should still be the terminal accent",
+    );
+
+    // The closing flourish syllable keeps its pure role tension (0.95 at the end
+    // of the ramp), not an engagement-inflated value.
+    let last = plan
+        .syllables()
+        .last()
+        .expect("plan has syllables")
+        .curves();
+
+    assert!(
+        (last.archetype_tension() - 0.95).abs() < 1e-9,
+        "final flourish tension should be the role value 0.95 (engagement-free), got {}",
+        last.archetype_tension(),
+    );
+}
+
+#[test]
+fn semantic_engagement_varies_curves_across_a_neutral_phrase() {
+    // VOICE_V8: brightness is no longer a flat constant across a neutral phrase;
+    // it varies syllable to syllable so upper-mid energy can burst on accents.
+    let events = sequence_events_for_text("cat dog airplane bird").expect("sequence");
+    let plan = plan_discourse_performance(&events);
+    let brights = plan
+        .syllables()
+        .iter()
+        .map(|syllable| syllable.curves().brightness_pressure())
+        .collect::<Vec<_>>();
+
+    assert!(
+        brights
+            .windows(2)
+            .any(|window| (window[0] - window[1]).abs() > 1e-9),
+        "brightness should vary across a neutral phrase, got {brights:?}",
+    );
+}
+
+#[test]
 fn leading_phrase_before_a_reset_is_a_probe() {
     let roles = roles("hi there. okay then.");
 

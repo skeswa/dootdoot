@@ -8,7 +8,41 @@
 //! `VOICE_V7` primitives by role rather than applying one global affect to
 //! every syllable.
 
-use crate::{ProsodicPunctuation, SequenceEvent, SyllableEvent};
+use crate::{KnobSet, ProsodicPunctuation, SequenceEvent, SyllableEvent};
+
+/// Gives the `VOICE_V8` per-syllable movement normalizer (axis-space distance).
+///
+/// Word-to-word distance in the four-axis knob space is divided by this to a
+/// `[0, 1]` movement amount; a typical token-to-token hop saturates it.
+const MOVEMENT_NORMALIZER: f64 = 2.0;
+
+/// Gives the `VOICE_V8` semantic-engagement gains applied on top of role
+/// curves.
+///
+/// These widen each performance channel by the syllable's salience/movement
+/// "drive", so a neutral, punctuation-less phrase still moves; the additional
+/// `ACCENT_*` terms promote one syllable per chatty/probe segment into a
+/// bright, whistle/roughness-engaging accent. Every channel stays clamped by
+/// [`PerformanceCurves::new`].
+const ENGAGE_PITCH_BIAS: f64 = 0.20;
+const ENGAGE_PITCH_VELOCITY: f64 = 0.30;
+const ENGAGE_FORMANT_VELOCITY: f64 = 0.20;
+const ENGAGE_BRIGHTNESS: f64 = 0.30;
+const ENGAGE_MOUTH: f64 = 0.12;
+const ENGAGE_TENSION: f64 = 0.30;
+const ACCENT_PITCH_VELOCITY: f64 = 0.25;
+const ACCENT_BRIGHTNESS: f64 = 0.30;
+const ACCENT_TENSION: f64 = 0.40;
+
+/// Gives how many trailing syllables of a terminal-flourish segment actually
+/// flourish.
+///
+/// `VOICE_V8`: the whistle/yelp is a **terminal accent**, not a treatment for
+/// the whole final phrase. In a long closing segment ("the weather is 78!")
+/// only the last few syllables flourish; the lead-in stays a chatty body so the
+/// phrase does not whistle on every syllable. Short flourishes (≤ this many
+/// syllables, e.g. "hello there?" or "today?!") are unchanged.
+const FLOURISH_TAIL_SYLLABLES: usize = 1;
 
 /// Gives one local discourse role for a phrase of voiced syllables.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -165,6 +199,7 @@ impl PerformancePlan {
 
 /// Plans deterministic discourse performance from sequencer events.
 pub fn plan_discourse_performance(events: &[SequenceEvent]) -> PerformancePlan {
+    let voiced_knobs = collect_voiced_knobs(events);
     let segments = segment_events(events);
     let segment_count = segments.len();
     let mut syllables = Vec::new();
@@ -176,6 +211,7 @@ pub fn plan_discourse_performance(events: &[SequenceEvent]) -> PerformancePlan {
             segment_index + 1 == segment_count,
         );
         let length = segment.syllable_indices.len();
+        let accent_position = accent_position(segment, role, &voiced_knobs);
 
         for (position, syllable_index) in segment.syllable_indices.iter().copied().enumerate() {
             let fraction = if length <= 1 {
@@ -183,16 +219,142 @@ pub fn plan_discourse_performance(events: &[SequenceEvent]) -> PerformancePlan {
             } else {
                 position_to_f64(position) / position_to_f64(length - 1)
             };
+            let knobs = voiced_knobs.get(syllable_index).copied();
+            let previous_knobs = position
+                .checked_sub(1)
+                .and_then(|previous| segment.syllable_indices.get(previous).copied())
+                .and_then(|index| voiced_knobs.get(index).copied());
+            let salience = knobs.map_or(0.0, syllable_salience);
+            let movement = match (knobs, previous_knobs) {
+                (Some(current), Some(previous)) => syllable_movement(current, previous),
+                _ => 0.0,
+            };
+            // Reserve the flourish for the tail of a long final segment; the
+            // lead-in stays a chatty body so the closing phrase does not whistle
+            // on every syllable.
+            let effective_role = flourish_tail_role(role, position, length);
+            let is_accent = accent_position == Some(position);
+            let base = role_curves(effective_role, fraction);
+            // Semantic engagement targets only the body roles (chatty-reply /
+            // probe). The terminal flourish, hesitation, and aside already carry
+            // intentional, self-contained curve shapes; amplifying them with the
+            // drive/accent stacked tension and roughness onto an already-intense
+            // gesture (a trailing "!" turned the whole closing phrase erratic).
+            let curves = if matches!(effective_role, PhraseRole::ChattyReply | PhraseRole::Probe) {
+                engage_curves(base, salience, movement, is_accent)
+            } else {
+                base
+            };
 
             syllables.push(PerformanceSyllable {
                 syllable_index,
-                role,
-                curves: role_curves(role, fraction),
+                role: effective_role,
+                curves,
             });
         }
     }
 
     PerformancePlan { syllables }
+}
+
+fn collect_voiced_knobs(events: &[SequenceEvent]) -> Vec<KnobSet> {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            SequenceEvent::Syllable(syllable) => Some(syllable.knobs()),
+            SequenceEvent::Mood(_)
+            | SequenceEvent::Complexity(_)
+            | SequenceEvent::Archetype(_)
+            | SequenceEvent::Punctuation(_) => None,
+        })
+        .collect()
+}
+
+/// Picks the in-segment position of the highest-salience syllable to accent.
+///
+/// Only the body roles (`ChattyReply`, `Probe`) earn a semantic accent; the
+/// terminal flourish, hesitation, and aside already carry their own treatment.
+/// Ties resolve to the earliest syllable.
+fn accent_position(segment: &Segment, role: PhraseRole, voiced_knobs: &[KnobSet]) -> Option<usize> {
+    if !matches!(role, PhraseRole::ChattyReply | PhraseRole::Probe) {
+        return None;
+    }
+
+    let mut best: Option<(usize, f64)> = None;
+
+    for (position, index) in segment.syllable_indices.iter().copied().enumerate() {
+        let salience = voiced_knobs
+            .get(index)
+            .copied()
+            .map_or(0.0, syllable_salience);
+
+        if best.is_none_or(|(_, best_salience)| salience > best_salience) {
+            best = Some((position, salience));
+        }
+    }
+
+    best.map(|(position, _)| position)
+}
+
+/// Reserves a terminal flourish for the trailing syllables of its segment.
+///
+/// Earlier syllables of a long final segment fall back to `ChattyReply` so they
+/// read as a chatty lead-in rather than a whole-phrase whistle; short segments
+/// (length ≤ [`FLOURISH_TAIL_SYLLABLES`]) keep the flourish on every syllable.
+fn flourish_tail_role(role: PhraseRole, position: usize, length: usize) -> PhraseRole {
+    if role == PhraseRole::TerminalFlourish && position + FLOURISH_TAIL_SYLLABLES < length {
+        PhraseRole::ChattyReply
+    } else {
+        role
+    }
+}
+
+/// Scores a syllable's expressive salience in `[0, 1]` from its semantic knobs.
+fn syllable_salience(knobs: KnobSet) -> f64 {
+    let contour = knobs.contour().abs();
+    let warble = (knobs.warble_depth().clamp(-1.0, 1.0) + 1.0) * 0.5;
+    let pitch = knobs.pitch_center().abs();
+
+    ((0.5 * contour) + (0.3 * warble) + (0.2 * pitch)).clamp(0.0, 1.0)
+}
+
+/// Measures word-to-word movement in `[0, 1]` as normalized axis-space
+/// distance.
+fn syllable_movement(current: KnobSet, previous: KnobSet) -> f64 {
+    let distance = current
+        .axes()
+        .iter()
+        .zip(previous.axes())
+        .map(|(current, previous)| {
+            let delta = current - previous;
+
+            delta * delta
+        })
+        .sum::<f64>()
+        .sqrt();
+
+    (distance / MOVEMENT_NORMALIZER).clamp(0.0, 1.0)
+}
+
+/// Widens role curves by semantic drive and promotes the accent syllable.
+fn engage_curves(
+    base: PerformanceCurves,
+    salience: f64,
+    movement: f64,
+    is_accent: bool,
+) -> PerformanceCurves {
+    let drive = salience.max(0.6 * movement).clamp(0.0, 1.0);
+    let accent = f64::from(u8::from(is_accent));
+
+    PerformanceCurves::new(
+        base.pitch_center_bias() + (ENGAGE_PITCH_BIAS * movement),
+        base.pitch_velocity() + (ENGAGE_PITCH_VELOCITY * drive) + (ACCENT_PITCH_VELOCITY * accent),
+        base.formant_target(),
+        base.formant_velocity() + (ENGAGE_FORMANT_VELOCITY * drive),
+        base.brightness_pressure() + (ENGAGE_BRIGHTNESS * drive) + (ACCENT_BRIGHTNESS * accent),
+        base.mouth_openness() + (ENGAGE_MOUTH * drive),
+        base.archetype_tension() + (ENGAGE_TENSION * drive) + (ACCENT_TENSION * accent),
+    )
 }
 
 fn segment_events(events: &[SequenceEvent]) -> Vec<Segment> {
@@ -266,7 +428,7 @@ fn role_curves(role: PhraseRole, fraction: f64) -> PerformanceCurves {
             0.65,
             0.45,
         ),
-        PhraseRole::ChattyReply => PerformanceCurves::new(0.0, 0.10, 0.0, 0.20, 0.45, 0.40, 0.40),
+        PhraseRole::ChattyReply => PerformanceCurves::new(0.0, 0.10, 0.0, 0.20, 0.20, 0.40, 0.40),
         PhraseRole::Hesitation => {
             PerformanceCurves::new(-0.10, -0.15, -0.25, -0.05, 0.20, 0.80, 0.20)
         }
