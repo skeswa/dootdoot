@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Directional acoustic comparison between a dootdoot render and a BB-8 reference.
+#
+# Usage:
+#   scripts/acoustics "<dootdoot phrase>" [reference-clip.mp3|reference.wav]
+#
+# Renders the phrase with the current voice, optionally decodes a reference clip
+# to mono 44.1 kHz, and reports the gap-analysis directional metrics via the
+# locked uv environment (numpy/scipy). This is a tuning aid, not part of the
+# deterministic voice contract.
+set -euo pipefail
+
+phrase="${1:?usage: scripts/acoustics \"<phrase>\" [reference-clip]}"
+reference="${2:-}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+output_dir="${ACOUSTICS_OUT:-target/acoustics}"
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "error: uv is required (https://docs.astral.sh/uv/)" >&2
+  exit 1
+fi
+
+mkdir -p "${output_dir}"
+render="${output_dir}/dootdoot.wav"
+cargo run --quiet -p dootdoot -- "${phrase}" -o "${render}"
+
+args=("dootdoot=${render}")
+
+if [ -n "${reference}" ]; then
+  case "${reference}" in
+    *.mp3 | *.MP3 | *.m4a | *.wav)
+      if [[ "${reference}" == *.wav ]]; then
+        ref_wav="${reference}"
+      else
+        if ! command -v ffmpeg >/dev/null 2>&1; then
+          echo "error: ffmpeg is required to decode ${reference}" >&2
+          exit 1
+        fi
+        ref_wav="${output_dir}/reference.wav"
+        ffmpeg -hide_banner -loglevel error -y -i "${reference}" -ac 1 -ar 44100 "${ref_wav}"
+      fi
+      args=("reference=${ref_wav}" "${args[@]}")
+      ;;
+    *)
+      echo "error: unsupported reference format: ${reference}" >&2
+      exit 1
+      ;;
+  esac
+fi
+
+uv run --quiet "${script_dir}/acoustic_metrics.py" "${args[@]}"

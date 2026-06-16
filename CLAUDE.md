@@ -99,6 +99,17 @@ cargo deny check && cargo machete
 
 # Regenerate the baked asset (ONLY when intentionally changing mapping/tokenizer inputs)
 cargo run -p xtask
+
+# Directional BB-8 acoustic comparison (TUNING AID, not the voice contract).
+# Renders a phrase, decodes a reference clip, and reports gap-analysis metrics
+# (active fraction, max internal gap, dominant-peak range, harmonicity IQR,
+# spectral centroid, 2-5 kHz share) via a locked uv (numpy/scipy) environment.
+scripts/acoustics "<phrase>" /path/to/inquisitive-then-chatty.mp3
+# Underlying locked PEP 723 script (numpy/scipy pinned by acoustic_metrics.py.lock):
+uv run scripts/acoustic_metrics.py reference=ref.wav dootdoot=render.wav
+
+# Regenerate golden WAV hashes after an intentional, version-bumped voice change:
+DOOTDOOT_REGEN_GOLDEN=1 cargo test -p dootdoot-core --test golden_wav_hashes
 ```
 
 ## Key conventions (full guide: `docs/style.md`)
