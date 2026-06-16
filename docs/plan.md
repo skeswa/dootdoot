@@ -543,7 +543,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       the v7 golden WAV hashes.
       Deps: T-81, T-82, T-83, T-84, T-85, T-86, T-87, T-88 · Reqs: FR-33, FR-39, FR-89,
       NFR-16, NFR-17, NFR-18, NFR-20 · Est: 3h
-- [ ] **T-90 — Fully revise `design.md` for the VOICE_V7 architecture.** After the V7
+- [x] **T-90 — Fully revise `design.md` for the VOICE_V7 architecture.** After the V7
       changes are complete and frozen (T-89), bring `design.md` into full sync with what was
       actually built — not just an appended decision note. Update the end-to-end pipeline
       (§2) to include the discourse-performance planner stage between tokenization and

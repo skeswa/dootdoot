@@ -31,11 +31,15 @@ intuition for the "language."
 
 ### 1.2 Non-goals
 
-- Intelligible speech / TTS. The droid does not pronounce English words.
+- Intelligible speech / TTS. The droid does not pronounce English words. The `VOICE_V7`
+  code-talkbox mouth stage (§6.2) is deliberately broad and subtle — droid articulation, not
+  phoneme-accurate speech — and never maps English phonemes to audio.
 - Real-time interactive performance / DAW plugin. It is a batch CLI.
 - Multi-language excellence. v1 is English-oriented (see §10).
 - User-tunable synthesis in v1. The mapping is intentionally fixed (that fixedness
-  is what makes the language learnable and shareable).
+  is what makes the language learnable and shareable). Later voice versions add more
+  performance channels, but all are deterministic, bounded, and a pure function of the
+  text — not user knobs.
 
 ---
 
@@ -52,11 +56,18 @@ flowchart TD
     ids --> lookup["§4 · look up each token's semantic vector<br/>via a precomputed, baked table<br/><i>gives MEANING — goal 2</i>"]
     lookup --> pca["4-dim PCA vector per token<br/>(+ pooling weight)"]
     pca --> squash["§5 · squash to 4 perceptual knobs<br/>per-token = local gesture<br/>weighted-mean of tokens = sequence baseline<br/><i>learnable, bounded — goal 2</i>"]
-    squash --> voice["§6 · formant-synthesis voice engine<br/>fixed DNA + 4 semantic knobs<br/><i>DROID identity — goal 3</i>"]
+    squash --> plan["§5.4/§6.4 · discourse-performance planner<br/>local phrase roles + bounded performance curves<br/><i>VOICE_V7: schedules gestures by role</i>"]
+    plan --> voice["§6 · formant-synthesis voice engine<br/>fixed DNA + 4 semantic knobs + V7 primitives<br/><i>DROID identity — goal 3</i>"]
     voice --> buf["§7 · canonical Vec&lt;i16&gt; @ 44.1 kHz / 16-bit / mono<br/><i>single source of truth</i>"]
     buf --> wav["hound → WAV file (§7)"]
     buf --> play["rodio → live playback (§7)"]
 ```
+
+From `VOICE_V7` on, a **deterministic discourse-performance planner** sits between the
+semantic layer and synthesis (§5.4, §6.4): it segments the token/control-event stream into
+local phrases, assigns each a role, and emits bounded continuous performance curves that
+schedule the expanded synthesis primitives. It is a pure function of the text and does not
+touch the learnable four-axis semantic core.
 
 The determinism guarantee (§8) wraps the whole pipeline; the runtime architecture
 (§9) is shaped by the decision to precompute the semantic mapping at build time.
@@ -123,6 +134,13 @@ semantics therefore also fixes the tokenizer choice.
   back to `[UNK]` for unrepresentable input; it has its own embedding, so it produces a
   consistent "unknown" warble. We keep it: deterministic and on-theme ("the droid doesn't
   know that word").
+- **Dash/ellipsis hesitation markers (`VOICE_V7`).** Standalone `-`, `--`, en dash (`–`),
+  em dash (`—`), and the single-character ellipsis (`…`) are treated as **control-only
+  hesitation markers**, not voiced semantic tokens: they carry no four-axis values, attach
+  a quiet, bridge-suppressed hesitation rest to the **preceding** syllable (like prosodic
+  punctuation, backward-only), and appear as a distinct control row in `--explain`. A
+  three-dot `...` still tokenizes to three `.` periods and routes through the existing
+  control-only period path.
 - **Empty after filtering** → treated as empty input: the inquisitive "?" chirp (§7.4).
   (E.g. input that is only `[PAD]`.)
 - The tokenizer is driven by the model's `tokenizer.json`, carried inside the embedded
@@ -389,6 +407,26 @@ The `α_k` vector, the per-axis `[lo_k, hi_k]` bounds, and the final clamp are a
 `VOICE_V1` freezes `α = [0.85, 0.90, 1.10, 1.20]` in pitch/vowel/contour/warble order.
 All four squashed knob axes use bounds `[-1.0, 1.0]`.
 
+### 5.5 Decision: `VOICE_V7` adds a performance layer above the meaning layer
+
+The four semantic knobs remain the **learnable core**. `VOICE_V7` adds a separate
+**performance layer** that shapes _how_ a syllable is delivered without changing _what_ it
+means. After tokenization and mapping, a pure **discourse-performance planner** (§6.4)
+segments the voiced syllables into local phrases by punctuation and hesitation timing,
+assigns each phrase a role (`probe`, `chatty_reply`, `hesitation`, `terminal_flourish`,
+`aside`), and emits bounded continuous **performance curves** per syllable: pitch
+center/velocity, formant target/velocity, brightness pressure, mouth openness, and
+archetype tension/release. These curves drive the expanded synthesis primitives (§6.2) and
+the role-gated timing (§6.4).
+
+Affect and archetype are **localized**: the utterance still has a single pooled mood row,
+but archetype selection and gesture intensity are chosen per role/syllable, so a
+high-arousal utterance no longer collapses into one global Yelp — whistle and yelp are
+reserved for the opener and the terminal accent while the middle rotates
+chatter/stutter/tremble. Every curve is clamped to a fixed range and is a pure function of
+the text, so NFR-16's bounded droid parameter space holds. Neutral curves reproduce
+`VOICE_V6` exactly, so the empty chirp and any non-planned syllable are unchanged.
+
 ---
 
 ## 6. Perceptual axes → sound (the droid voice)
@@ -450,16 +488,48 @@ formant bank → ring-mod → amplitude envelope`. The earlier "portamento/warbl
 stages" framing was about _which axis controls what_, not signal order; pitch modulation
 necessarily happens at the oscillator, upstream of the formants.
 
+**`VOICE_V7` expanded primitives.** V7 widens the instrument's dynamic range with bounded,
+deterministic additions that the performance planner (§5.5, §6.4) schedules by role; with
+neutral curves they are inert, so the V6 graph is unchanged:
+
+- **Swept-oscillator whistle gesture** — for terminal-flourish accents the **oscillator
+  fundamental itself** (not just the sparkle layer) sweeps up into the 2–4 kHz whistle band,
+  using a **wider per-gesture pitch span** so selected events leave the established
+  ~0.5–1.1 kHz register.
+- **Noise/breath excitation** — a deterministic value-noise source is blended under the
+  tonal oscillator for selected gestures, so harmonicity can swing clean→rough within a
+  gesture; ordinary syllables stay cleanly periodic.
+- **Event-based upper-mid sparkle** — the formerly always-on sparkle becomes a
+  brightness-reserved event with a shaped attack/decay, louder on flourishes than on
+  ordinary chatter; the global brightness floor is **not** raised.
+- **Code-talkbox mouth stage** — an optional broad moving mouth filter (2–4 resonances)
+  after the formant bank, with a deterministic open/close envelope, tongue/front-back curves,
+  optional breath excitation, and mild bounded saturation. Off by default; opened by the
+  planner on inquisitive holds, moans, and flourishes.
+- **Deterministic imperfection** — a small bounded (±6 cents) per-gesture tape-speed detune
+  for organic life, gated to zero on neutral curves.
+
+The graph with V7 is: `(pitch center + portamento + warble + whistle sweep + imperfection)
+→ oscillator/source + noise/breath → formant bank → ring-mod → mouth stage → amplitude
+envelope`, with the event-based sparkle/body layers mixed in before ring-mod.
+
 ### 6.3 Decision: the fixed/variable split (guarantees droid identity)
 
 - **Fixed (the DNA, identical for all input):** formant _character_ (the filter
   structure and vowel locus), portamento glide time, warble _rate_, ring-mod frequency
   and mix, envelope shape, high-register bias, source waveform.
-- **Variable (the 4 semantic axes only):** pitch center, vowel position, contour/glide
-  shape, warble depth.
+- **Variable (the 4 semantic axes only, in `VOICE_V1`):** pitch center, vowel position,
+  contour/glide shape, warble depth.
 
 Because only 4 tasteful, bounded knobs move and everything else is constant, **every**
-output is unmistakably the same droid (goal 3), while the knobs carry meaning (goal 2).
+`VOICE_V1` output is unmistakably the same droid (goal 3), while the knobs carry meaning
+(goal 2).
+
+`VOICE_V2`–`VOICE_V7` broaden the _variable_ set with additional **deterministic, bounded**
+performance channels (affect, complexity, archetype, phrase prosody, and the V7
+planner-driven primitives above), but every one is clamped to a fixed range and is a pure
+function of the text. The droid-family identity is preserved by the fixedness of the
+_bounds_, not by the literal count of moving parameters (the broadened NFR-16; §8.3, §5.5).
 
 ### 6.4 Decision: temporal / rhythmic structure
 
@@ -595,6 +665,40 @@ reduces the regular tremolo-like pulse heard in repeated high-arousal phrases:
 The active acceptance note is
 [`voice-v6-repeated-phrase-smoothing.md`](./validation/voice-v6-repeated-phrase-smoothing.md).
 The committed golden WAV hashes are regenerated under `VOICE_V6`.
+
+**VOICE_V7 contextual performance & timing.** V7 keeps the V2–V6 channels and adds a
+discourse-performance planner (§5.5) that deploys the expanded synthesis primitives (§6.2)
+and reshapes timing by role:
+
+- **Role-gated long pauses** — between an opener/probe/hesitation phrase and the following
+  reply, the planner inserts a deterministic turn gap (`ROLE_LONG_PAUSE`, ~600–1200 ms),
+  gated so plain statements stay on the smooth V3/V6 connected path and do not slow down.
+- **Suppressible word-boundary bridging** — staged reply phrases suppress the tonal word
+  bridge and use short internal rests (`STAGED_REPLY_REST`, ~30–80 ms) so the
+  opener-gap-answer shape can open up and the active-sound fraction can fall toward the
+  reference's staged level.
+- **Dash/ellipsis hesitation rests** — control-only markers (§3.3) attach a quiet,
+  bridge-suppressed hesitation rest to the prior syllable.
+- Phrase-final lengthening and amplitude tails remain available (carried by the existing
+  clause/sentence syllable lengths) and occupy time without adding a voiced syllable.
+
+**VOICE_V7 synthesis constants.** New frozen values, all deterministic and bounded:
+
+- wider per-gesture pitch span = 16 semitones (vs the V1 span of 10); whistle sweep target
+  = 3,400 Hz with a 4,200 Hz ceiling.
+- noise/breath excitation max blend = 0.50; per-gesture imperfection detune = ±6 cents.
+- role-gated long pause = 26,460–52,920 samples (~600–1200 ms); staged-reply rest =
+  1,323–3,528 samples (~30–80 ms); dash hesitation = 14,994 samples (~340 ms); ellipsis
+  hesitation = 22,050 samples (~500 ms).
+- code-talkbox mouth stage = 3 broad resonances (Q 2.2), max wet mix 0.45, breath mix 0.40,
+  saturation drive 1.6.
+- curve-driven pitch-center bias span = 4 semitones; event-based sparkle reserve =
+  `0.35 + 0.9·brightness`, shaped by a per-gesture sine envelope.
+
+The acceptance note is
+[`voice-v7-contextual-performance.md`](./validation/voice-v7-contextual-performance.md). The
+committed golden WAV hashes are regenerated under `VOICE_V7`; neutral-curve rendering (the
+empty chirp and hand-built events) stays byte-identical to `VOICE_V6`.
 
 ---
 
@@ -908,9 +1012,10 @@ change the semantic PCA mapping; SHALL NOT use a speech vocoder over English tex
 center ring modulation as the main voice; and SHALL NOT import sample libraries.
 
 The new `FR-77…FR-89` requirements (spec §1.16) are the normative form of this scope. The
-full pipeline/synthesis/timing/tokenizer revisions land in §2/§6/§6.4/§3.3 once the
-constants are frozen (plan T-90); this subsection is the contract-scope decision. The frozen
-`VOICE_V7` contract is documented by the acceptance note
+architecture is integrated throughout the document: the planner stage in §2, the
+dash/ellipsis markers in §3.3, the performance layer in §5.5, the expanded synthesis
+primitives in §6.2/§6.3, and the role-gated timing plus the frozen `VOICE_V7` constants in
+§6.4. The frozen `VOICE_V7` contract is documented by the acceptance note
 [`voice-v7-contextual-performance.md`](validation/voice-v7-contextual-performance.md), with
 the golden WAV hashes remaining the byte-level contract.
 
@@ -1024,3 +1129,8 @@ These do not change the architecture and are settled during implementation:
 - **Droid identity (goal 3):** research-grounded fixed formant voice with portamento
   (§6.1–6.3) + fixed/variable split that constrains all input to a tasteful droid
   parameter space.
+- **Expressiveness without losing the language (`VOICE_V2`–`VOICE_V7`):** affect,
+  complexity, archetype, and phrase prosody (§8.3) plus the V7 discourse-performance planner
+  (§5.5) and expanded synthesis primitives (§6.2, §6.4) add deterministic, bounded
+  performance channels layered over — never replacing — the learnable four-axis core, so
+  expressiveness and learnability coexist (broadened NFR-16).

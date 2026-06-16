@@ -1,7 +1,8 @@
 //! `VOICE_V7` discourse-performance planner tests.
 
 use dootdoot_core::{
-    PerformanceCurves, PhraseRole, plan_discourse_performance, sequence_events_for_text,
+    PerformanceCurves, PerformanceSyllable, PhraseRole, plan_discourse_performance,
+    sequence_events_for_text,
 };
 
 fn roles(text: &str) -> Vec<PhraseRole> {
@@ -10,7 +11,7 @@ fn roles(text: &str) -> Vec<PhraseRole> {
     plan_discourse_performance(&events)
         .syllables()
         .iter()
-        .map(|syllable| syllable.role())
+        .map(PerformanceSyllable::role)
         .collect()
 }
 

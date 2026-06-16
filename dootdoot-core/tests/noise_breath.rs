@@ -60,17 +60,21 @@ fn noise_breath_is_bounded_and_finite_over_a_grid() {
     }
 }
 
+fn usize_to_f64(value: usize) -> f64 {
+    u32::try_from(value).map(f64::from).expect("count fits u32")
+}
+
 #[test]
 fn noise_breath_is_aperiodic_and_active() {
-    let samples = (0..2_048)
+    let samples = (0_u32..2_048)
         .map(|index| noise_breath_sample(index, 1.0))
         .collect::<Vec<_>>();
-    let mean = samples.iter().sum::<f64>() / samples.len() as f64;
+    let mean = samples.iter().sum::<f64>() / usize_to_f64(samples.len());
     let variance = samples
         .iter()
         .map(|value| (value - mean).powi(2))
         .sum::<f64>()
-        / samples.len() as f64;
+        / usize_to_f64(samples.len());
 
     assert!(
         variance > 0.01,
@@ -78,8 +82,8 @@ fn noise_breath_is_aperiodic_and_active() {
     );
 
     // Not a single periodic tone: it should not repeat at the oscillator scale.
-    let short_period_matches = (0..1_024)
-        .filter(|&index| (samples[index as usize] - samples[(index + 64) as usize]).abs() < 1e-9)
+    let short_period_matches = (0_usize..1_024)
+        .filter(|&index| (samples[index] - samples[index + 64]).abs() < 1e-9)
         .count();
 
     assert!(

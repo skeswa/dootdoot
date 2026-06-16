@@ -1198,7 +1198,7 @@ pub(crate) fn render_syllable_with_performance_into(
     );
 
     for sample_index in 0..duration_samples {
-        samples.push(render_performance_sample(sample_index, controls, state));
+        samples.push(render_performance_sample(sample_index, &controls, state));
     }
 }
 
@@ -1242,7 +1242,7 @@ pub(crate) fn render_transition_bridge(
 
 fn render_performance_sample(
     sample_index: u32,
-    controls: SyllableRenderControls,
+    controls: &SyllableRenderControls,
     state: &mut SyllableRenderState,
 ) -> f64 {
     let elapsed_seconds = f64::from(sample_index) / f64::from(SYNTH_SAMPLE_RATE_HZ);
@@ -1313,7 +1313,7 @@ fn apply_mouth_stage(
     sample: f64,
     sample_index: u32,
     elapsed_seconds: f64,
-    controls: SyllableRenderControls,
+    controls: &SyllableRenderControls,
     state: &mut SyllableRenderState,
 ) -> f64 {
     if controls.mouth_openness <= 0.0 {
@@ -1335,7 +1335,7 @@ fn apply_mouth_stage(
 }
 
 fn performance_sample_parameters(
-    controls: SyllableRenderControls,
+    controls: &SyllableRenderControls,
     state: &SyllableRenderState,
     elapsed_seconds: f64,
 ) -> PerformanceSampleParameters {

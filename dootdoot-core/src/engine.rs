@@ -3,12 +3,12 @@
 use thiserror::Error;
 
 use crate::{
-    HesitationMarker, KnobSet, MappingError, PerformanceCurves, PerformanceSyllable, PhraseRole,
-    ProsodicPunctuation, SequenceEvent, SyllableEvent, SyllableTiming, TokenVector, TokenizerError,
-    UtteranceMood, analyze_affect_for_text, analyze_complexity_for_text, archetype_for_role,
-    assemble_knobs, embedded_mapping, embedded_tokenizer, plan_discourse_performance,
-    plan_gesture_archetypes, pool_sequence, render_canonical_buffer, role_long_pause_samples,
-    staged_reply_rest_samples,
+    ComplexityAnalysis, HesitationMarker, KnobSet, MappingError, PerformanceCurves,
+    PerformanceSyllable, PhraseRole, ProsodicPunctuation, SequenceEvent, SyllableEvent,
+    SyllableTiming, TokenVector, TokenizerError, UtteranceMood, analyze_affect_for_text,
+    analyze_complexity_for_text, archetype_for_role, assemble_knobs, embedded_mapping,
+    embedded_tokenizer, plan_discourse_performance, plan_gesture_archetypes, pool_sequence,
+    render_canonical_buffer, role_long_pause_samples, staged_reply_rest_samples,
 };
 
 /// Reports why text could not be rendered.
@@ -117,42 +117,66 @@ pub fn explain_rows_for_text(text: &str) -> Result<Vec<ExplainRow>, EngineError>
     Ok(analyze_text(text)?.explain_rows)
 }
 
+#[derive(Debug, Default)]
+struct ParsedTokens {
+    templates: Vec<EventTemplate>,
+    voiced_tokens: Vec<VoicedToken>,
+    punctuation_tokens: Vec<PunctuationToken>,
+    hesitation_tokens: Vec<HesitationToken>,
+}
+
 fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
     let tokenizer = embedded_tokenizer()?;
     let mapping = embedded_mapping()?;
     let mood = analyze_affect_for_text(text)?.mood();
     let complexity = analyze_complexity_for_text(text)?;
     let encoded_input = tokenizer.tokenize(text)?;
-    let mut templates = Vec::new();
-    let mut voiced_tokens: Vec<VoicedToken> = Vec::new();
-    let mut punctuation_tokens = Vec::new();
-    let mut hesitation_tokens = Vec::new();
+    let parsed = parse_tokens(encoded_input.tokens(), &mapping)?;
+
+    if parsed.voiced_tokens.is_empty() {
+        Ok(empty_analysis(mood, complexity, &parsed))
+    } else {
+        voiced_analysis(mood, complexity, &parsed, &mapping)
+    }
+}
+
+fn parse_tokens(
+    tokens: &[crate::TokenizedToken],
+    mapping: &crate::Mapping,
+) -> Result<ParsedTokens, EngineError> {
+    let mut parsed = ParsedTokens::default();
     let mut last_voiced_index: Option<usize> = None;
 
-    for token in encoded_input.tokens() {
+    for token in tokens {
         if let Some(punctuation) = ProsodicPunctuation::from_text(token.text()) {
-            templates.push(EventTemplate::Punctuation(punctuation_tokens.len()));
-            punctuation_tokens.push(PunctuationToken {
+            parsed
+                .templates
+                .push(EventTemplate::Punctuation(parsed.punctuation_tokens.len()));
+            parsed.punctuation_tokens.push(PunctuationToken {
                 text: token.text().to_owned(),
                 punctuation,
             });
         } else if let Some(marker) = HesitationMarker::from_text(token.text()) {
-            templates.push(EventTemplate::Hesitation(hesitation_tokens.len()));
-            hesitation_tokens.push(HesitationToken {
+            parsed
+                .templates
+                .push(EventTemplate::Hesitation(parsed.hesitation_tokens.len()));
+            parsed.hesitation_tokens.push(HesitationToken {
                 text: token.text().to_owned(),
                 marker,
             });
 
             if let Some(index) = last_voiced_index {
-                voiced_tokens[index].timing =
-                    longer_hesitation(voiced_tokens[index].timing, marker.timing());
+                parsed.voiced_tokens[index].timing =
+                    longer_hesitation(parsed.voiced_tokens[index].timing, marker.timing());
             }
         } else {
             let token_vector = mapping.lookup(token.id())?;
 
-            last_voiced_index = Some(voiced_tokens.len());
-            templates.push(EventTemplate::Voiced(voiced_tokens.len()));
-            voiced_tokens.push(VoicedToken {
+            last_voiced_index = Some(parsed.voiced_tokens.len());
+            parsed
+                .templates
+                .push(EventTemplate::Voiced(parsed.voiced_tokens.len()));
+            parsed.voiced_tokens.push(VoicedToken {
                 text: token.text().to_owned(),
                 vector: token_vector,
                 continuation: token.is_continuation(),
@@ -161,96 +185,24 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
         }
     }
 
-    if voiced_tokens.is_empty() {
-        let mut events = vec![
-            SequenceEvent::mood(mood),
-            SequenceEvent::complexity(complexity),
-        ];
-        let mut explain_rows = vec![ExplainRow::mood(mood)];
+    Ok(parsed)
+}
 
-        for template in templates {
-            match template {
-                EventTemplate::Punctuation(index) => {
-                    let punctuation = &punctuation_tokens[index];
-
-                    events.push(SequenceEvent::punctuation(punctuation.punctuation));
-                    explain_rows.push(ExplainRow::punctuation(
-                        punctuation.text.clone(),
-                        punctuation.punctuation,
-                    ));
-                }
-                EventTemplate::Hesitation(index) => {
-                    let hesitation = &hesitation_tokens[index];
-
-                    explain_rows.push(ExplainRow::hesitation(
-                        hesitation.text.clone(),
-                        hesitation.marker,
-                    ));
-                }
-                EventTemplate::Voiced(_) => {}
-            }
-        }
-
-        return Ok(TextAnalysis {
-            events: with_archetype_events(events),
-            explain_rows,
-        });
-    }
-
-    let token_vectors = voiced_tokens
-        .iter()
-        .map(|token| token.vector)
-        .collect::<Vec<_>>();
-    let baseline = mapping.squash_pooled(pool_sequence(&token_vectors)?);
-    let squashed_tokens = token_vectors
-        .iter()
-        .copied()
-        .map(|token_vector| mapping.squash_token(token_vector))
-        .collect::<Vec<_>>();
-    let knobs_per_voiced = squashed_tokens
-        .iter()
-        .map(|squashed| assemble_knobs(baseline, *squashed))
-        .collect::<Vec<_>>();
-
-    // Pass 1: build base events (no curves/archetype yet) for the planner.
-    let mut base_events = vec![
-        SequenceEvent::mood(mood),
-        SequenceEvent::complexity(complexity),
-    ];
-
-    for template in &templates {
-        match template {
-            EventTemplate::Punctuation(index) => {
-                base_events.push(SequenceEvent::punctuation(
-                    punctuation_tokens[*index].punctuation,
-                ));
-            }
-            EventTemplate::Voiced(index) => {
-                base_events.push(SequenceEvent::syllable_with_timing(
-                    knobs_per_voiced[*index],
-                    voiced_tokens[*index].continuation,
-                    voiced_tokens[*index].timing,
-                ));
-            }
-            EventTemplate::Hesitation(_) => {}
-        }
-    }
-
-    let plan = plan_discourse_performance(&base_events);
-    let plan_rows = plan.syllables();
-    let deployed = deploy_performance_timing(&voiced_tokens, plan_rows);
-
-    // Pass 2: build the final, planner-enriched events plus explain rows.
+fn empty_analysis(
+    mood: UtteranceMood,
+    complexity: ComplexityAnalysis,
+    parsed: &ParsedTokens,
+) -> TextAnalysis {
     let mut events = vec![
         SequenceEvent::mood(mood),
         SequenceEvent::complexity(complexity),
     ];
     let mut explain_rows = vec![ExplainRow::mood(mood)];
 
-    for template in templates {
+    for template in &parsed.templates {
         match template {
             EventTemplate::Punctuation(index) => {
-                let punctuation = &punctuation_tokens[index];
+                let punctuation = &parsed.punctuation_tokens[*index];
 
                 events.push(SequenceEvent::punctuation(punctuation.punctuation));
                 explain_rows.push(ExplainRow::punctuation(
@@ -259,7 +211,64 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
                 ));
             }
             EventTemplate::Hesitation(index) => {
-                let hesitation = &hesitation_tokens[index];
+                let hesitation = &parsed.hesitation_tokens[*index];
+
+                explain_rows.push(ExplainRow::hesitation(
+                    hesitation.text.clone(),
+                    hesitation.marker,
+                ));
+            }
+            EventTemplate::Voiced(_) => {}
+        }
+    }
+
+    TextAnalysis {
+        events: with_archetype_events(events),
+        explain_rows,
+    }
+}
+
+fn voiced_analysis(
+    mood: UtteranceMood,
+    complexity: ComplexityAnalysis,
+    parsed: &ParsedTokens,
+    mapping: &crate::Mapping,
+) -> Result<TextAnalysis, EngineError> {
+    let token_vectors = parsed
+        .voiced_tokens
+        .iter()
+        .map(|token| token.vector)
+        .collect::<Vec<_>>();
+    let baseline = mapping.squash_pooled(pool_sequence(&token_vectors)?);
+    let knobs_per_voiced = token_vectors
+        .iter()
+        .copied()
+        .map(|token_vector| assemble_knobs(baseline, mapping.squash_token(token_vector)))
+        .collect::<Vec<_>>();
+    let base_events = base_events_for_plan(mood, complexity, parsed, &knobs_per_voiced);
+    let plan = plan_discourse_performance(&base_events);
+    let plan_rows = plan.syllables();
+    let deployed = deploy_performance_timing(&parsed.voiced_tokens, plan_rows);
+
+    let mut events = vec![
+        SequenceEvent::mood(mood),
+        SequenceEvent::complexity(complexity),
+    ];
+    let mut explain_rows = vec![ExplainRow::mood(mood)];
+
+    for template in &parsed.templates {
+        match template {
+            EventTemplate::Punctuation(index) => {
+                let punctuation = &parsed.punctuation_tokens[*index];
+
+                events.push(SequenceEvent::punctuation(punctuation.punctuation));
+                explain_rows.push(ExplainRow::punctuation(
+                    punctuation.text.clone(),
+                    punctuation.punctuation,
+                ));
+            }
+            EventTemplate::Hesitation(index) => {
+                let hesitation = &parsed.hesitation_tokens[*index];
 
                 explain_rows.push(ExplainRow::hesitation(
                     hesitation.text.clone(),
@@ -267,19 +276,19 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
                 ));
             }
             EventTemplate::Voiced(index) => {
-                let token = &voiced_tokens[index];
-                let knobs = knobs_per_voiced[index];
+                let token = &parsed.voiced_tokens[*index];
+                let knobs = knobs_per_voiced[*index];
                 let role = plan_rows
-                    .get(index)
+                    .get(*index)
                     .map_or(PhraseRole::ChattyReply, PerformanceSyllable::role);
                 let curves = plan_rows
-                    .get(index)
+                    .get(*index)
                     .map_or_else(PerformanceCurves::neutral, PerformanceSyllable::curves);
 
-                events.push(SequenceEvent::archetype(archetype_for_role(role, index)));
+                events.push(SequenceEvent::archetype(archetype_for_role(role, *index)));
                 events.push(SequenceEvent::Syllable(
                     SyllableEvent::new(knobs, token.continuation)
-                        .with_timing(deployed[index])
+                        .with_timing(deployed[*index])
                         .with_performance(role, curves),
                 ));
                 explain_rows.push(ExplainRow::token(
@@ -296,6 +305,38 @@ fn analyze_text(text: &str) -> Result<TextAnalysis, EngineError> {
         events,
         explain_rows,
     })
+}
+
+fn base_events_for_plan(
+    mood: UtteranceMood,
+    complexity: ComplexityAnalysis,
+    parsed: &ParsedTokens,
+    knobs_per_voiced: &[KnobSet],
+) -> Vec<SequenceEvent> {
+    let mut base_events = vec![
+        SequenceEvent::mood(mood),
+        SequenceEvent::complexity(complexity),
+    ];
+
+    for template in &parsed.templates {
+        match template {
+            EventTemplate::Punctuation(index) => {
+                base_events.push(SequenceEvent::punctuation(
+                    parsed.punctuation_tokens[*index].punctuation,
+                ));
+            }
+            EventTemplate::Voiced(index) => {
+                base_events.push(SequenceEvent::syllable_with_timing(
+                    knobs_per_voiced[*index],
+                    parsed.voiced_tokens[*index].continuation,
+                    parsed.voiced_tokens[*index].timing,
+                ));
+            }
+            EventTemplate::Hesitation(_) => {}
+        }
+    }
+
+    base_events
 }
 
 /// Renders text into the canonical signed 16-bit mono audio buffer.
