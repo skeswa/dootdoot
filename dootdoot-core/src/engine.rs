@@ -169,30 +169,68 @@ fn parse_tokens(
 ) -> Result<ParsedTokens, EngineError> {
     let mut parsed = ParsedTokens::default();
     let mut last_voiced_index: Option<usize> = None;
+    let mut index = 0;
 
-    for token in tokens {
-        if let Some(punctuation) = ProsodicPunctuation::from_text(token.text()) {
-            parsed
-                .templates
-                .push(EventTemplate::Punctuation(parsed.punctuation_tokens.len()));
-            parsed.punctuation_tokens.push(PunctuationToken {
-                text: token.text().to_owned(),
-                punctuation,
-            });
-        } else if let Some(marker) = HesitationMarker::from_text(token.text()) {
-            parsed
-                .templates
-                .push(EventTemplate::Hesitation(parsed.hesitation_tokens.len()));
-            parsed.hesitation_tokens.push(HesitationToken {
-                text: token.text().to_owned(),
-                marker,
-            });
+    while index < tokens.len() {
+        let text = tokens[index].text();
 
-            if let Some(index) = last_voiced_index {
-                parsed.voiced_tokens[index].timing =
-                    longer_hesitation(parsed.voiced_tokens[index].timing, marker.timing());
+        if ProsodicPunctuation::from_text(text).is_some() {
+            // VOICE_V9 (R2): collapse a maximal run of consecutive prosodic
+            // punctuation. A run of two or more ASCII periods becomes one
+            // trailing-off ellipsis (`...` is how people actually type it);
+            // any other run keeps only its first marker. The engine already
+            // first-wins on consecutive punctuation (`segment_events`,
+            // `pending_syllables`), so collapsing a stacked terminal run
+            // (`?!`, `!!!`) only makes that pre-existing behavior honest.
+            let start = index;
+            while index < tokens.len()
+                && ProsodicPunctuation::from_text(tokens[index].text()).is_some()
+            {
+                index += 1;
             }
+
+            let run = &tokens[start..index];
+            let all_periods = run.iter().all(|token| token.text() == ".");
+
+            if run.len() >= 2 && all_periods {
+                add_hesitation(
+                    &mut parsed,
+                    run_text(run),
+                    HesitationMarker::Ellipsis,
+                    last_voiced_index,
+                );
+            } else {
+                let punctuation = ProsodicPunctuation::from_text(run[0].text())
+                    .expect("the run head is prosodic punctuation");
+
+                parsed
+                    .templates
+                    .push(EventTemplate::Punctuation(parsed.punctuation_tokens.len()));
+                parsed.punctuation_tokens.push(PunctuationToken {
+                    text: run[0].text().to_owned(),
+                    punctuation,
+                });
+            }
+        } else if HesitationMarker::from_text(text).is_some() {
+            // Collapse a run of consecutive hesitation markers (`--`, `---`) to
+            // the longest-pause marker so a dash run is one rest, not several.
+            let start = index;
+            while index < tokens.len()
+                && HesitationMarker::from_text(tokens[index].text()).is_some()
+            {
+                index += 1;
+            }
+
+            let run = &tokens[start..index];
+            let marker = run
+                .iter()
+                .filter_map(|token| HesitationMarker::from_text(token.text()))
+                .max_by_key(|marker| marker.pause_samples())
+                .expect("the run head is a hesitation marker");
+
+            add_hesitation(&mut parsed, run_text(run), marker, last_voiced_index);
         } else {
+            let token = &tokens[index];
             let token_vector = mapping.lookup(token.id())?;
 
             last_voiced_index = Some(parsed.voiced_tokens.len());
@@ -205,10 +243,35 @@ fn parse_tokens(
                 continuation: token.is_continuation(),
                 timing: SyllableTiming::default(),
             });
+            index += 1;
         }
     }
 
     Ok(parsed)
+}
+
+/// Joins a run of control tokens into one display string (e.g. `...`, `--`).
+fn run_text(run: &[crate::TokenizedToken]) -> String {
+    run.iter().map(crate::TokenizedToken::text).collect()
+}
+
+/// Records one hesitation marker and attaches its quiet rest to the preceding
+/// voiced syllable, keeping the longer rest when one is already present.
+fn add_hesitation(
+    parsed: &mut ParsedTokens,
+    text: String,
+    marker: HesitationMarker,
+    last_voiced_index: Option<usize>,
+) {
+    parsed
+        .templates
+        .push(EventTemplate::Hesitation(parsed.hesitation_tokens.len()));
+    parsed.hesitation_tokens.push(HesitationToken { text, marker });
+
+    if let Some(index) = last_voiced_index {
+        parsed.voiced_tokens[index].timing =
+            longer_hesitation(parsed.voiced_tokens[index].timing, marker.timing());
+    }
 }
 
 fn empty_analysis(
