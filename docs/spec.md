@@ -98,7 +98,10 @@
 - **FR-26** When `-o/--output <FILE>` is given without `--play`, the tool SHALL write
   the buffer as a WAV file and SHALL NOT play audio.
 - **FR-27** When no `-o/--output` is given, the tool SHALL play the buffer live and
-  SHALL NOT write a file.
+  SHALL NOT write a file, **except** that `--explain` (a non-listening inspection mode)
+  SHALL suppress the default playback. Audio SHALL still play when `--play` is given
+  explicitly. In short, audio plays only when `--play` is set, or on a bare render with
+  neither `-o` nor `--explain`.
 - **FR-28** When both `-o/--output` and `--play` are given, the tool SHALL write the
   WAV file and play the buffer.
 - **FR-29** Output WAV files SHALL be 44,100 Hz, 16-bit signed PCM, mono.

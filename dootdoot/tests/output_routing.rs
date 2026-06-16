@@ -47,6 +47,33 @@ fn route_writes_and_plays_when_output_and_play_are_set() {
 }
 
 #[test]
+fn route_does_not_play_when_explaining_without_play() {
+    let cli = Cli::try_parse_from(["dootdoot", "hello", "--explain"]).expect("arguments parse");
+
+    assert_eq!(
+        output_route(&cli),
+        OutputRoute {
+            output: None,
+            play: false,
+        },
+    );
+}
+
+#[test]
+fn route_plays_when_explain_and_play_are_both_set() {
+    let cli =
+        Cli::try_parse_from(["dootdoot", "hello", "--explain", "--play"]).expect("arguments parse");
+
+    assert_eq!(
+        output_route(&cli),
+        OutputRoute {
+            output: None,
+            play: true,
+        },
+    );
+}
+
+#[test]
 fn binary_writes_wav_when_output_path_is_set() {
     let path = unique_wav_path("write-output");
     let _ = fs::remove_file(&path);

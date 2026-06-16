@@ -14,9 +14,16 @@ pub struct OutputRoute {
 }
 
 /// Resolves CLI flags into an output route.
+///
+/// Audio plays only when `--play` is set explicitly, or when the invocation is
+/// a bare render with neither an output file (`-o`) nor `--explain`. Both `-o`
+/// and `--explain` suppress the default live playback, since each is a
+/// non-listening use (writing a file, or inspecting the per-token table).
 pub fn output_route(cli: &Cli) -> OutputRoute {
+    let bare_render = cli.output.is_none() && !cli.explain;
+
     OutputRoute {
         output: cli.output.clone(),
-        play: cli.play || cli.output.is_none(),
+        play: cli.play || bare_render,
     }
 }

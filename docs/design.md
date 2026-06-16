@@ -746,15 +746,21 @@ Built with `clap` (derive).
 
 **Output behavior:**
 
-- No `-o` → **play live** (default).
+- No `-o`, no `--explain` → **play live** (the bare-render default).
 - `-o, --output <FILE>` → **write WAV, no playback** (scripting-friendly default).
 - `-o … --play` → **write and play**.
+- `--explain` (without `--play`) → **no playback** — it is a non-listening inspection mode.
+- `--play` always forces playback regardless of `-o`/`--explain`.
+
+So audio plays only when `--play` is set, or on a bare render with neither `-o` nor
+`--explain`.
 
 **Learnability feature:**
 
 - `--explain` → per-token table to **stderr**: `token │ pitch │ vowel │ contour │ warble`
   (so users _see_ the 4 axes and build intuition). On stderr so it never pollutes piped
-  audio.
+  audio. Because it is an inspection mode, it does not play audio unless `--play` is also
+  given.
 
 **Empty / whitespace-only input:** always emit a **fixed inquisitive "?" chirp**
 (a rising-glide warble, the droid going "hm?"), exit 0. The chirp is a fixed gesture,
