@@ -8,12 +8,20 @@ use dootdoot::explain_table_for_text;
 fn explain_table_includes_semantic_and_control_rows() {
     let table = explain_table_for_text("hello?").expect("explain table should render");
 
-    assert!(table.starts_with("token │ pitch │ vowel │ contour │ warble\n"));
-    assert!(table.contains("? │ control:question │ - │ - │ -\n"));
+    let header = table
+        .lines()
+        .next()
+        .expect("explain table should have a header");
+    assert!(header.starts_with("token") && header.contains("pitch") && header.contains("role"));
     assert!(
         table
             .lines()
-            .any(|line| { line.starts_with("hello │ ") && !line.contains("control:") })
+            .any(|line| line.starts_with('?') && line.contains("control:question"))
+    );
+    assert!(
+        table
+            .lines()
+            .any(|line| { line.starts_with("hello ") && !line.contains("control:") })
     );
 }
 
@@ -32,8 +40,12 @@ fn binary_writes_explain_table_to_stderr_only() {
 
     assert!(output.status.success());
     assert!(stdout.is_empty());
-    assert!(stderr.starts_with("token │ pitch │ vowel │ contour │ warble\n"));
-    assert!(stderr.contains("? │ control:question │ - │ - │ -\n"));
+    assert!(stderr.starts_with("token"));
+    assert!(
+        stderr
+            .lines()
+            .any(|line| line.starts_with('?') && line.contains("control:question"))
+    );
     assert!(path.exists());
 
     fs::remove_file(path).expect("temporary wav should be removable");

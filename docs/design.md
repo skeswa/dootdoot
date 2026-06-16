@@ -757,8 +757,9 @@ So audio plays only when `--play` is set, or on a bare render with neither `-o` 
 
 **Learnability feature:**
 
-- `--explain` → per-token table to **stderr**: `token │ pitch │ vowel │ contour │ warble`
-  (so users _see_ the 4 axes and build intuition). On stderr so it never pollutes piped
+- `--explain` → per-token table to **stderr**, aligned into a tidy grid:
+  `token │ pitch │ vowel │ contour │ warble │ role` (so users _see_ the 4 axes plus the
+  planner's per-phrase role and build intuition). On stderr so it never pollutes piped
   audio. Because it is an inspection mode, it does not play audio unless `--play` is also
   given.
 

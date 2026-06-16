@@ -8,7 +8,11 @@ const MOOD_SNAPSHOT: &str = include_str!("fixtures/explain_mood_scenarios.txt");
 fn explain_table_includes_mood_row() {
     let table = explain_table_for_text("VERY HAPPY!!!").expect("explain table should render");
 
-    assert!(table.contains("mood │ valence:"));
+    assert!(
+        table
+            .lines()
+            .any(|line| line.starts_with("mood") && line.contains("valence:"))
+    );
     assert!(table.contains("arousal:"));
 }
 
@@ -26,7 +30,7 @@ fn explain_mood_rows_match_scenario_snapshot() {
         let table = explain_table_for_text(text).expect("explain table should render");
         let mood = table
             .lines()
-            .find(|line| line.starts_with("mood │ "))
+            .find(|line| line.starts_with("mood"))
             .expect("explain table should include mood row");
 
         actual.push_str(label);

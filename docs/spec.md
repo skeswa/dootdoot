@@ -111,7 +111,7 @@
 ### 1.7 CLI & UX
 
 - **FR-31** The tool SHALL provide `--explain`, printing a per-token table
-  (`token │ pitch │ vowel │ contour │ warble`) to stderr.
+  (`token │ pitch │ vowel │ contour │ warble │ role`, aligned into a tidy grid) to stderr.
 - **FR-32** `--explain` output SHALL go to stderr only and SHALL NOT appear in any
   piped audio or file output.
 - **FR-33** The tool SHALL provide `--version`, which SHALL surface the active voice

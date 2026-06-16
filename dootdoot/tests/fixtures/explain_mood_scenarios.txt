@@ -1,4 +1,4 @@
-calm	mood │ valence:+0.675 │ arousal:+0.307 │ - │ -
-sad	mood │ valence:-0.575 │ arousal:+0.305 │ - │ -
-excited	mood │ valence:+0.675 │ arousal:+1.000 │ - │ -
-alarm	mood │ valence:-0.562 │ arousal:+1.000 │ - │ -
+calm	mood  │ valence:+0.675  arousal:+0.307
+sad	mood     │ valence:-0.575  arousal:+0.305
+excited	mood  │ valence:+0.675  arousal:+1.000
+alarm	mood     │ valence:-0.562  arousal:+1.000

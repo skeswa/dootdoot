@@ -7,8 +7,6 @@ use dootdoot_core::{
     explain_rows_for_text,
 };
 
-const EXPLAIN_HEADER: &str = "token │ pitch │ vowel │ contour │ warble\n";
-
 /// Formats an empty-input explain table.
 pub fn explain_table_for_empty_chirp() -> String {
     format_explain_rows(&[])
@@ -18,13 +16,22 @@ pub fn explain_table_for_empty_chirp() -> String {
 ///
 /// # Errors
 ///
-/// Returns an error if text cannot be tokenized or mapped with `VOICE_V1`.
+/// Returns an error if text cannot be tokenized or mapped with the active
+/// voice.
 pub fn explain_table_for_text(text: &str) -> Result<String, EngineError> {
     Ok(format_explain_rows(&explain_rows_for_text(text)?))
 }
 
 fn format_explain_rows(rows: &[ExplainRow]) -> String {
-    let mut table = String::from(EXPLAIN_HEADER);
+    let token_width = explain_token_width(rows);
+    let mut table = String::new();
+
+    writeln!(
+        table,
+        "{:<token_width$} │ {:>6} │ {:>6} │ {:>7} │ {:>6} │ role",
+        "token", "pitch", "vowel", "contour", "warble",
+    )
+    .expect("writing to a String cannot fail");
 
     for row in rows {
         match row {
@@ -33,18 +40,18 @@ fn format_explain_rows(rows: &[ExplainRow]) -> String {
 
                 writeln!(
                     table,
-                    "mood │ valence:{:+.3} │ arousal:{:+.3} │ - │ -",
+                    "{:<token_width$} │ valence:{:+.3}  arousal:{:+.3}",
+                    "mood",
                     mood.valence(),
                     mood.arousal(),
                 )
-                .expect("writing to a String cannot fail");
             }
             ExplainRow::Token(token) => {
                 let knobs = token.knobs();
 
                 writeln!(
                     table,
-                    "{} │ {:+.3} │ {:+.3} │ {:+.3} │ {:+.3} │ role:{}",
+                    "{:<token_width$} │ {:>+6.3} │ {:>+6.3} │ {:>+7.3} │ {:>+6.3} │ {}",
                     token.token(),
                     knobs.pitch_center(),
                     knobs.vowel_position(),
@@ -52,30 +59,45 @@ fn format_explain_rows(rows: &[ExplainRow]) -> String {
                     knobs.warble_depth(),
                     role_name(token.role()),
                 )
-                .expect("writing to a String cannot fail");
             }
             ExplainRow::Punctuation(punctuation) => {
                 writeln!(
                     table,
-                    "{} │ control:{} │ - │ - │ -",
+                    "{:<token_width$} │ control:{}",
                     punctuation.token(),
                     punctuation_name(punctuation.punctuation()),
                 )
-                .expect("writing to a String cannot fail");
             }
             ExplainRow::Hesitation(hesitation) => {
                 writeln!(
                     table,
-                    "{} │ control:{} │ - │ - │ -",
+                    "{:<token_width$} │ control:{}",
                     hesitation.token(),
                     hesitation_name(hesitation.marker()),
                 )
-                .expect("writing to a String cannot fail");
             }
         }
+        .expect("writing to a String cannot fail");
     }
 
     table
+}
+
+fn explain_token_width(rows: &[ExplainRow]) -> usize {
+    let mut width = "token".len().max("mood".len());
+
+    for row in rows {
+        let cell = match row {
+            ExplainRow::Mood(_) => "mood".chars().count(),
+            ExplainRow::Token(token) => token.token().chars().count(),
+            ExplainRow::Punctuation(punctuation) => punctuation.token().chars().count(),
+            ExplainRow::Hesitation(hesitation) => hesitation.token().chars().count(),
+        };
+
+        width = width.max(cell);
+    }
+
+    width
 }
 
 fn role_name(role: PhraseRole) -> &'static str {

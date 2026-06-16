@@ -55,17 +55,20 @@ echo "piped text" | dootdoot         # read from stdin
 dootdoot "curious?" --explain        # print the per-token sound breakdown
 ```
 
-`--explain` writes a table to stderr so it never pollutes file output or shell
-pipelines. The columns are the four learnable sound knobs:
+`--explain` writes an aligned table to stderr so it never pollutes file output or shell
+pipelines. It is an inspection mode, so it does **not** play audio (pass `--play` if you
+also want to hear it). The numeric columns are the four learnable sound knobs; the `role`
+column shows the per-phrase discourse role the planner assigned:
 
 ```text
-token │ pitch │ vowel │ contour │ warble
-hello │ +0.185 │ -0.340 │ +0.512 │ -0.118
-? │ control:question │ - │ - │ -
+token   │  pitch │  vowel │ contour │ warble │ role
+mood    │ valence:+0.325  arousal:+0.357
+curious │ -0.660 │ +0.058 │  -0.390 │ +0.762 │ terminal-flourish
+?       │ control:question
 ```
 
-The exact numbers depend on the frozen mapping and active voice. Punctuation and
-performance rows are control markers: they shape neighboring voiced syllables and pauses,
+The exact numbers depend on the frozen mapping and active voice. The `mood` row and the
+`control:` rows are control markers: they shape neighboring voiced syllables and pauses,
 but do not produce their own voiced tokens.
 
 ## Documented behavior
