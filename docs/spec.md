@@ -342,6 +342,47 @@
   `dootdoot VOICE_V7` version string, and regenerated golden WAV hashes; the planner's
   role and curve decisions SHALL be surfaced in `--explain` where useful.
 
+### 1.17 VOICE_V8 semantic engagement & bursty texture
+
+> Derived from
+> [`bb8-corpus-timbre-texture-analysis.md`](./research/bb8-corpus-timbre-texture-analysis.md).
+> `VOICE_V8` targets the residual corpus-wide gap: `VOICE_V7` already ships the expressive
+> primitives (whistle, roughness, bursty sparkle, staged rests) but engages them only from
+> punctuation/affect, so neutral text renders flat. `VOICE_V8` engages those primitives
+> from semantics and makes the upper-mid layer bursty rather than constant. It keeps the
+> four semantic PCA axes as the learnable core (FR-11) and reuses the V7 channels. Every
+> requirement below is sample-affecting and stays inside the fixed droid parameter space
+> (NFR-16). Explicit non-goals: `VOICE_V8` SHALL NOT raise the global brightness _level_
+> (the corpus median centroid already matches), SHALL NOT introduce unseeded randomness,
+> SHALL NOT change the semantic PCA mapping, SHALL NOT over-noise the body (the roughness
+> floor stays bounded and subtle), and SHALL NOT fully de-bridge structured/punctuated
+> phrases (only neutral input gains word rests).
+
+- **FR-90** The `VOICE_V8` planner SHALL derive bounded per-syllable expressive engagement
+  from the semantic PCA axes (salience) and word-to-word axis movement, so a neutral,
+  unpunctuated utterance still receives per-syllable curve variation and at least one
+  semantic accent per chatty-reply/probe segment. This SHALL NOT change the discourse
+  roles that punctuation and position assign (FR-84); it only widens the per-syllable
+  curves (FR-85).
+- **FR-91** A `VOICE_V8` body-syllable semantic accent SHALL be able to engage the whistle
+  sweep (FR-77) and wider pitch span (FR-78) without terminal punctuation, gated by a named
+  archetype-tension threshold so only accents reach the whistle band.
+- **FR-92** `VOICE_V8` SHALL lower the default upper-mid brightness of ordinary body
+  syllables and make the event-based sparkle (FR-87) burstier (sharper envelope, lower
+  floor, higher accent peak), so the constant 2–5 kHz share falls toward the BB-8 corpus
+  while accent bursts rise; `>6 kHz` energy SHALL stay modest.
+- **FR-93** Engaged (planner-driven) body syllables SHALL carry a small, named, always-on
+  roughness floor so neutral text is not pinned to pure periodicity (harmonicity can swing
+  off ~0.95 toward the corpus). Neutral-curve rendering (the empty chirp and hand-built
+  events) SHALL keep a zero roughness floor and remain cleanly periodic.
+- **FR-94** `VOICE_V8` SHALL insert short (≈30–80 ms) word-boundary rests on neutral
+  multi-word input independent of punctuation, so the active-sound fraction falls toward
+  the BB-8 library level; structured (punctuated/staged) utterances SHALL keep their
+  longer staged rests and tonal bridges.
+- **FR-95** The frozen `VOICE_V8` contract SHALL be documented with a corpus timbre/texture
+  acceptance note (tracked separately from the golden hashes), the surfaced
+  `dootdoot VOICE_V8` version string, and regenerated golden WAV hashes.
+
 ---
 
 ## 2. Non-functional requirements

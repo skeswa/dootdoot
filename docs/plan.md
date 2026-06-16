@@ -562,6 +562,39 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ---
 
+## Phase 17 — VOICE_V8 semantic engagement & bursty texture
+
+> Derived from
+> [`bb8-corpus-timbre-texture-analysis.md`](./research/bb8-corpus-timbre-texture-analysis.md):
+> the whole-corpus comparison found `VOICE_V7` already ships the expressive primitives, but
+> engages them only from punctuation/affect, so neutral text renders flat. Phase 17 engages
+> those primitives from semantics and makes the upper-mid bursty. Every task is
+> sample-affecting, requires `VOICE_V8` and regenerated golden fixtures, and stays inside the
+> fixed droid parameter space (NFR-16). Implemented in one pass.
+
+- [x] **T-91 — Semantic engagement in the planner.** Have the discourse-performance planner
+      read each voiced syllable's four-axis salience and word-to-word movement and widen the
+      role curves accordingly, promoting one semantic accent per chatty-reply/probe segment,
+      without changing punctuation-assigned roles. Lower the ordinary chatty-reply brightness.
+      Deps: T-86, T-87 · Reqs: FR-90, FR-92, FR-85, NFR-16 · Est: 2.5h
+- [x] **T-92 — Whistle and roughness on semantic accents.** Engage the V7 whistle sweep on a
+      chatty-reply/probe accent past a named tension threshold, and add a small always-on
+      roughness floor for engaged body syllables while keeping neutral curves cleanly periodic.
+      Deps: T-91, T-81, T-82 · Reqs: FR-91, FR-93, NFR-3, NFR-4, NFR-16 · Est: 2h
+- [x] **T-93 — Bursty upper-mid sparkle.** Sharpen the event-based sparkle envelope (`sin²`,
+      lower floor, higher accent peak) so the constant 2-5 kHz bed becomes accent bursts.
+      Deps: T-91, T-87 · Reqs: FR-92, NFR-3, NFR-4, NFR-16 · Est: 1.5h
+- [x] **T-94 — Neutral word-boundary rests.** Insert short silent rests at unpunctuated word
+      boundaries so neutral input de-bridges; keep structured utterances' bridges and rests.
+      Deps: T-83 · Reqs: FR-94, FR-81, NFR-16 · Est: 1.5h
+- [x] **T-95 — Freeze VOICE_V8 + corpus acceptance doc.** Bump `ACTIVE_VOICE` to `VOICE_V8`,
+      surface the version string, write the corpus timbre/texture acceptance note with the
+      before/after directional metrics, regenerate the golden WAV hashes, and sync
+      `spec.md` (FR-90…FR-95), `design.md` (§8.9 + constants), and the affected tests.
+      Deps: T-91, T-92, T-93, T-94 · Reqs: FR-95, FR-33, FR-39, NFR-16 · Est: 2.5h
+
+---
+
 ## Critical paths
 
 ```mermaid

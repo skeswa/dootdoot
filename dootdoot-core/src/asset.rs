@@ -24,8 +24,11 @@ pub const VOICE_V6: &str = "VOICE_V6";
 /// Identifies the contextual-performance output contract.
 pub const VOICE_V7: &str = "VOICE_V7";
 
+/// Identifies the semantic-engagement and bursty-texture output contract.
+pub const VOICE_V8: &str = "VOICE_V8";
+
 /// Identifies the active sample-affecting output contract.
-pub const ACTIVE_VOICE: &str = VOICE_V7;
+pub const ACTIVE_VOICE: &str = VOICE_V8;
 
 /// Identifies the first committed dootdoot asset spec file.
 pub const DOOT_ASSET_FILE_V1: &str = "dootdoot_asset_v1.doot";

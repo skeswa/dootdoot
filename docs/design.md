@@ -700,6 +700,27 @@ The acceptance note is
 committed golden WAV hashes are regenerated under `VOICE_V7`; neutral-curve rendering (the
 empty chirp and hand-built events) stays byte-identical to `VOICE_V6`.
 
+**VOICE_V8 semantic engagement & bursty texture.** V8 reuses every V7 channel and constant;
+it changes when and how strongly they engage. New frozen values and behaviors:
+
+- planner semantic engagement: per-syllable salience (`0.5·|contour| + 0.3·warble +
+0.2·|pitch|`) and word-to-word axis movement (distance / 2.0) widen the role curves; one
+  semantic accent per chatty-reply/probe segment adds brightness/tension/velocity.
+- whistle on body accents: a chatty-reply/probe syllable whose archetype tension ≥ 0.75
+  engages the whistle sweep (scaled by 0.85), so neutral text reaches the whistle band.
+- bursty sparkle: the ordinary chatty-reply brightness pressure drops from 0.45 to 0.20 and
+  the event-based sparkle reserve is sharpened to `(0.08 + 1.5·brightness)·sin²(progress)`,
+  turning the upper-mid bed into accent bursts.
+- roughness floor = 0.18 for engaged (planner-driven) body syllables; neutral curves keep a
+  zero floor, so the empty chirp and hand-built events stay cleanly periodic.
+- neutral word rest = `staged_reply_rest_samples(0.2)` (~40 ms) at unpunctuated word
+  boundaries; structured utterances keep the 0.5 (~55 ms) staged rest and tonal bridges.
+
+The acceptance note is
+[`voice-v8-semantic-engagement.md`](./validation/voice-v8-semantic-engagement.md). The
+committed golden WAV hashes are regenerated under `VOICE_V8`; neutral-curve rendering stays
+cleanly periodic, and structured/punctuated phrases keep their `VOICE_V7` bridges.
+
 ---
 
 ## 7. Sound → output
@@ -1030,6 +1051,52 @@ primitives in §6.2/§6.3, and the role-gated timing plus the frozen `VOICE_V7` 
 [`voice-v7-contextual-performance.md`](validation/voice-v7-contextual-performance.md), with
 the golden WAV hashes remaining the byte-level contract.
 
+### 8.9 Decision: `VOICE_V8` engages the V7 primitives from semantics
+
+`VOICE_V8` is the response to
+[`bb8-corpus-timbre-texture-analysis.md`](research/bb8-corpus-timbre-texture-analysis.md),
+which measured the whole BB-8 reference corpus (not one clip) against `VOICE_V7`. The
+finding: V7 already ships the expressive primitives, but they engage only from punctuation
+and affect, so neutral declarative text renders flat — one long over-connected island, a
+constant (not bursty) upper-mid bed, and pure periodicity. `VOICE_V8` keeps the four PCA
+semantic axes as the learnable core (§5) and every V7 channel and constant; it changes when
+and how strongly they engage:
+
+- **Semantic engagement.** The planner reads each voiced syllable's four-axis salience and
+  word-to-word movement and widens its role curves accordingly, and promotes one **semantic
+  accent** per chatty-reply/probe segment. Punctuation-assigned roles (§8.8) are unchanged;
+  only the per-syllable curves move, so a neutral phrase still earns one expressive accent.
+- **Whistle on body accents.** An accent whose archetype tension clears a named threshold
+  engages the V7 whistle sweep without terminal punctuation, so the dominant tonal peak can
+  climb into the whistle band on plain text.
+- **Flourish reserved for the terminal accent.** The whistle/yelp is a terminal _accent_
+  (FR-86), not a treatment for the whole final phrase. Only the trailing syllable of a
+  terminal-flourish segment flourishes; the lead-in of a long closing phrase ("the weather
+  is 78!") stays a chatty body, so it does not whistle on every syllable and turn shrill.
+  Short flourishes are unchanged.
+- **Bursty upper-mid.** The ordinary chatty-reply brightness drops and the event-based
+  sparkle envelope is sharpened (`sin²`, lower floor, higher accent peak), turning the
+  constant 2-5 kHz bed into accent bursts without raising the brightness level.
+- **Roughness floor.** Engaged body syllables carry a small always-on roughness floor so
+  neutral text swings off pure periodicity; neutral curves keep a zero floor, so the empty
+  chirp and hand-built events stay cleanly periodic.
+- **Neutral word rests.** Unpunctuated multi-word input gets short silent word-boundary
+  rests, so the active-sound fraction falls toward the BB-8 library; structured/punctuated
+  utterances keep their `VOICE_V7` tonal bridges and longer staged rests.
+
+Every `VOICE_V8` change is a pure function of the text plus frozen constants, bounded and
+clamped, so determinism (§8.1) and the fixed droid parameter space (NFR-16) are preserved.
+The new `FR-90…FR-95` requirements (spec §1.17) are the normative form of this scope. The
+frozen `VOICE_V8` contract is documented by the acceptance note
+[`voice-v8-semantic-engagement.md`](validation/voice-v8-semantic-engagement.md), with the
+golden WAV hashes remaining the byte-level contract.
+
+**Non-goals restated for `VOICE_V8`.** It SHALL NOT raise the global brightness _level_ (the
+corpus median centroid already matches — the gap was burstiness, not level); SHALL NOT
+introduce unseeded randomness; SHALL NOT change the semantic PCA mapping; SHALL NOT
+over-noise the body (the roughness floor stays bounded and subtle); and SHALL NOT
+de-bridge structured/punctuated phrases.
+
 ---
 
 ## 9. Architecture
@@ -1140,8 +1207,11 @@ These do not change the architecture and are settled during implementation:
 - **Droid identity (goal 3):** research-grounded fixed formant voice with portamento
   (§6.1–6.3) + fixed/variable split that constrains all input to a tasteful droid
   parameter space.
-- **Expressiveness without losing the language (`VOICE_V2`–`VOICE_V7`):** affect,
+- **Expressiveness without losing the language (`VOICE_V2`–`VOICE_V8`):** affect,
   complexity, archetype, and phrase prosody (§8.3) plus the V7 discourse-performance planner
   (§5.5) and expanded synthesis primitives (§6.2, §6.4) add deterministic, bounded
   performance channels layered over — never replacing — the learnable four-axis core, so
-  expressiveness and learnability coexist (broadened NFR-16).
+  expressiveness and learnability coexist (broadened NFR-16). `VOICE_V8` (§8.9) engages those
+  primitives from the four-axis semantics themselves — semantic accents, bursty upper-mid, a
+  roughness floor, and neutral word rests — so even unpunctuated text performs, still as a
+  pure function of the learnable core.

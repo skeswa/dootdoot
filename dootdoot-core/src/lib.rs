@@ -24,7 +24,7 @@ pub use asset::{
     DOOT_ASSET_SCALE_COUNT, DOOT_ASSET_SPEC_VERSION, DOOT_ASSET_SQUASH_STATS_PER_AXIS,
     DOOT_ASSET_TOKEN_RECORD_BYTES, DootAsset, DootAssetError, DootAssetHashes, DootAssetParts,
     DootAssetScales, DootAssetSpec, DootAssetSquashAxisStats, DootAssetSquashFunction, VOICE_V1,
-    VOICE_V2, VOICE_V3, VOICE_V4, VOICE_V5, VOICE_V6, VOICE_V7, embedded_doot_asset,
+    VOICE_V2, VOICE_V3, VOICE_V4, VOICE_V5, VOICE_V6, VOICE_V7, VOICE_V8, embedded_doot_asset,
 };
 pub use complexity::{ComplexityAnalysis, analyze_complexity_for_text};
 pub use engine::{

@@ -7,6 +7,7 @@ const VOICE_V4: &str = include_str!("../../docs/validation/voice-v4-onset-smooth
 const VOICE_V5: &str = include_str!("../../docs/validation/voice-v5-word-attack-smoothing.md");
 const VOICE_V6: &str = include_str!("../../docs/validation/voice-v6-repeated-phrase-smoothing.md");
 const VOICE_V7: &str = include_str!("../../docs/validation/voice-v7-contextual-performance.md");
+const VOICE_V8: &str = include_str!("../../docs/validation/voice-v8-semantic-engagement.md");
 
 #[test]
 fn integrated_tuning_acceptance_records_phase_seven_decision() {
@@ -139,6 +140,27 @@ fn voice_v7_contextual_performance_acceptance_records_decision() {
         assert!(
             VOICE_V7.contains(expected),
             "VOICE_V7 acceptance note should mention {expected}",
+        );
+    }
+}
+
+#[test]
+fn voice_v8_semantic_engagement_acceptance_records_decision() {
+    for expected in [
+        "Accepted for VOICE_V8",
+        "dootdoot VOICE_V8",
+        "bb8-corpus-timbre-texture-analysis",
+        "semantic accent",
+        "whistle",
+        "roughness floor",
+        "word-boundary rests",
+        "Harmonicity IQR",
+        "2-5 kHz",
+        "golden WAV hashes",
+    ] {
+        assert!(
+            VOICE_V8.contains(expected),
+            "VOICE_V8 acceptance note should mention {expected}",
         );
     }
 }

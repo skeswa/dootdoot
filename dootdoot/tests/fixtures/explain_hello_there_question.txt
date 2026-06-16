@@ -2,10 +2,10 @@ mood        valence:+0.000  arousal:+0.322
 complexity  scalar:+0.264  subtokens:0  chars:11
 
 token  │  pitch │  vowel │ contour │ warble │ role              │ archetype
-hello  │ -0.561 │ -0.517 │  -0.931 │ +0.415 │ terminal-flourish │ yelp
+hello  │ -0.561 │ -0.517 │  -0.931 │ +0.415 │ chatty-reply      │ chatter
 there  │ -0.075 │ +0.070 │  +0.312 │ +0.477 │ terminal-flourish │ yelp
 ?      │ control:question · rising glide · pause 240 ms
 
 curves │ p.bias │  p.vel │  f.tgt │  f.vel │ bright │  mouth │   tens │ gap
-hello  │ +0.350 │ +0.550 │ +0.300 │ +0.350 │  0.550 │  0.550 │  0.600 │ -
+hello  │ +0.000 │ +0.337 │ +0.000 │ +0.358 │  0.437 │  0.495 │  0.637 │ -
 there  │ +0.800 │ +0.950 │ +0.300 │ +0.350 │  0.900 │  0.550 │  0.950 │ -
