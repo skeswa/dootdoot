@@ -34,7 +34,9 @@ fn input_limit_status_rejects_above_hard_threshold() {
 fn binary_rejects_over_ceiling_input_without_writing_audio() {
     let path = unique_wav_path("limit");
     let _ = fs::remove_file(&path);
-    let text = "hello ".repeat(8_001);
+    // VOICE_V8 shortens neutral word gaps (silent rests replace tonal bridges),
+    // so the over-ceiling fixture needs more words to still exceed 30 minutes.
+    let text = "hello ".repeat(12_000);
     let output = Command::new(env!("CARGO_BIN_EXE_dootdoot"))
         .arg(text)
         .args(["-o"])

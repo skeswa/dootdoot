@@ -5,6 +5,9 @@
 *.profraw
 /lcov.info
 
+# Stray render artifacts (e.g. a rejected CLI test's -o target that should never be written)
+ignored.wav
+
 # macOS
 .DS_Store
 

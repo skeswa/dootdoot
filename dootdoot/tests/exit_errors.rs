@@ -4,16 +4,24 @@ use std::{fs, path::PathBuf, process::Command};
 
 #[test]
 fn over_ceiling_input_exits_one_with_error_prefix() {
-    let text = "hello ".repeat(8_001);
+    // VOICE_V8 shortens neutral word gaps (silent rests replace tonal bridges),
+    // so the over-ceiling fixture needs more words to still exceed 30 minutes.
+    let text = "hello ".repeat(12_000);
+    // Write to a unique temp path, not a relative "ignored.wav", so a regression
+    // that renders instead of rejecting cannot litter the working tree.
+    let path = missing_output_path("over-ceiling").with_file_name("ignored.wav");
+    let _ = fs::remove_file(&path);
     let output = Command::new(env!("CARGO_BIN_EXE_dootdoot"))
         .arg(text)
-        .args(["-o", "ignored.wav"])
+        .arg("-o")
+        .arg(&path)
         .output()
         .expect("test harness provides the compiled dootdoot binary path");
     let stderr = String::from_utf8(output.stderr).expect("stderr should be utf8");
 
     assert_eq!(output.status.code(), Some(1));
     assert!(stderr.starts_with("error: input would render"));
+    assert!(!path.exists(), "rejected input must not write audio");
 }
 
 #[test]
