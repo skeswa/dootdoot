@@ -52,7 +52,7 @@ pub use sequence::{
     EMPTY_CHIRP_PITCH_CENTER, EMPTY_CHIRP_START_PITCH_CENTER, EMPTY_CHIRP_VOWEL_POSITION,
     EMPTY_CHIRP_WARBLE_DEPTH, HesitationMarker, ProsodicPunctuation, ROLE_LONG_PAUSE_MAX_SAMPLES,
     ROLE_LONG_PAUSE_MIN_SAMPLES, STAGED_REPLY_REST_MAX_SAMPLES, STAGED_REPLY_REST_MIN_SAMPLES,
-    SequenceEvent, SequencedUtterance, SyllableEvent, SyllableTiming,
+    SequenceEvent, SequencedUtterance, SyllableEvent, SyllableTiming, TailShape,
     estimate_utterance_sample_count, render_empty_chirp, role_long_pause_samples,
     sequence_utterance, staged_reply_rest_samples,
 };

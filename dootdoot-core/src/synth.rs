@@ -3,7 +3,8 @@
 use core::f64::consts::{LN_2, PI};
 
 use crate::{
-    ArchetypeSelection, GestureArchetype, PerformanceCurves, PhraseRole, cos, exp, sin, tanh,
+    ArchetypeSelection, GestureArchetype, PerformanceCurves, PhraseRole, TailShape, cos, exp, sin,
+    tanh,
 };
 
 /// Gives the maximum `VOICE_V7` curve-driven pitch-center bias in semitones.
@@ -240,6 +241,7 @@ pub(crate) struct SyllablePerformance {
     end_connection: SyllableConnection,
     role: PhraseRole,
     curves: PerformanceCurves,
+    tail_shape: TailShape,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -270,6 +272,7 @@ struct SyllableRenderControls {
     roughness_amount: f64,
     mouth_openness: f64,
     mouth_front_back: f64,
+    tail_shape: TailShape,
     performance: SyllablePerformance,
 }
 
@@ -989,6 +992,7 @@ impl SyllablePerformance {
             end_connection: SyllableConnection::Detached,
             role: PhraseRole::ChattyReply,
             curves: PerformanceCurves::neutral(),
+            tail_shape: TailShape::Sustained,
         }
     }
 
@@ -1006,6 +1010,7 @@ impl SyllablePerformance {
             end_connection: SyllableConnection::Detached,
             role: PhraseRole::ChattyReply,
             curves: PerformanceCurves::neutral(),
+            tail_shape: TailShape::Sustained,
         }
     }
 
@@ -1047,6 +1052,12 @@ impl SyllablePerformance {
     pub(crate) fn with_curves(mut self, role: PhraseRole, curves: PerformanceCurves) -> Self {
         self.role = role;
         self.curves = curves;
+
+        self
+    }
+
+    pub(crate) fn with_tail_shape(mut self, tail_shape: TailShape) -> Self {
+        self.tail_shape = tail_shape;
 
         self
     }
@@ -1157,6 +1168,7 @@ impl SyllableRenderControls {
             roughness_amount,
             mouth_openness,
             mouth_front_back,
+            tail_shape: performance.tail_shape,
             performance,
         }
     }
@@ -1350,13 +1362,53 @@ fn render_performance_sample(
         parameters.contour,
     );
 
-    apply_connected_amplitude_envelope(
+    let enveloped = apply_connected_amplitude_envelope(
         mouthed,
         elapsed_seconds,
         controls.duration_seconds,
         controls.performance.start_connection,
         controls.performance.end_connection,
-    )
+    );
+
+    enveloped * tail_shape_gain(elapsed_seconds, controls.duration_seconds, controls.tail_shape)
+}
+
+/// Fraction of a syllable that plays at full level before a clipped tail begins.
+const CLIP_TAIL_START_FRACTION: f64 = 0.68;
+/// Fraction of a syllable that plays at full level before a decayed tail begins.
+const DECAY_TAIL_START_FRACTION: f64 = 0.45;
+/// Exponential rate of the trailing-off (ellipsis) tail decay.
+const DECAY_TAIL_RATE: f64 = 3.2;
+
+/// Returns the `VOICE_V9` trailing-edge amplitude gain for one sample.
+///
+/// A clipped (dash) tail holds full level, then gates to near silence with a
+/// steep quartic so the syllable cuts off abruptly; a decayed (ellipsis) tail
+/// fades exponentially so the syllable trails off. The default sustained shape
+/// is a transparent unity gain, so every non-hesitation syllable is unchanged.
+fn tail_shape_gain(elapsed_seconds: f64, duration_seconds: f64, tail_shape: TailShape) -> f64 {
+    if duration_seconds <= 0.0 || !elapsed_seconds.is_finite() {
+        return 1.0;
+    }
+
+    let (start_fraction, gain): (f64, fn(f64) -> f64) = match tail_shape {
+        TailShape::Sustained => return 1.0,
+        TailShape::Clipped => (CLIP_TAIL_START_FRACTION, |t| {
+            let remaining = 1.0 - t;
+
+            remaining * remaining * remaining * remaining
+        }),
+        TailShape::Decayed => (DECAY_TAIL_START_FRACTION, |t| exp(-DECAY_TAIL_RATE * t)),
+    };
+    let tail_start = duration_seconds * start_fraction;
+
+    if elapsed_seconds <= tail_start {
+        return 1.0;
+    }
+
+    let progress = ((elapsed_seconds - tail_start) / (duration_seconds - tail_start)).clamp(0.0, 1.0);
+
+    gain(progress)
 }
 
 fn apply_mouth_stage(

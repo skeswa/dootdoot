@@ -21,6 +21,8 @@ fn golden_corpus_covers_voice_v1_contract_cases() {
         "airplane",
         "bare_question",
         "punctuation",
+        "dash",
+        "ellipsis",
         "unknown",
         "long",
     ] {

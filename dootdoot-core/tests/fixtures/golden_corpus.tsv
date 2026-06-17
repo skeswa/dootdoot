@@ -8,5 +8,7 @@ dog	dog
 airplane	airplane
 bare_question	?
 punctuation	hello?!, there.
+dash	wait - go
+ellipsis	wait ... go
 unknown	[UNK]
 long	hello there cat dog airplane playing hello there cat dog airplane playing hello there cat dog airplane playing

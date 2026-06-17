@@ -1,8 +1,8 @@
 //! `VOICE_V7` dash/ellipsis hesitation marker tests.
 
 use dootdoot_core::{
-    DASH_HESITATION_PAUSE_SAMPLES, ExplainRow, HesitationMarker, explain_rows_for_text,
-    render_text_canonical_buffer,
+    BASE_SYLLABLE_SAMPLES, DASH_HESITATION_PAUSE_SAMPLES, ExplainRow, HesitationMarker,
+    LEADING_SILENCE_SAMPLES, TailShape, explain_rows_for_text, render_text_canonical_buffer,
 };
 
 fn max_zero_run(samples: &[i16]) -> usize {
@@ -91,6 +91,31 @@ fn dash_routes_to_a_real_rest_instead_of_a_bridge() {
     assert!(
         max_zero_run(&hesitated) >= DASH_HESITATION_PAUSE_SAMPLES as usize,
         "a dash should open a real hesitation rest",
+    );
+}
+
+#[test]
+fn dash_clips_its_tail_while_ellipsis_trails_off() {
+    // VOICE_V9 (R3): a dash is an abrupt cutoff and an ellipsis trails off, so
+    // the two markers must shape the preceding syllable's tail differently.
+    assert_eq!(HesitationMarker::Dash.tail_shape(), TailShape::Clipped);
+    assert_eq!(HesitationMarker::Ellipsis.tail_shape(), TailShape::Decayed);
+}
+
+#[test]
+fn dash_and_ellipsis_render_the_lead_syllable_differently() {
+    // The lead syllable "a" has the same duration before either rest, so a
+    // difference inside its own region proves the tail-shape directive reaches
+    // synthesis rather than only changing the silent gap that follows.
+    let dashed = render_text_canonical_buffer("a - b").expect("render should succeed");
+    let trailed = render_text_canonical_buffer("a ... b").expect("render should succeed");
+
+    let lead_start = LEADING_SILENCE_SAMPLES as usize;
+    let lead_end = lead_start + BASE_SYLLABLE_SAMPLES as usize;
+
+    assert!(
+        dashed[lead_start..lead_end] != trailed[lead_start..lead_end],
+        "the clipped dash and decayed ellipsis lead syllables should differ in tail shape",
     );
 }
 

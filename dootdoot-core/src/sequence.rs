@@ -53,6 +53,23 @@ pub struct SyllableTiming {
     pause_override: Option<u32>,
     bridge_suppressed: bool,
     hesitation: bool,
+    tail_shape: TailShape,
+}
+
+/// Gives the amplitude shape of a syllable's trailing edge (`VOICE_V9`).
+///
+/// Hesitation markers shape the preceding syllable's tail so the *kind* of
+/// break is audible before the silent rest that follows: a dash cuts off
+/// abruptly, an ellipsis trails off.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TailShape {
+    /// The standard release; the syllable sustains into its normal envelope.
+    #[default]
+    Sustained,
+    /// An abrupt cutoff: the tail is clipped to silence quickly (dash).
+    Clipped,
+    /// A gradual trailing-off: the tail decays gently to near silence (ellipsis).
+    Decayed,
 }
 
 impl SyllableTiming {
@@ -99,6 +116,19 @@ impl SyllableTiming {
     pub fn is_hesitation(self) -> bool {
         self.hesitation
     }
+
+    /// Returns a copy carrying a trailing-edge amplitude shape (`VOICE_V9`).
+    #[must_use]
+    pub(crate) fn with_tail_shape(mut self, tail_shape: TailShape) -> Self {
+        self.tail_shape = tail_shape;
+
+        self
+    }
+
+    /// Returns the trailing-edge amplitude shape for this syllable.
+    pub(crate) fn tail_shape(self) -> TailShape {
+        self.tail_shape
+    }
 }
 
 /// Gives the deterministic dash hesitation pause in samples (~340 ms).
@@ -137,6 +167,15 @@ impl HesitationMarker {
         }
     }
 
+    /// Returns the trailing-edge shape this marker imposes on the prior
+    /// syllable (`VOICE_V9`): a dash clips abruptly, an ellipsis trails off.
+    pub fn tail_shape(self) -> TailShape {
+        match self {
+            Self::Dash => TailShape::Clipped,
+            Self::Ellipsis => TailShape::Decayed,
+        }
+    }
+
     /// Returns the timing directive a hesitation marker imposes on the prior
     /// syllable: a quiet, bridge-suppressed rest of the marker's pause length.
     pub fn timing(self) -> SyllableTiming {
@@ -144,6 +183,7 @@ impl HesitationMarker {
             .with_pause_override(self.pause_samples())
             .suppress_bridge()
             .mark_hesitation()
+            .with_tail_shape(self.tail_shape())
     }
 }
 
@@ -495,7 +535,8 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
                 complexity.scalar(),
                 plan.archetype,
             )
-            .with_curves(syllable.role(), syllable.curves()),
+            .with_curves(syllable.role(), syllable.curves())
+            .with_tail_shape(syllable.timing().tail_shape()),
             &mut synth_state,
             &mut samples,
         );
