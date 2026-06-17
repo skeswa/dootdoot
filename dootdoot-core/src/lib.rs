@@ -57,7 +57,8 @@ pub use sequence::{
     sequence_utterance, staged_reply_rest_samples,
 };
 pub use synth::{
-    ATTACK_TRANSIENT_MIX, ATTACK_TRANSIENT_SECONDS, BASE_SYLLABLE_SAMPLES, BASE_SYLLABLE_SECONDS,
+    ACCENT_PITCH_SPAN_SEMITONES, ATTACK_TRANSIENT_MIX, ATTACK_TRANSIENT_SECONDS,
+    BASE_SYLLABLE_SAMPLES, BASE_SYLLABLE_SECONDS,
     BODY_LAYER_MIX, CLAUSE_SYLLABLE_SAMPLES, ENVELOPE_ATTACK_SECONDS, ENVELOPE_DECAY_SECONDS,
     ENVELOPE_RELEASE_SECONDS, ENVELOPE_SUSTAIN_LEVEL, FORMANT_AH_HZ, FORMANT_COUNT, FORMANT_EE_HZ,
     FORMANT_GAINS, FORMANT_OO_HZ, FORMANT_Q, FormantFilterBank, INTERNAL_PITCH_ARCH_CENTS,
@@ -77,7 +78,8 @@ pub use synth::{
     apply_amplitude_envelope, apply_internal_pitch_swoop_hz, apply_warble_hz,
     apply_warble_hz_with_phase, attack_transient_sample, blend_noise_excitation,
     body_layer_frequency_hz, body_layer_sample, compound_warble_offset_cents, formant_frequencies,
-    imperfection_detune_cents, internal_pitch_offset_cents, mouth_open_envelope,
+    gesture_pitch_span_semitones, imperfection_detune_cents, internal_pitch_offset_cents,
+    mouth_open_envelope,
     mouth_resonance_hz, noise_breath_sample, pitch_center_hz, pitch_center_hz_with_span,
     apply_whistle_sweep_hz, portamento_pitch_hz, portamento_progress, render_syllable,
     ring_modulate, source_harmonic_count, source_oscillator_sample, sparkle_event_gain,

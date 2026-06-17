@@ -2,8 +2,8 @@
 
 use dootdoot_core::{
     PITCH_SEMITONE_SPAN, PhraseRole, WHISTLE_FLOOR_HZ, WHISTLE_PITCH_CEILING_HZ, WHISTLE_TARGET_HZ,
-    WIDE_GESTURE_PITCH_SPAN_SEMITONES, apply_whistle_sweep_hz, pitch_center_hz,
-    pitch_center_hz_with_span, whistle_sweep_amount, whistle_sweep_pitch_hz,
+    WIDE_GESTURE_PITCH_SPAN_SEMITONES, apply_whistle_sweep_hz, gesture_pitch_span_semitones,
+    pitch_center_hz, pitch_center_hz_with_span, whistle_sweep_amount, whistle_sweep_pitch_hz,
 };
 
 fn bits(value: f64) -> u64 {
@@ -194,6 +194,27 @@ fn wide_pitch_span_leaves_the_default_band() {
         "wide span should leave the established register: {wide_ceiling}",
     );
     assert!(wide_ceiling < WHISTLE_PITCH_CEILING_HZ);
+}
+
+#[test]
+fn body_accent_uses_a_wider_span_than_the_flourish() {
+    // VOICE_V10: the one promoted body accent swoops widest (toward BB-8's
+    // multi-octave gestures); the terminal flourish stays at the wide span; a
+    // non-whistling syllable keeps the default span.
+    let accent = gesture_pitch_span_semitones(PhraseRole::ChattyReply, 0.6);
+    let flourish = gesture_pitch_span_semitones(PhraseRole::TerminalFlourish, 0.6);
+    let plain = gesture_pitch_span_semitones(PhraseRole::ChattyReply, 0.0);
+
+    assert!(
+        accent > flourish,
+        "the body accent span ({accent}) should exceed the flourish span ({flourish})",
+    );
+    assert!(
+        accent <= 36.0,
+        "the accent span ({accent}) must stay bounded inside the droid range",
+    );
+    assert_eq!(bits(flourish), bits(WIDE_GESTURE_PITCH_SPAN_SEMITONES));
+    assert_eq!(bits(plain), bits(PITCH_SEMITONE_SPAN));
 }
 
 #[test]

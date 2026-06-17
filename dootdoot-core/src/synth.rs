@@ -153,6 +153,14 @@ pub const PITCH_SEMITONE_SPAN: f64 = 10.0;
 /// ~0.5-1.1 kHz register, while ordinary syllables keep `PITCH_SEMITONE_SPAN`.
 pub const WIDE_GESTURE_PITCH_SPAN_SEMITONES: f64 = 16.0;
 
+/// Gives the `VOICE_V10` accent per-gesture pitch span in semitones.
+///
+/// The one promoted semantic accent per phrase swoops widest so a single gesture
+/// approaches BB-8's multi-octave excursions (the taxonomy found dootdoot capped
+/// near one octave where BB-8 routinely spans three to four). It stays bounded
+/// inside the droid register and above `WIDE_GESTURE_PITCH_SPAN_SEMITONES`.
+pub const ACCENT_PITCH_SPAN_SEMITONES: f64 = 26.0;
+
 /// Gives the nominal top of a `VOICE_V7` whistle sweep in hertz.
 pub const WHISTLE_TARGET_HZ: f64 = 3_400.0;
 
@@ -531,6 +539,22 @@ pub fn whistle_sweep_amount(role: PhraseRole, archetype_tension: f64, pitch_velo
         -magnitude
     } else {
         magnitude
+    }
+}
+
+/// Gives the per-gesture pitch span in semitones for a planned syllable.
+///
+/// A syllable with no whistle keeps the default [`PITCH_SEMITONE_SPAN`]. A
+/// whistling gesture widens so it can leave the established register: the
+/// terminal flourish uses [`WIDE_GESTURE_PITCH_SPAN_SEMITONES`], and a body
+/// semantic accent (`ChattyReply`/`Probe`) uses the wider
+/// [`ACCENT_PITCH_SPAN_SEMITONES`] so its excursion approaches BB-8's
+/// multi-octave swoops.
+pub fn gesture_pitch_span_semitones(role: PhraseRole, whistle_amount: f64) -> f64 {
+    match role {
+        _ if whistle_amount == 0.0 => PITCH_SEMITONE_SPAN,
+        PhraseRole::ChattyReply | PhraseRole::Probe => ACCENT_PITCH_SPAN_SEMITONES,
+        _ => WIDE_GESTURE_PITCH_SPAN_SEMITONES,
     }
 }
 
@@ -1209,11 +1233,7 @@ impl SyllableRenderControls {
         let roughness_amount = performance.roughness_amount();
         let mouth_openness = curves.mouth_openness();
         let mouth_front_back = curves.formant_target();
-        let pitch_span = if whistle_amount == 0.0 {
-            PITCH_SEMITONE_SPAN
-        } else {
-            WIDE_GESTURE_PITCH_SPAN_SEMITONES
-        };
+        let pitch_span = gesture_pitch_span_semitones(performance.role, whistle_amount);
         let pitch_bias_semitones = curves.pitch_center_bias() * CURVE_PITCH_BIAS_SEMITONES;
         let target_pitch_hz = pitch_center_hz_with_span(knobs.pitch_center(), pitch_span)
             * semitone_multiplier(performance.pitch_offset_with_emphasis() + pitch_bias_semitones);
