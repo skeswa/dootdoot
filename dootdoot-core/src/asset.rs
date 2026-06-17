@@ -27,8 +27,12 @@ pub const VOICE_V7: &str = "VOICE_V7";
 /// Identifies the semantic-engagement and bursty-texture output contract.
 pub const VOICE_V8: &str = "VOICE_V8";
 
+/// Identifies the audible-punctuation output contract: a question, exclamation,
+/// period, dash, and ellipsis each read as a distinct prosodic gesture.
+pub const VOICE_V9: &str = "VOICE_V9";
+
 /// Identifies the active sample-affecting output contract.
-pub const ACTIVE_VOICE: &str = VOICE_V8;
+pub const ACTIVE_VOICE: &str = VOICE_V9;
 
 /// Identifies the first committed dootdoot asset spec file.
 pub const DOOT_ASSET_FILE_V1: &str = "dootdoot_asset_v1.doot";

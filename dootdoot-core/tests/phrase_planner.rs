@@ -46,6 +46,36 @@ fn assert_float_bits(actual: f64, expected: f64) {
 }
 
 #[test]
+fn period_settles_deeper_than_an_exclamation_punch() {
+    // VOICE_V9 (R1): a period falls all the way to a quiet settle, while an
+    // exclamation falls only shallowly from its raised, emphasized peak so it
+    // stays energetic. A question keeps its suppressed (rising) close.
+    let period = sentence_final_lowering("all done.");
+    let exclamation = sentence_final_lowering("all done!");
+    let question = sentence_final_lowering("all done?");
+
+    assert!(
+        period < exclamation,
+        "a period should settle deeper than an exclamation: {period} vs {exclamation}",
+    );
+    assert!(
+        exclamation < 0.0,
+        "an exclamation should still fall from its raised peak: {exclamation}",
+    );
+    assert_float_bits(question, 0.0);
+}
+
+fn sentence_final_lowering(text: &str) -> f64 {
+    let events = sequence_events_for_text(text).expect("text should analyze");
+    let plan = plan_phrase_prosody(&events);
+
+    plan.syllables()
+        .last()
+        .expect("the phrase should have a final syllable")
+        .final_lowering_semitones()
+}
+
+#[test]
 fn clause_boundary_drops_its_lowering_for_a_continuation_rise() {
     // VOICE_V9 (R4): a clause mark carries an open continuation rise, so it must
     // not also impose a final lowering that would erase that rise at the tail.
@@ -103,7 +133,7 @@ fn phrase_planner_snapshot_is_stable_for_mixed_boundaries() {
                 boundary_strength: Sentence,
                 declination_offset_semitones: -0.84,
                 pitch_reset_semitones: 1.2,
-                final_lowering_semitones: -0.9,
+                final_lowering_semitones: -0.6,
                 pre_boundary_lengthening: 1.25,
                 pause_samples: 10584,
                 emphasized: true,
