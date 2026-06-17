@@ -134,13 +134,16 @@ semantics therefore also fixes the tokenizer choice.
   back to `[UNK]` for unrepresentable input; it has its own embedding, so it produces a
   consistent "unknown" warble. We keep it: deterministic and on-theme ("the droid doesn't
   know that word").
-- **Dash/ellipsis hesitation markers (`VOICE_V7`).** Standalone `-`, `--`, en dash (`–`),
-  em dash (`—`), and the single-character ellipsis (`…`) are treated as **control-only
-  hesitation markers**, not voiced semantic tokens: they carry no four-axis values, attach
-  a quiet, bridge-suppressed hesitation rest to the **preceding** syllable (like prosodic
-  punctuation, backward-only), and appear as a distinct control row in `--explain`. A
-  three-dot `...` still tokenizes to three `.` periods and routes through the existing
-  control-only period path.
+- **Dash/ellipsis hesitation markers (`VOICE_V7`, normalised in `VOICE_V9`).** Standalone
+  `-`, `--`, en dash (`–`), em dash (`—`), and the single-character ellipsis (`…`) are
+  treated as **control-only hesitation markers**, not voiced semantic tokens: they carry no
+  four-axis values, attach a quiet, bridge-suppressed hesitation rest to the **preceding**
+  syllable (like prosodic punctuation, backward-only), and appear as a distinct control row
+  in `--explain`. `VOICE_V9` adds normalisation (§8.10): a run of two or more ASCII periods
+  (`...`) collapses to one ellipsis marker, and consecutive dash tokens collapse to one
+  dash — so the common ASCII forms reach the hesitation path instead of routing through the
+  period path. `VOICE_V9` also shapes the hesitating syllable's **tail** by marker type (a
+  dash clips, an ellipsis decays).
 - **Empty after filtering** → treated as empty input: the inquisitive "?" chirp (§7.4).
   (E.g. input that is only `[PAD]`.)
 - The tokenizer is driven by the model's `tokenizer.json`, carried inside the embedded
@@ -721,6 +724,27 @@ The acceptance note is
 committed golden WAV hashes are regenerated under `VOICE_V8`; neutral-curve rendering stays
 cleanly periodic, and structured/punctuated phrases keep their `VOICE_V7` bridges.
 
+**VOICE_V9 audible punctuation.** V9 reuses every V8 channel; it reshapes the per-mark
+boundary signature so question, exclamation, period, dash, and ellipsis are each audibly
+distinct. New frozen values and behaviors:
+
+- ASCII normalisation: a run of ≥2 `.` collapses to one ellipsis hesitation marker, a dash
+  run collapses to one dash, and a stacked terminal run keeps its first contour.
+- clause continuation rise: `,` `;` `:` map to a `Continuation` final glide
+  (`+1.5` st) with zero final lowering, contrasting a period's close.
+- period settle vs exclamation punch: period final lowering `−1.40` st (deep settle),
+  exclamation `−0.60` st (shallow punch from its emphasized peak); question stays `0`.
+- tail shape: a hesitation marker carries a `TailShape` into synthesis — the dash clips the
+  prior syllable's tail with a steep quartic gate, the ellipsis decays it as `e^(−3.2·t)`;
+  the sustained default is unity gain (all other syllables byte-identical).
+- question rise: `QUESTION_RISE_SEMITONES = 4.5` (wider than the `3.0` generic glide) with a
+  `1.2` st pre-final dip.
+
+The acceptance note is
+[`voice-v9-audible-punctuation.md`](./validation/voice-v9-audible-punctuation.md). The
+committed golden WAV hashes are regenerated under `VOICE_V9` (with new `dash`/`ellipsis`
+fixtures); every non-hesitation syllable's amplitude is unchanged.
+
 ---
 
 ## 7. Sound → output
@@ -1097,6 +1121,49 @@ introduce unseeded randomness; SHALL NOT change the semantic PCA mapping; SHALL 
 over-noise the body (the roughness floor stays bounded and subtle); and SHALL NOT
 de-bridge structured/punctuated phrases.
 
+### 8.10 Decision: `VOICE_V9` makes each punctuation mark audibly distinct
+
+`VOICE_V9` is the response to
+[`punctuation-prosody-audibility.md`](research/punctuation-prosody-audibility.md): the five
+marks a writer reaches for were **not reliably distinguishable**. A period and an
+exclamation were acoustically identical apart from terminal role; the common ASCII `...`
+routed through the period path instead of the ellipsis gesture; a dash and an ellipsis
+differed only by a silent-gap length that the role-gated turn gap masks; and clause marks
+had no continuation tone to contrast a period's close. The fix is **not new primitives** but
+a distinct boundary signature per mark, modelled on how TTS encodes boundary tones plus
+phrase-final timing/intensity. All changes are pure functions of the text plus frozen
+constants, bounded, and reuse the V2–V8 channels:
+
+- **Normalisation.** A run of ≥2 ASCII periods collapses to one **ellipsis** marker, and a
+  stacked terminal run (`?!`, `!!!`) keeps its first contour — making explicit the engine's
+  pre-existing first-wins behaviour while routing `...` to the trailing-off gesture.
+- **Continuation vs closure.** Clause marks (`,` `;` `:`) gain a shallow continuation rise
+  (`CONTINUATION_GLIDE_SEMITONES = +1.5`) and drop their final lowering, so a comma is open
+  against a period's close.
+- **Settle vs punch.** A period falls deep to a quiet settle
+  (`PERIOD_FINAL_LOWERING_SEMITONES = −1.40`); an exclamation falls only shallowly
+  (`EXCLAMATION_FINAL_LOWERING_SEMITONES = −0.60`) from its already-emphasized peak.
+- **Tail shape.** A hesitation marker carries a `TailShape` (`Sustained`/`Clipped`/
+  `Decayed`) through `SyllableTiming` → `SyllablePerformance` into synthesis: a dash clips
+  the preceding syllable's tail with a steep quartic gate, an ellipsis decays it
+  exponentially. The sustained default is a transparent unity gain, so all other syllables
+  stay byte-identical. This is the cue that actually separates dash from ellipsis, since
+  both inherit the same role-gated turn gap.
+- **Question rise.** A dedicated `QUESTION_RISE_SEMITONES = 4.5` (wider than the `3.0`
+  generic glide) plus a bounded pre-final dip (`L*`) make the inquisitive lift unmistakable;
+  declination stays suppressed across the final segment.
+
+The new `FR-96…FR-101` requirements (spec §1.18) are the normative form of this scope. The
+frozen `VOICE_V9` contract is documented by the acceptance note
+[`voice-v9-audible-punctuation.md`](validation/voice-v9-audible-punctuation.md), with the
+golden WAV hashes (now including `dash` and `ellipsis` fixtures) remaining the byte-level
+contract.
+
+**Non-goals restated for `VOICE_V9`.** It SHALL NOT change the semantic PCA mapping; SHALL
+NOT change the punctuation-assigned discourse roles (§8.8) — only the per-mark boundary
+contour, timing, and tail; SHALL NOT introduce unseeded randomness; and SHALL NOT alter any
+non-hesitation syllable's amplitude (the sustained tail is unity gain).
+
 ---
 
 ## 9. Architecture
@@ -1207,11 +1274,14 @@ These do not change the architecture and are settled during implementation:
 - **Droid identity (goal 3):** research-grounded fixed formant voice with portamento
   (§6.1–6.3) + fixed/variable split that constrains all input to a tasteful droid
   parameter space.
-- **Expressiveness without losing the language (`VOICE_V2`–`VOICE_V8`):** affect,
+- **Expressiveness without losing the language (`VOICE_V2`–`VOICE_V9`):** affect,
   complexity, archetype, and phrase prosody (§8.3) plus the V7 discourse-performance planner
   (§5.5) and expanded synthesis primitives (§6.2, §6.4) add deterministic, bounded
   performance channels layered over — never replacing — the learnable four-axis core, so
   expressiveness and learnability coexist (broadened NFR-16). `VOICE_V8` (§8.9) engages those
   primitives from the four-axis semantics themselves — semantic accents, bursty upper-mid, a
   roughness floor, and neutral word rests — so even unpunctuated text performs, still as a
-  pure function of the learnable core.
+  pure function of the learnable core. `VOICE_V9` (§8.10) makes the five marks a writer
+  reaches for — question, exclamation, period, dash, ellipsis — each audibly distinct, so
+  punctuation becomes a reliable expressive control without touching the semantic mapping or
+  discourse roles.

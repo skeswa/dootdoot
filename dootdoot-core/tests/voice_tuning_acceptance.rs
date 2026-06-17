@@ -8,6 +8,7 @@ const VOICE_V5: &str = include_str!("../../docs/validation/voice-v5-word-attack-
 const VOICE_V6: &str = include_str!("../../docs/validation/voice-v6-repeated-phrase-smoothing.md");
 const VOICE_V7: &str = include_str!("../../docs/validation/voice-v7-contextual-performance.md");
 const VOICE_V8: &str = include_str!("../../docs/validation/voice-v8-semantic-engagement.md");
+const VOICE_V9: &str = include_str!("../../docs/validation/voice-v9-audible-punctuation.md");
 
 #[test]
 fn integrated_tuning_acceptance_records_phase_seven_decision() {
@@ -161,6 +162,26 @@ fn voice_v8_semantic_engagement_acceptance_records_decision() {
         assert!(
             VOICE_V8.contains(expected),
             "VOICE_V8 acceptance note should mention {expected}",
+        );
+    }
+}
+
+#[test]
+fn voice_v9_audible_punctuation_acceptance_records_decision() {
+    for expected in [
+        "Accepted for VOICE_V9",
+        "dootdoot VOICE_V9",
+        "punctuation-prosody-audibility",
+        "continuation rise",
+        "settle",
+        "punch",
+        "tail",
+        "ellipsis",
+        "golden WAV hashes",
+    ] {
+        assert!(
+            VOICE_V9.contains(expected),
+            "VOICE_V9 acceptance note should mention {expected}",
         );
     }
 }

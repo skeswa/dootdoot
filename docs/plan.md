@@ -595,6 +595,40 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 
 ---
 
+## Phase 18 — VOICE_V9 audible punctuation
+
+> Source: [`punctuation-prosody-audibility.md`](research/punctuation-prosody-audibility.md).
+> The five marks a writer reaches for (question, exclamation, period, dash, ellipsis)
+> collided, mis-routed, or differed only by a masked gap. Phase 18 gives each a distinct
+> boundary signature. Order is lowest-risk-first; each slice is its own red-green revision
+> and the version bump + golden regen lands once (T-98) at the first sample-affecting slice.
+
+- [x] **T-96 — Normalise ASCII ellipsis / dash runs.** Collapse a run of two or more ASCII
+      periods into one ellipsis hesitation marker and any stacked terminal run to its first
+      contour, in `parse_tokens`. Sample-neutral except `...` → ellipsis.
+      Deps: T-84 · Reqs: FR-96 · Est: 1.5h
+- [x] **T-97 — Clause continuation rise.** Add a `Continuation` final-glide variant and map
+      clause marks to it; zero the clause final lowering so the rise survives at the tail.
+      Deps: T-96 · Reqs: FR-97, NFR-3, NFR-4, NFR-16 · Est: 1.5h
+- [x] **T-98 — Period settle vs exclamation punch + open VOICE_V9.** Deepen the period fall
+      and shallow the exclamation fall; bump `ACTIVE_VOICE` to `VOICE_V9` and regenerate the
+      golden WAV hashes.
+      Deps: T-97 · Reqs: FR-98, NFR-16 · Est: 1.5h
+- [x] **T-99 — Dash/ellipsis tail shape.** Carry a `TailShape` directive from a hesitation
+      marker through synthesis: clip the dash tail, decay the ellipsis tail; keep the
+      sustained default byte-identical. Add `dash`/`ellipsis` golden fixtures.
+      Deps: T-98 · Reqs: FR-99, NFR-3, NFR-4, NFR-16 · Est: 2.5h
+- [x] **T-100 — Question rise widening + pre-final dip.** Give the question a dedicated wider
+      rise span and a bounded pre-final dip; confirm declination stays suppressed.
+      Deps: T-99 · Reqs: FR-100, NFR-3, NFR-4, NFR-16 · Est: 1.5h
+- [x] **T-101 — Freeze VOICE_V9 + acceptance doc.** Write the audible-punctuation acceptance
+      note with the per-mark directional metrics, surface the `dootdoot VOICE_V9` version
+      string, and sync `spec.md` (§1.18, FR-96…FR-101, FR-82/FR-23 reconciliation),
+      `design.md` (§3.3 + §8.10 + traceability), and the affected tests.
+      Deps: T-96, T-97, T-98, T-99, T-100 · Reqs: FR-101, FR-33, FR-39, NFR-16 · Est: 2h
+
+---
+
 ## Critical paths
 
 ```mermaid

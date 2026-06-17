@@ -193,16 +193,11 @@ fn gap_label(pause_override: Option<u32>) -> String {
 fn punctuation_effect(punctuation: ProsodicPunctuation) -> String {
     let pause = pause_ms(punctuation.pause_samples());
 
-    match punctuation_glide(punctuation) {
-        Some(glide) => format!(
-            "control:{} · {glide} · pause {pause} ms",
-            punctuation_name(punctuation),
-        ),
-        None => format!(
-            "control:{} · pause {pause} ms",
-            punctuation_name(punctuation)
-        ),
-    }
+    format!(
+        "control:{} · {} · pause {pause} ms",
+        punctuation_name(punctuation),
+        punctuation_glide(punctuation),
+    )
 }
 
 fn hesitation_effect(marker: HesitationMarker) -> String {
@@ -213,13 +208,13 @@ fn hesitation_effect(marker: HesitationMarker) -> String {
     )
 }
 
-fn punctuation_glide(punctuation: ProsodicPunctuation) -> Option<&'static str> {
+fn punctuation_glide(punctuation: ProsodicPunctuation) -> &'static str {
     match punctuation {
-        ProsodicPunctuation::Question => Some("rising glide"),
-        ProsodicPunctuation::Period | ProsodicPunctuation::Exclamation => Some("falling glide"),
+        ProsodicPunctuation::Question => "rising glide",
+        ProsodicPunctuation::Period | ProsodicPunctuation::Exclamation => "falling glide",
         ProsodicPunctuation::Comma
         | ProsodicPunctuation::Semicolon
-        | ProsodicPunctuation::Colon => Some("continuation rise"),
+        | ProsodicPunctuation::Colon => "continuation rise",
     }
 }
 

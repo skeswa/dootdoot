@@ -9,9 +9,9 @@ const DECLINATION_STEP_SEMITONES: f64 = -0.28;
 const CLAUSE_PITCH_RESET_SEMITONES: f64 = 0.45;
 const SENTENCE_PITCH_RESET_SEMITONES: f64 = 1.20;
 const SENTENCE_FINAL_LOWERING_SEMITONES: f64 = -0.90;
-/// VOICE_V9 (R1): a period falls all the way to a quiet settle.
+/// `VOICE_V9` (R1): a period falls all the way to a quiet settle.
 const PERIOD_FINAL_LOWERING_SEMITONES: f64 = -1.40;
-/// VOICE_V9 (R1): an exclamation falls only shallowly from its raised,
+/// `VOICE_V9` (R1): an exclamation falls only shallowly from its raised,
 /// emphasized peak, so it punches and stays energetic rather than closing.
 const EXCLAMATION_FINAL_LOWERING_SEMITONES: f64 = -0.60;
 const CLAUSE_LENGTHENING: f64 = 1.12;
@@ -254,10 +254,9 @@ fn final_lowering_semitones(
             EXCLAMATION_FINAL_LOWERING_SEMITONES
         }
         (_, PhraseBoundaryStrength::Sentence) => SENTENCE_FINAL_LOWERING_SEMITONES,
-        // VOICE_V9 (R4): a clause boundary carries its "more coming" tone as a
-        // continuation rise (the syllable's final glide), not a lowering — a
-        // lowering here would override that rise at the tail.
-        (_, PhraseBoundaryStrength::Clause) => 0.0,
+        // VOICE_V9 (R4): a clause boundary (and word/none) carries no lowering.
+        // A clause's "more coming" tone is its continuation rise (the syllable's
+        // final glide); a lowering here would override that rise at the tail.
         _ => 0.0,
     }
 }

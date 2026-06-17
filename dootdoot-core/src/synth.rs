@@ -1379,12 +1379,19 @@ fn render_performance_sample(
         controls.performance.end_connection,
     );
 
-    enveloped * tail_shape_gain(elapsed_seconds, controls.duration_seconds, controls.tail_shape)
+    enveloped
+        * tail_shape_gain(
+            elapsed_seconds,
+            controls.duration_seconds,
+            controls.tail_shape,
+        )
 }
 
-/// Fraction of a syllable that plays at full level before a clipped tail begins.
+/// Fraction of a syllable that plays at full level before a clipped tail
+/// begins.
 const CLIP_TAIL_START_FRACTION: f64 = 0.68;
-/// Fraction of a syllable that plays at full level before a decayed tail begins.
+/// Fraction of a syllable that plays at full level before a decayed tail
+/// begins.
 const DECAY_TAIL_START_FRACTION: f64 = 0.45;
 /// Exponential rate of the trailing-off (ellipsis) tail decay.
 const DECAY_TAIL_RATE: f64 = 3.2;
@@ -1415,7 +1422,8 @@ fn tail_shape_gain(elapsed_seconds: f64, duration_seconds: f64, tail_shape: Tail
         return 1.0;
     }
 
-    let progress = ((elapsed_seconds - tail_start) / (duration_seconds - tail_start)).clamp(0.0, 1.0);
+    let progress =
+        ((elapsed_seconds - tail_start) / (duration_seconds - tail_start)).clamp(0.0, 1.0);
 
     gain(progress)
 }

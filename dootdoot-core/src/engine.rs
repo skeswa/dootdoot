@@ -266,7 +266,9 @@ fn add_hesitation(
     parsed
         .templates
         .push(EventTemplate::Hesitation(parsed.hesitation_tokens.len()));
-    parsed.hesitation_tokens.push(HesitationToken { text, marker });
+    parsed
+        .hesitation_tokens
+        .push(HesitationToken { text, marker });
 
     if let Some(index) = last_voiced_index {
         parsed.voiced_tokens[index].timing =

@@ -68,7 +68,8 @@ pub enum TailShape {
     Sustained,
     /// An abrupt cutoff: the tail is clipped to silence quickly (dash).
     Clipped,
-    /// A gradual trailing-off: the tail decays gently to near silence (ellipsis).
+    /// A gradual trailing-off: the tail decays gently to near silence
+    /// (ellipsis).
     Decayed,
 }
 

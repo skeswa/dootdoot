@@ -84,7 +84,8 @@
   count toward the voiced-syllable total. Each SHALL shape the **preceding** syllable
   and the following pause: `?` → rising final glide + longer pause; `.`/`!` → falling
   final glide + longer pause; `,`/`;`/`:` → medium pause, no contour change. Symbols
-  outside this set SHALL be voiced as normal tokens.
+  outside this set SHALL be voiced as normal tokens. (`VOICE_V9` refines the per-mark
+  boundary signature — clause continuation rise, period/exclamation split — per §1.18.)
 - **FR-23a** In `--explain` output, prosodic-punctuation markers SHALL be shown as
   distinct control rows, separate from the per-token knob rows.
 - **FR-24** The utterance SHALL include short fixed leading and trailing silence
@@ -306,9 +307,11 @@
   phrases can use short (≈30–80 ms) internal rests and the active-sound fraction can fall
   toward the reference's staged level; phrase-final lengthening and amplitude tails MAY
   occupy time without counting as an additional voiced syllable.
-- **FR-82** `VOICE_V7` SHALL treat standalone `-`, `--`, em dash, and `...` as
-  control-only hesitation markers with a deterministic pause, instead of voiced semantic
-  tokens; such markers SHALL NOT appear with four-axis values in `--explain`.
+- **FR-82** `VOICE_V7` SHALL treat standalone `-`, `--`, en/em dash, and the
+  single-character ellipsis (`…`) as control-only hesitation markers with a deterministic
+  pause, instead of voiced semantic tokens; such markers SHALL NOT appear with four-axis
+  values in `--explain`. (A multi-character ASCII `...` was _not_ normalised to an ellipsis
+  by `VOICE_V7`; that is delivered by `VOICE_V9`, FR-96.)
 - **FR-83** `VOICE_V7` MAY apply an optional, bounded code-talkbox mouth stage after the
   formant bank — a broad moving mouth filter (2–4 resonances) with a deterministic
   open/close envelope, tongue/front-back curves linked to the semantic/formant axes,
@@ -382,6 +385,39 @@
 - **FR-95** The frozen `VOICE_V8` contract SHALL be documented with a corpus timbre/texture
   acceptance note (tracked separately from the golden hashes), the surfaced
   `dootdoot VOICE_V8` version string, and regenerated golden WAV hashes.
+
+### 1.18 VOICE_V9 audible punctuation
+
+> Five marks a writer reaches for — **question, exclamation, period, dash, ellipsis** —
+> must each be audible as a distinct prosodic gesture, not collide (period ≡ exclamation),
+> route to the wrong gesture (ASCII `...`), or differ only by a masked gap length (dash vs
+> ellipsis). `VOICE_V9` reshapes each mark's boundary signature; it does not touch the PCA
+> mapping or the discourse-role assignment. Derived from
+> [`punctuation-prosody-audibility.md`](research/punctuation-prosody-audibility.md).
+
+- **FR-96** `VOICE_V9` SHALL normalise a run of two or more ASCII periods (`...`, `....`)
+  into a single control-only **ellipsis** hesitation marker, and SHALL collapse any other
+  run of consecutive prosodic-punctuation tokens (including `?!`, `!!!`) to its first
+  contour. This SHALL be deterministic and SHALL match the engine's existing first-wins
+  behaviour on consecutive punctuation.
+- **FR-97** `VOICE_V9` clause marks (`,` `;` `:`) SHALL carry a shallow **continuation
+  rise** (a bounded upward final glide) and SHALL NOT impose a final lowering, so a clause
+  boundary reads as open ("more coming") against a period's closed fall.
+- **FR-98** `VOICE_V9` SHALL distinguish the period from the exclamation: a period SHALL
+  fall deeper to a quiet settle, while an exclamation SHALL fall only shallowly from its
+  raised, emphasized peak. A question SHALL keep its suppressed (non-lowered) rising close.
+- **FR-99** `VOICE_V9` SHALL shape the trailing edge of the syllable preceding a hesitation
+  marker by marker type: a dash SHALL clip the tail to silence abruptly, an ellipsis SHALL
+  decay it gradually. The default (non-hesitation) tail SHALL be a transparent unity gain so
+  all other syllables stay byte-identical. This contrast SHALL NOT depend on the marker's
+  rest length, which the role-gated turn gap can mask.
+- **FR-100** `VOICE_V9` SHALL give the question a dedicated terminal rise wider than the
+  generic punctuation glide, with a bounded pre-final dip, and SHALL keep declination
+  suppressed across the question's whole final segment.
+- **FR-101** The frozen `VOICE_V9` contract SHALL be documented with an audible-punctuation
+  acceptance note (tracked separately from the golden hashes), the surfaced
+  `dootdoot VOICE_V9` version string, and regenerated golden WAV hashes (including `dash`
+  and `ellipsis` corpus fixtures).
 
 ---
 
