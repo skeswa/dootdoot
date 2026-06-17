@@ -1,9 +1,46 @@
 //! `VOICE_V7` deterministic noise/breath excitation primitive tests.
 
-use dootdoot_core::{NOISE_BREATH_MAX_MIX, blend_noise_excitation, noise_breath_sample};
+use dootdoot_core::{
+    NOISE_BREATH_MAX_MIX, PhraseRole, blend_noise_excitation, noise_breath_sample,
+    syllable_roughness_amount,
+};
 
 fn bits(value: f64) -> u64 {
     value.to_bits()
+}
+
+#[test]
+fn agitated_accent_bursts_into_the_noisy_band() {
+    // VOICE_V10: a body accent in a high-arousal, negative-valence utterance
+    // breaks into a rough/noisy burst so a single gesture leaves the tonal band.
+    let agitated = syllable_roughness_amount(PhraseRole::ChattyReply, 0.85, 0.5, -1.0, 1.0);
+
+    assert!(
+        agitated >= 0.7,
+        "an agitated accent should burst rough, got {agitated}",
+    );
+}
+
+#[test]
+fn calm_or_positive_accents_keep_the_base_roughness() {
+    // Positive valence (happy) or low arousal must not trigger the burst; the
+    // accent stays in its V8 body range.
+    let happy = syllable_roughness_amount(PhraseRole::ChattyReply, 0.85, 0.5, 1.0, 1.0);
+    let calm = syllable_roughness_amount(PhraseRole::ChattyReply, 0.85, 0.5, -1.0, 0.2);
+
+    assert!(happy <= 0.4, "a happy accent should stay in the body range, got {happy}");
+    assert!(calm <= 0.4, "a low-arousal accent should stay in the body range, got {calm}");
+}
+
+#[test]
+fn non_accent_and_neutral_syllables_never_burst() {
+    // A non-accent body syllable (below the whistle gate) and a hand-built /
+    // neutral syllable stay clean even in an agitated utterance.
+    let non_accent = syllable_roughness_amount(PhraseRole::ChattyReply, 0.40, 0.5, -1.0, 1.0);
+    let neutral = syllable_roughness_amount(PhraseRole::ChattyReply, 0.0, 0.0, -1.0, 1.0);
+
+    assert!(non_accent <= 0.4, "non-accent body should not burst, got {non_accent}");
+    assert!(neutral.abs() < 1e-12, "neutral hand-built syllable must stay clean, got {neutral}");
 }
 
 #[test]

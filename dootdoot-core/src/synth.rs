@@ -42,6 +42,16 @@ const WHISTLE_ACCENT_SCALE: f64 = 0.85;
 /// byte-identical (clean) under neutral curves.
 const ROUGHNESS_BODY_FLOOR: f64 = 0.18;
 
+/// Gives the utterance arousal above which a negative-valence accent can break
+/// into a `VOICE_V10` rough/noisy burst.
+const AGITATION_AROUSAL_THRESHOLD: f64 = 0.5;
+
+/// Gives how far a fully agitated accent pushes its roughness toward a pure
+/// noise burst (1.0) above its base. The taxonomy found BB-8 squawks rough on
+/// agitation while dootdoot never left the tonal band; a fully agitated accent
+/// now crosses into the noisy band, then recovers when the gesture ends.
+const AGITATION_ROUGHNESS_GAIN: f64 = 0.95;
+
 /// Gives the synthesis sample rate in hertz.
 pub const SYNTH_SAMPLE_RATE_HZ: u32 = 44_100;
 
@@ -556,6 +566,57 @@ pub fn gesture_pitch_span_semitones(role: PhraseRole, whistle_amount: f64) -> f6
         PhraseRole::ChattyReply | PhraseRole::Probe => ACCENT_PITCH_SPAN_SEMITONES,
         _ => WIDE_GESTURE_PITCH_SPAN_SEMITONES,
     }
+}
+
+/// Gives the noise/breath roughness amount for a planned syllable.
+///
+/// The role base is the `VOICE_V8` blend (a small always-on floor for engaged
+/// body syllables; clean for hand-built/neutral curves). `VOICE_V10` adds a
+/// transient burst: a body accent (`ChattyReply`/`Probe` past the whistle gate)
+/// in an agitated utterance — high arousal *and* negative valence — pushes its
+/// roughness toward a noise burst so a single gesture crosses into the noisy
+/// band, then recovers when the gesture ends. Non-accent and calm syllables keep
+/// the base, so the steady-state texture is unchanged.
+pub fn syllable_roughness_amount(
+    role: PhraseRole,
+    archetype_tension: f64,
+    brightness_pressure: f64,
+    mood_valence: f64,
+    mood_arousal: f64,
+) -> f64 {
+    let tension = archetype_tension.clamp(0.0, 1.0);
+    // VOICE_V8: only engaged (planner-driven) body syllables carry the small
+    // always-on roughness floor, so neutral text swings off pure periodicity.
+    // Neutral curves (hand-built events, empty chirp) keep a zero floor, and the
+    // terminal flourish keeps its V7 floor-free roughness so a trailing "!" does
+    // not pile breath noise onto an already-intense whistle gesture.
+    let engaged = brightness_pressure > 0.0 || tension > 0.0;
+
+    let base = match role {
+        PhraseRole::Hesitation => (0.45 + (0.20 * tension)).clamp(0.0, 0.7),
+        PhraseRole::Aside => (0.30 + (0.20 * tension)).clamp(0.0, 0.6),
+        PhraseRole::ChattyReply | PhraseRole::Probe => {
+            let floor = if engaged { ROUGHNESS_BODY_FLOOR } else { 0.0 };
+
+            (floor + (0.12 * tension)).clamp(0.0, 0.4)
+        }
+        PhraseRole::TerminalFlourish => (0.12 * tension).clamp(0.0, 0.3),
+    };
+
+    // VOICE_V10 agitation burst: only on a body accent (the promoted semantic
+    // accent reaches the whistle gate), and only when the utterance is agitated.
+    let is_accent = matches!(role, PhraseRole::ChattyReply | PhraseRole::Probe)
+        && tension >= WHISTLE_ACCENT_TENSION_THRESHOLD;
+    if !is_accent {
+        return base;
+    }
+
+    let arousal_drive = ((mood_arousal.clamp(0.0, 1.0) - AGITATION_AROUSAL_THRESHOLD)
+        / (1.0 - AGITATION_AROUSAL_THRESHOLD))
+        .clamp(0.0, 1.0);
+    let agitation = arousal_drive * (-mood_valence).clamp(0.0, 1.0);
+
+    (base + (AGITATION_ROUGHNESS_GAIN * agitation * (1.0 - base))).clamp(0.0, 1.0)
 }
 
 /// Computes shaped portamento progress for elapsed time.
@@ -1179,24 +1240,13 @@ impl SyllablePerformance {
     }
 
     fn roughness_amount(self) -> f64 {
-        let tension = self.curves.archetype_tension();
-        // VOICE_V8: only engaged (planner-driven) *body* syllables carry the small
-        // always-on roughness floor, so neutral text swings off pure periodicity.
-        // Neutral curves (hand-built events, empty chirp) keep a zero floor, and
-        // the terminal flourish keeps its V7 floor-free roughness so a trailing
-        // "!" does not pile breath noise onto an already-intense whistle gesture.
-        let engaged = self.curves.brightness_pressure() > 0.0 || tension > 0.0;
-
-        match self.role {
-            PhraseRole::Hesitation => (0.45 + (0.20 * tension)).clamp(0.0, 0.7),
-            PhraseRole::Aside => (0.30 + (0.20 * tension)).clamp(0.0, 0.6),
-            PhraseRole::ChattyReply | PhraseRole::Probe => {
-                let floor = if engaged { ROUGHNESS_BODY_FLOOR } else { 0.0 };
-
-                (floor + (0.12 * tension)).clamp(0.0, 0.4)
-            }
-            PhraseRole::TerminalFlourish => (0.12 * tension).clamp(0.0, 0.3),
-        }
+        syllable_roughness_amount(
+            self.role,
+            self.curves.archetype_tension(),
+            self.curves.brightness_pressure(),
+            self.mood_valence,
+            self.mood_arousal,
+        )
     }
 }
 
