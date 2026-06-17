@@ -8,7 +8,6 @@ use crate::{
 const DECLINATION_STEP_SEMITONES: f64 = -0.28;
 const CLAUSE_PITCH_RESET_SEMITONES: f64 = 0.45;
 const SENTENCE_PITCH_RESET_SEMITONES: f64 = 1.20;
-const CLAUSE_FINAL_LOWERING_SEMITONES: f64 = -0.20;
 const SENTENCE_FINAL_LOWERING_SEMITONES: f64 = -0.90;
 const CLAUSE_LENGTHENING: f64 = 1.12;
 const SENTENCE_LENGTHENING: f64 = 1.25;
@@ -244,7 +243,10 @@ fn final_lowering_semitones(
     match (punctuation, boundary_strength) {
         (Some(ProsodicPunctuation::Question), PhraseBoundaryStrength::Sentence) => 0.0,
         (_, PhraseBoundaryStrength::Sentence) => SENTENCE_FINAL_LOWERING_SEMITONES,
-        (_, PhraseBoundaryStrength::Clause) => CLAUSE_FINAL_LOWERING_SEMITONES,
+        // VOICE_V9 (R4): a clause boundary carries its "more coming" tone as a
+        // continuation rise (the syllable's final glide), not a lowering — a
+        // lowering here would override that rise at the tail.
+        (_, PhraseBoundaryStrength::Clause) => 0.0,
         _ => 0.0,
     }
 }

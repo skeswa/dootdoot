@@ -219,7 +219,7 @@ fn punctuation_glide(punctuation: ProsodicPunctuation) -> Option<&'static str> {
         ProsodicPunctuation::Period | ProsodicPunctuation::Exclamation => Some("falling glide"),
         ProsodicPunctuation::Comma
         | ProsodicPunctuation::Semicolon
-        | ProsodicPunctuation::Colon => None,
+        | ProsodicPunctuation::Colon => Some("continuation rise"),
     }
 }
 

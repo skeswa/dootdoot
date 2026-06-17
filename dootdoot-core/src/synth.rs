@@ -160,6 +160,11 @@ pub const VOWEL_TRAJECTORY_BLOOM: f64 = 0.12;
 /// Gives the fixed final-glide span for prosodic punctuation in semitones.
 pub const PUNCTUATION_GLIDE_SEMITONES: f64 = 3.0;
 
+/// Gives the shallow continuation-rise span for clause punctuation in
+/// semitones (`VOICE_V9`). A clause mark lifts the tail just enough to read as
+/// "more coming" without reaching the full question rise.
+const CONTINUATION_GLIDE_SEMITONES: f64 = 1.5;
+
 /// Gives the fixed saw contribution in the source oscillator.
 pub const SOURCE_SAW_MIX: f64 = 0.55;
 
@@ -216,6 +221,8 @@ pub(crate) enum SyllableFinalGlide {
     Neutral,
     Rising,
     Falling,
+    /// A shallow continuation rise for clause punctuation (`VOICE_V9`).
+    Continuation,
 }
 
 /// Gives phrase-level controls applied while rendering one syllable.
@@ -1858,6 +1865,7 @@ fn apply_final_glide_hz(
         SyllableFinalGlide::Neutral => return pitch_hz,
         SyllableFinalGlide::Rising => PUNCTUATION_GLIDE_SEMITONES,
         SyllableFinalGlide::Falling => -PUNCTUATION_GLIDE_SEMITONES,
+        SyllableFinalGlide::Continuation => CONTINUATION_GLIDE_SEMITONES,
     };
     let final_glide_start_seconds = duration_seconds - PORTAMENTO_SECONDS;
 

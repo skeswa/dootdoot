@@ -46,6 +46,21 @@ fn assert_float_bits(actual: f64, expected: f64) {
 }
 
 #[test]
+fn clause_boundary_drops_its_lowering_for_a_continuation_rise() {
+    // VOICE_V9 (R4): a clause mark carries an open continuation rise, so it must
+    // not also impose a final lowering that would erase that rise at the tail.
+    let events = sequence_events_for_text("alpha beta, gamma").expect("text should analyze");
+    let plan = plan_phrase_prosody(&events);
+    let syllables = plan.syllables();
+
+    assert_eq!(
+        syllables[1].boundary_strength(),
+        PhraseBoundaryStrength::Clause,
+    );
+    assert_float_bits(syllables[1].final_lowering_semitones(), 0.0);
+}
+
+#[test]
 fn phrase_planner_snapshot_is_stable_for_mixed_boundaries() {
     let events = sequence_events_for_text("alpha beta, gamma delta!").expect("text should analyze");
     let plan = plan_phrase_prosody(&events);
@@ -68,7 +83,7 @@ fn phrase_planner_snapshot_is_stable_for_mixed_boundaries() {
                 boundary_strength: Clause,
                 declination_offset_semitones: -0.28,
                 pitch_reset_semitones: 0.45,
-                final_lowering_semitones: -0.2,
+                final_lowering_semitones: 0.0,
                 pre_boundary_lengthening: 1.12,
                 pause_samples: 6615,
                 emphasized: false,

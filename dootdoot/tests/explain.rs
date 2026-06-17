@@ -61,6 +61,26 @@ fn binary_writes_explain_table_to_stderr_only() {
     fs::remove_file(path).expect("temporary wav should be removable");
 }
 
+#[test]
+fn clause_marks_explain_as_a_continuation_rise() {
+    // VOICE_V9 (R4): clause marks read as an open continuation rise, contrasting
+    // the period's falling close and the question's full rise.
+    let table = explain_table_for_text("alpha beta, gamma delta.").expect("table should render");
+
+    assert!(
+        table
+            .lines()
+            .any(|line| line.starts_with(',') && line.contains("continuation rise")),
+        "a comma should explain as a continuation rise, not a flat control",
+    );
+    assert!(
+        table
+            .lines()
+            .any(|line| line.starts_with('.') && line.contains("falling glide")),
+        "a period should still explain as a falling close",
+    );
+}
+
 fn unique_wav_path(label: &str) -> PathBuf {
     std::env::temp_dir().join(format!(
         "dootdoot-{label}-{}-{}.wav",

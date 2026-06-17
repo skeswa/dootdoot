@@ -361,7 +361,7 @@ impl ProsodicPunctuation {
         match self {
             Self::Question => SyllableFinalGlide::Rising,
             Self::Period | Self::Exclamation => SyllableFinalGlide::Falling,
-            Self::Comma | Self::Semicolon | Self::Colon => SyllableFinalGlide::Neutral,
+            Self::Comma | Self::Semicolon | Self::Colon => SyllableFinalGlide::Continuation,
         }
     }
 }
