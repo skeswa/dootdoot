@@ -1166,6 +1166,51 @@ non-hesitation syllable's amplitude (the sustained tail is unity gain).
 
 ---
 
+### 8.11 Decision: `VOICE_V10` widens the gesture vocabulary, not the instrument set
+
+`VOICE_V10` is the response to
+[`bb8-sound-vocabulary-taxonomy.md`](research/bb8-sound-vocabulary-taxonomy.md), a
+frame-by-frame, gesture-level comparison (vs the whole-clip aggregate of `VOICE_V8`). It
+found dootdoot had the right gesture families but was **rising-biased and register-shy**: it
+never produced a falling whistle (0 vs BB-8's 7 across the contextual clips), its accents
+barely left the register, single gestures spanned ~1 octave where BB-8 spans 3–4, neutral
+gestures ran long, and it never crossed into a rough/noisy burst. The fix is **not new
+primitives** but more of the polarity, range, engagement, pace, and texture the existing
+channels already carry, all pure functions of the text plus frozen constants and bounded:
+
+- **Signed whistle.** `whistle_sweep_pitch_hz` is now signed: a positive amount climbs to the
+  ceiling (the V7 path, byte-identical), a negative amount descends toward `WHISTLE_FLOOR_HZ`
+  (300 Hz). The exclamation terminal flourish carries a negative pitch velocity and so
+  descends (a falling whistle), while the question flourish keeps rising — the same
+  questions-rise/statements-fall polarity as the existing glide split (§8.10).
+- **Harder, earlier accent whistle.** An engaged body accent now sweeps from a substantial
+  floor (`WHISTLE_ACCENT_FLOOR`) instead of the near-zero `VOICE_V8` ramp, and the sweep
+  begins earlier (`CURVE_WHISTLE_START_FRACTION` 0.45 → 0.30) so it dwells in the whistle
+  band. The engagement gate isolates the one promoted accent from non-accent body syllables,
+  so the phrase still whistles once, not on every syllable.
+- **Wider accent swoop.** The promoted accent uses `ACCENT_PITCH_SPAN_SEMITONES` (26 st),
+  wider than the flourish's `WIDE_GESTURE_PITCH_SPAN_SEMITONES` (16 st), toward BB-8's
+  multi-octave gestures; non-accent gestures keep their spans.
+- **Shorter neutral pace.** The text-path duration scale (`text_syllable_duration_scale`) is
+  lowered below 1.0 so calm neutral text paces shorter than the base (it used to pace
+  _longer_). The hand-built / empty-chirp / neutral-curve path keeps a scale of exactly 1.0
+  and is byte-identical.
+- **Agitation roughness burst.** A body accent in an agitated utterance (high arousal **and**
+  negative valence) pushes its noise/breath roughness toward the noisy band, then recovers;
+  non-accent, calm, and positive-valence syllables keep the steady-state texture.
+
+The new `FR-102…FR-108` requirements (spec §1.19) are the normative form of this scope. The
+frozen `VOICE_V10` contract is documented by the acceptance note
+[`voice-v10-bidirectional-whistle.md`](validation/voice-v10-bidirectional-whistle.md), with
+the regenerated golden WAV hashes remaining the byte-level contract.
+
+**Non-goals restated for `VOICE_V10`.** It SHALL NOT change the semantic PCA mapping or the
+discourse-role assignment; SHALL NOT raise the global brightness _level_ or boost the
+upper-mid sparkle mix (the whistle fundamental is the register lever, not the sparkle); SHALL
+NOT alter the warble; and SHALL NOT introduce unseeded randomness.
+
+---
+
 ## 9. Architecture
 
 ### 9.1 Decision: precompute the mapping → minimal runtime
@@ -1274,7 +1319,7 @@ These do not change the architecture and are settled during implementation:
 - **Droid identity (goal 3):** research-grounded fixed formant voice with portamento
   (§6.1–6.3) + fixed/variable split that constrains all input to a tasteful droid
   parameter space.
-- **Expressiveness without losing the language (`VOICE_V2`–`VOICE_V9`):** affect,
+- **Expressiveness without losing the language (`VOICE_V2`–`VOICE_V10`):** affect,
   complexity, archetype, and phrase prosody (§8.3) plus the V7 discourse-performance planner
   (§5.5) and expanded synthesis primitives (§6.2, §6.4) add deterministic, bounded
   performance channels layered over — never replacing — the learnable four-axis core, so
@@ -1284,4 +1329,7 @@ These do not change the architecture and are settled during implementation:
   pure function of the learnable core. `VOICE_V9` (§8.10) makes the five marks a writer
   reaches for — question, exclamation, period, dash, ellipsis — each audibly distinct, so
   punctuation becomes a reliable expressive control without touching the semantic mapping or
-  discourse roles.
+  discourse roles. `VOICE_V10` (§8.11) widens the gesture vocabulary itself — a bidirectional
+  whistle (falling as well as rising), harder/earlier and wider accents, shorter neutral
+  pacing, and an agitation roughness burst — closing the rising-bias and register gaps the
+  frame-by-frame taxonomy found, again as a pure function of the learnable core.

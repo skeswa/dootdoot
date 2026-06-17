@@ -27,9 +27,10 @@ const WHISTLE_ACCENT_TENSION_THRESHOLD: f64 = 0.76;
 
 /// Gives the whistle amount a body accent sweeps with the instant it engages.
 ///
-/// `VOICE_V10`: the `VOICE_V8` ramp started from zero at the gate, so a just-engaged
-/// accent barely left the register and the dominant peak never rode high. The
-/// engaged sweep now starts from this floor and ramps to [`WHISTLE_ACCENT_SCALE`].
+/// `VOICE_V10`: the `VOICE_V8` ramp started from zero at the gate, so a
+/// just-engaged accent barely left the register and the dominant peak never
+/// rode high. The engaged sweep now starts from this floor and ramps to
+/// [`WHISTLE_ACCENT_SCALE`].
 const WHISTLE_ACCENT_FLOOR: f64 = 0.55;
 
 /// Gives the `VOICE_V8` whistle scale applied to body-syllable accents, keeping
@@ -165,10 +166,11 @@ pub const WIDE_GESTURE_PITCH_SPAN_SEMITONES: f64 = 16.0;
 
 /// Gives the `VOICE_V10` accent per-gesture pitch span in semitones.
 ///
-/// The one promoted semantic accent per phrase swoops widest so a single gesture
-/// approaches BB-8's multi-octave excursions (the taxonomy found dootdoot capped
-/// near one octave where BB-8 routinely spans three to four). It stays bounded
-/// inside the droid register and above `WIDE_GESTURE_PITCH_SPAN_SEMITONES`.
+/// The one promoted semantic accent per phrase swoops widest so a single
+/// gesture approaches BB-8's multi-octave excursions (the taxonomy found
+/// dootdoot capped near one octave where BB-8 routinely spans three to four).
+/// It stays bounded inside the droid register and above
+/// `WIDE_GESTURE_PITCH_SPAN_SEMITONES`.
 pub const ACCENT_PITCH_SPAN_SEMITONES: f64 = 26.0;
 
 /// Gives the nominal top of a `VOICE_V7` whistle sweep in hertz.
@@ -177,7 +179,8 @@ pub const WHISTLE_TARGET_HZ: f64 = 3_400.0;
 /// Gives the hard ceiling for a `VOICE_V7` whistle sweep in hertz.
 pub const WHISTLE_PITCH_CEILING_HZ: f64 = 4_200.0;
 
-/// Gives the nominal bottom of a `VOICE_V10` *descending* whistle sweep in hertz.
+/// Gives the nominal bottom of a `VOICE_V10` *descending* whistle sweep in
+/// hertz.
 ///
 /// The taxonomy comparison found BB-8 falls as readily as it rises, but
 /// dootdoot's whistle only ever climbed. A negative sweep amount now glides the
@@ -513,8 +516,8 @@ pub fn whistle_sweep_pitch_hz(start_hz: f64, whistle_amount: f64, progress: f64)
 /// Positive rises, negative descends (see [`whistle_sweep_pitch_hz`]), `0` is a
 /// no-op. A terminal flourish sweeps by its full archetype tension; a body
 /// accent (`ChattyReply`/`Probe`) engages only once tension clears
-/// `WHISTLE_ACCENT_TENSION_THRESHOLD` — which the planner reaches only on the one
-/// promoted accent, never on non-accent body syllables — then sweeps from
+/// `WHISTLE_ACCENT_TENSION_THRESHOLD` — which the planner reaches only on the
+/// one promoted accent, never on non-accent body syllables — then sweeps from
 /// `WHISTLE_ACCENT_FLOOR` up to `WHISTLE_ACCENT_SCALE`. The sign follows
 /// `pitch_velocity` so the exclamation flourish descends (`VOICE_V10`).
 pub fn whistle_sweep_amount(role: PhraseRole, archetype_tension: f64, pitch_velocity: f64) -> f64 {
@@ -575,8 +578,8 @@ pub fn gesture_pitch_span_semitones(role: PhraseRole, whistle_amount: f64) -> f6
 /// transient burst: a body accent (`ChattyReply`/`Probe` past the whistle gate)
 /// in an agitated utterance — high arousal *and* negative valence — pushes its
 /// roughness toward a noise burst so a single gesture crosses into the noisy
-/// band, then recovers when the gesture ends. Non-accent and calm syllables keep
-/// the base, so the steady-state texture is unchanged.
+/// band, then recovers when the gesture ends. Non-accent and calm syllables
+/// keep the base, so the steady-state texture is unchanged.
 pub fn syllable_roughness_amount(
     role: PhraseRole,
     archetype_tension: f64,

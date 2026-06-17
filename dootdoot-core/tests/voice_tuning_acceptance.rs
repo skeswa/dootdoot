@@ -9,6 +9,7 @@ const VOICE_V6: &str = include_str!("../../docs/validation/voice-v6-repeated-phr
 const VOICE_V7: &str = include_str!("../../docs/validation/voice-v7-contextual-performance.md");
 const VOICE_V8: &str = include_str!("../../docs/validation/voice-v8-semantic-engagement.md");
 const VOICE_V9: &str = include_str!("../../docs/validation/voice-v9-audible-punctuation.md");
+const VOICE_V10: &str = include_str!("../../docs/validation/voice-v10-bidirectional-whistle.md");
 
 #[test]
 fn integrated_tuning_acceptance_records_phase_seven_decision() {
@@ -182,6 +183,25 @@ fn voice_v9_audible_punctuation_acceptance_records_decision() {
         assert!(
             VOICE_V9.contains(expected),
             "VOICE_V9 acceptance note should mention {expected}",
+        );
+    }
+}
+
+#[test]
+fn voice_v10_bidirectional_whistle_acceptance_records_decision() {
+    for expected in [
+        "Accepted for VOICE_V10",
+        "dootdoot VOICE_V10",
+        "bb8-sound-vocabulary-taxonomy",
+        "falling whistle",
+        "descends",
+        "agitated",
+        "sound_taxonomy",
+        "golden WAV hashes",
+    ] {
+        assert!(
+            VOICE_V10.contains(expected),
+            "VOICE_V10 acceptance note should mention {expected}",
         );
     }
 }

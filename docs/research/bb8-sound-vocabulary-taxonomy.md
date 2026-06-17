@@ -259,9 +259,9 @@ ornament into a regular accent gesture.
 on top. So a single dootdoot gesture can't span what BB-8 routinely does.
 
 **Concrete change.** On the single highest-salience accent per phrase (the
-semantic-accent the planner already identifies for VOICE_V8), allow the gesture
+semantic-accent the planner already identifies for VOICE*V8), allow the gesture
 span to reach ~24–36 st — either by raising the wide-gesture span on that one
-gesture, or by letting the whistle sweep run across a _lengthened_ accent
+gesture, or by letting the whistle sweep run across a \_lengthened* accent
 syllable so the start→peak interval itself widens. Leave non-accent gestures at
 the current spans so the voice doesn't become uniformly wild.
 

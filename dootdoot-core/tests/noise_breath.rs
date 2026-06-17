@@ -28,8 +28,14 @@ fn calm_or_positive_accents_keep_the_base_roughness() {
     let happy = syllable_roughness_amount(PhraseRole::ChattyReply, 0.85, 0.5, 1.0, 1.0);
     let calm = syllable_roughness_amount(PhraseRole::ChattyReply, 0.85, 0.5, -1.0, 0.2);
 
-    assert!(happy <= 0.4, "a happy accent should stay in the body range, got {happy}");
-    assert!(calm <= 0.4, "a low-arousal accent should stay in the body range, got {calm}");
+    assert!(
+        happy <= 0.4,
+        "a happy accent should stay in the body range, got {happy}"
+    );
+    assert!(
+        calm <= 0.4,
+        "a low-arousal accent should stay in the body range, got {calm}"
+    );
 }
 
 #[test]
@@ -39,8 +45,14 @@ fn non_accent_and_neutral_syllables_never_burst() {
     let non_accent = syllable_roughness_amount(PhraseRole::ChattyReply, 0.40, 0.5, -1.0, 1.0);
     let neutral = syllable_roughness_amount(PhraseRole::ChattyReply, 0.0, 0.0, -1.0, 1.0);
 
-    assert!(non_accent <= 0.4, "non-accent body should not burst, got {non_accent}");
-    assert!(neutral.abs() < 1e-12, "neutral hand-built syllable must stay clean, got {neutral}");
+    assert!(
+        non_accent <= 0.4,
+        "non-accent body should not burst, got {non_accent}"
+    );
+    assert!(
+        neutral.abs() < 1e-12,
+        "neutral hand-built syllable must stay clean, got {neutral}"
+    );
 }
 
 #[test]

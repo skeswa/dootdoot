@@ -61,7 +61,10 @@ fn whistle_sweep_descends_toward_the_floor_at_negative_amount() {
     let start = 900.0;
     let end = whistle_sweep_pitch_hz(start, -1.0, 1.0);
 
-    assert!(end < start, "negative amount should descend: {end} >= {start}");
+    assert!(
+        end < start,
+        "negative amount should descend: {end} >= {start}"
+    );
     assert!(
         (end - WHISTLE_FLOOR_HZ).abs() <= 1.0,
         "full negative sweep should land at the floor: {end} vs {WHISTLE_FLOOR_HZ}",

@@ -313,11 +313,12 @@ fn flourish_tail_role(role: PhraseRole, position: usize, length: usize) -> Phras
 /// Aims the terminal-flourish whistle by setting its pitch-velocity sign.
 ///
 /// `VOICE_V10`: the whistle is bidirectional. An exclamation flourish descends
-/// (negative pitch velocity steers the synth whistle toward `WHISTLE_FLOOR_HZ`),
-/// matching BB-8's falling whistles and the exclamation's settling glide, while a
-/// question flourish keeps its rising velocity. Every other role — and the
-/// question flourish, whose velocity is already positive — is returned unchanged,
-/// so only exclamation-final syllables move off `VOICE_V9`.
+/// (negative pitch velocity steers the synth whistle toward
+/// `WHISTLE_FLOOR_HZ`), matching BB-8's falling whistles and the exclamation's
+/// settling glide, while a question flourish keeps its rising velocity. Every
+/// other role — and the question flourish, whose velocity is already positive —
+/// is returned unchanged, so only exclamation-final syllables move off
+/// `VOICE_V9`.
 fn aim_flourish_whistle(
     curves: PerformanceCurves,
     role: PhraseRole,

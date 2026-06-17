@@ -31,8 +31,14 @@ pub const VOICE_V8: &str = "VOICE_V8";
 /// period, dash, and ellipsis each read as a distinct prosodic gesture.
 pub const VOICE_V9: &str = "VOICE_V9";
 
+/// Identifies the bidirectional-whistle vocabulary output contract: the whistle
+/// can descend as well as climb (the exclamation flourish falls), accents
+/// engage it harder/earlier and swoop wider, neutral text paces shorter, and
+/// agitated accents can burst into the noisy band.
+pub const VOICE_V10: &str = "VOICE_V10";
+
 /// Identifies the active sample-affecting output contract.
-pub const ACTIVE_VOICE: &str = VOICE_V9;
+pub const ACTIVE_VOICE: &str = VOICE_V10;
 
 /// Identifies the first committed dootdoot asset spec file.
 pub const DOOT_ASSET_FILE_V1: &str = "dootdoot_asset_v1.doot";

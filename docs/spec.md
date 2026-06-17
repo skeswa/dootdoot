@@ -419,6 +419,50 @@
   `dootdoot VOICE_V9` version string, and regenerated golden WAV hashes (including `dash`
   and `ellipsis` corpus fixtures).
 
+### 1.19 VOICE_V10 bidirectional whistle & gesture vocabulary
+
+> A frame-by-frame, gesture-level comparison against the BB-8 corpus found dootdoot has the
+> right gesture families but is **rising-biased and register-shy**: it never produced a
+> falling whistle, its accents barely left the register and spanned ~1 octave where BB-8
+> spans 3–4, neutral gestures ran long, and it never crossed into a rough/noisy burst.
+> `VOICE_V10` widens that vocabulary without new instruments or any change to the PCA
+> mapping, staying inside the fixed, deterministic, bounded droid parameter space (NFR-16).
+> Derived from
+> [`bb8-sound-vocabulary-taxonomy.md`](research/bb8-sound-vocabulary-taxonomy.md). Explicit
+> non-goals: `VOICE_V10` SHALL NOT raise the global brightness _level_, SHALL NOT boost the
+> upper-mid sparkle mix, SHALL NOT alter the warble, and SHALL NOT add unseeded randomness.
+
+- **FR-102** `VOICE_V10` SHALL make the whistle sweep **signed**: a positive amount rises
+  toward the whistle ceiling (the `VOICE_V7` climb), and a negative amount descends toward a
+  named bounded floor (`WHISTLE_FLOOR_HZ`). A zero amount SHALL remain a no-op and the
+  positive path SHALL stay byte-identical to `VOICE_V7`–`V9`.
+- **FR-103** The exclamation terminal flourish SHALL descend (a falling whistle) while the
+  question flourish SHALL keep rising; the direction SHALL be carried deterministically by
+  the sign of the syllable's pitch velocity. Only exclamation-final flourishes SHALL move off
+  `VOICE_V9`.
+- **FR-104** A body semantic accent that engages the whistle SHALL sweep from a substantial
+  engaged floor (not a near-zero ramp) and SHALL begin its sweep earlier in the syllable, so
+  the swept pitch dwells in the whistle band; the engagement gate SHALL continue to isolate
+  the one promoted accent from non-accent body syllables (no shrill every-syllable whistle).
+  The whistle ceiling SHALL be unchanged.
+- **FR-105** The single promoted semantic accent per phrase SHALL use a wider per-gesture
+  pitch span (`ACCENT_PITCH_SPAN_SEMITONES`) than the terminal flourish, bounded inside the
+  droid register, so a single accent gesture can approach BB-8's multi-octave excursions;
+  non-accent gestures SHALL keep their existing spans.
+- **FR-106** `VOICE_V10` SHALL pace neutral (text-path) syllables shorter than the base so
+  neutral gestures read as quick blips rather than long held tones. The hand-built /
+  empty-chirp / neutral-curve path (no explicit mood) SHALL keep a duration scale of exactly
+  `1.0` and stay byte-identical. Output-length estimation SHALL remain consistent with render.
+- **FR-107** A body semantic accent in an agitated utterance (high arousal **and** negative
+  valence) SHALL be able to burst its noise/breath roughness toward the noisy band, then
+  recover, so a single gesture leaves the tonal band. Non-accent, calm, and positive-valence
+  syllables SHALL keep the steady-state roughness; the burst SHALL be deterministic and
+  bounded.
+- **FR-108** The frozen `VOICE_V10` contract SHALL be documented with a gesture-vocabulary
+  acceptance note (tracked separately from the golden hashes, re-running the
+  `sound_taxonomy.py` harness), the surfaced `dootdoot VOICE_V10` version string, and
+  regenerated golden WAV hashes.
+
 ---
 
 ## 2. Non-functional requirements

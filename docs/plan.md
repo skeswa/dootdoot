@@ -634,11 +634,11 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 > Derived from
 > [`bb8-sound-vocabulary-taxonomy.md`](./research/bb8-sound-vocabulary-taxonomy.md):
 > a frame-by-frame, gesture-level comparison (not the whole-clip aggregate of Phase 17)
-> found dootdoot has the right gesture *families* but is **rising-biased** and
+> found dootdoot has the right gesture _families_ but is **rising-biased** and
 > **register-shy**. The clearest gaps, in leverage order: dootdoot's whistle only ever
 > climbs (0 falling-whistles vs BB-8's 7; fall fraction 13% vs 28%); the dominant
 > spectral peak almost never rides high (p90 ~711 Hz vs BB-8's ~2.7 kHz) because the
-> whistle sweep is rarely engaged and brief — *not* because the sparkle layer is too
+> whistle sweep is rarely engaged and brief — _not_ because the sparkle layer is too
 > quiet; per-gesture pitch excursions are small (p90 ~14 st vs ~45 st); neutral gestures
 > are over-connected and too long (134 vs 87 ms median); and dootdoot never crosses into
 > a rough/noisy burst (0% noisy vs BB-8's agitation squawks).
@@ -649,12 +649,12 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 > neutral (`tension == 0`) path byte-identical so unchanged inputs do not move, and stays
 > inside the fixed, deterministic, bounded droid parameter space (NFR-16). **Non-goals
 > (restated from the analysis):** do not raise overall brightness (level already matches —
-> fix its *polarity* and *shape*); do not boost `UPPER_MID_SPARKLE_MIX` (the sparkle is
-> subordinate by design — the whistle *fundamental* sweep is the register lever); do not
+> fix its _polarity_ and _shape_); do not boost `UPPER_MID_SPARKLE_MIX` (the sparkle is
+> subordinate by design — the whistle _fundamental_ sweep is the register lever); do not
 > touch the warble (rate/depth already in the BB-8 pocket); no unseeded randomness, speech
 > vocoder, or sample libraries.
 
-- [ ] **T-102 — Signed whistle sweep with a downward floor.** Generalize
+- [x] **T-102 — Signed whistle sweep with a downward floor.** Generalize
       `whistle_sweep_pitch_hz` (today it only climbs toward `WHISTLE_TARGET_HZ`) to a
       signed direction: sweep up to the existing target when sweep pressure is positive,
       or down to a new named `WHISTLE_FLOOR_HZ` (≈ 280–350 Hz, kept inside the bounded
@@ -662,7 +662,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       floor, bounded/finite output, no NaN/silent paths, and that a zero/positive amount
       stays byte-identical to V9.
       Deps: T-101, T-81 · Reqs: FR-102, NFR-3, NFR-4, NFR-16 · Est: 2.5h
-- [ ] **T-103 — Falling terminal flourish (descending whistle for statements).** Drive the
+- [x] **T-103 — Falling terminal flourish (descending whistle for statements).** Drive the
       new downward sweep from discourse role: give the period/exclamation
       `TerminalFlourish` a negative terminal sweep pressure (via `pitch_velocity`) so a
       statement lands with a BB-8-like descending whistle, while the question
@@ -670,7 +670,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       polarity as the existing ±-glide split. Add `insta` snapshots for a statement vs a
       question flourish and confirm the fall fraction rises toward the BB-8 ~28%.
       Deps: T-102, T-87, T-91 · Reqs: FR-103, FR-86, NFR-16 · Est: 2h
-- [ ] **T-104 — Engage the whistle more often, earlier, and harder.** Lower the bar for the
+- [x] **T-104 — Engage the whistle more often, earlier, and harder.** Lower the bar for the
       fundamental-moving whistle to reach the high register on ordinary expressive text:
       reduce `WHISTLE_ACCENT_TENSION_THRESHOLD` and/or let the planner push body-syllable
       tension higher on the promoted semantic accent, and start the sweep earlier
@@ -679,7 +679,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       of use and dwell time are the gap). Add tests for the new engagement threshold and a
       directional check that the fraction of accent frames clearing ~1.1 kHz rises.
       Deps: T-103, T-92 · Reqs: FR-104, NFR-3, NFR-4, NFR-16 · Est: 2h
-- [ ] **T-105 — Widen accent pitch excursion toward 2–4 octaves.** On the single
+- [x] **T-105 — Widen accent pitch excursion toward 2–4 octaves.** On the single
       highest-salience accent per phrase (the accent the planner already promotes in V8),
       allow the per-gesture pitch span to reach ~24–36 st — by raising the wide-gesture
       span for that one gesture and/or letting the sweep run across a lengthened accent
@@ -687,7 +687,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       `WIDE_GESTURE_PITCH_SPAN_SEMITONES` so the voice does not become uniformly wild. Add
       tests for the bounded widened span, accent-only application, and determinism.
       Deps: T-104, T-91 · Reqs: FR-105, NFR-3, NFR-4, NFR-16 · Est: 2h
-- [ ] **T-106 — Shorten and separate neutral gestures.** Extend the V8 neutral
+- [x] **T-106 — Shorten and separate neutral gestures.** Extend the V8 neutral
       word-boundary rests (T-94): bias neutral (un-punctuated) syllable duration shorter so
       the median gesture falls toward ~90 ms and the type mix shifts from `trill/chatter`
       back toward discrete `blip` strings, lowering active fraction toward the library's
@@ -695,7 +695,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       output-length estimation and input-limit tests for the timing change, and add a
       directional gesture-median/active-fraction check.
       Deps: T-101, T-94, T-50 · Reqs: FR-106, FR-36, FR-37, NFR-16 · Est: 2.5h
-- [ ] **T-107 — Transient rough/noisy burst on agitation.** Let `roughness_amount` spike
+- [x] **T-107 — Transient rough/noisy burst on agitation.** Let `roughness_amount` spike
       briefly toward ~1.0 (mix → `NOISE_BREATH_MAX_MIX`) for a short window on a
       high-arousal, negative-valence agitated accent (the planner's tremble/agitation path),
       so a single gesture crosses into the noisy band and then recovers — leaving the
@@ -703,7 +703,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       fires only on agitated accents, that ordinary syllables stay cleanly periodic, and
       determinism/finiteness.
       Deps: T-101, T-82, T-87 · Reqs: FR-107, NFR-3, NFR-4, NFR-16 · Est: 2.5h
-- [ ] **T-108 — Freeze VOICE_V10 + vocabulary acceptance doc.** Bump `ACTIVE_VOICE` to
+- [x] **T-108 — Freeze VOICE_V10 + vocabulary acceptance doc.** Bump `ACTIVE_VOICE` to
       `VOICE_V10` and surface the version string; write the acceptance note re-running the
       `scripts/sound_taxonomy.py` gesture-level harness on dootdoot renders and tracking the
       directional vocabulary deltas (fall fraction, falling-whistle count, dominant-peak
