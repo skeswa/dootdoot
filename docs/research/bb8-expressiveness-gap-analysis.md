@@ -155,8 +155,8 @@ We analyzed the full local sample set in two layers:
   islands (median ≈ 290 ms vs dootdoot ≈ 186 ms), much wider dominant-peak motion
   (≈ 1335 Hz vs ≈ 668 Hz), and lower harmonicity (≈ 0.81 vs ≈ 0.95). Those aggregate
   metrics are reliable enough for directional tuning.
-- The seven emotionally-labeled contextual clips in
-  `anddav87/bb8-sounds/bb8-clips/`, decoded to mono 44.1 kHz and checked with the same
+- The seven emotionally-labeled contextual clips from the source recordings,
+  decoded to mono 44.1 kHz and checked with the same
   RMS-gated metrics plus rough autocorrelation pitch tracking. These are useful
   evidence for _communicative context_, but they are not clean lab recordings: music,
   SFX, and dialogue beds keep many frames "active" (the context-only run measured an

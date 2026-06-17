@@ -3,7 +3,7 @@
 Status: **Accepted for VOICE_V1**.
 
 This note records the integrated Phase 7 tuning decision after T-46 through T-50 landed.
-The comparison workflow is `scripts/bb8-metrics /Users/skeswa/repos/anddav87/bb8-sounds
+The comparison workflow is `scripts/bb8-metrics <reference-recordings-dir>
 target/bb8-metrics`, which decodes the local BB-8 reference clips, renders the fixed
 dootdoot corpus, and reports directional metrics. These numbers are not a golden
 contract; they are the tuning aid used before the Phase 8 hash freeze.

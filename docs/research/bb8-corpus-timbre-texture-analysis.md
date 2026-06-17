@@ -1,7 +1,7 @@
 # BB-8 Corpus Timbre & Texture Analysis (VOICE_V7)
 
 > Status: **research / directional**. This note compares the **whole** local BB-8
-> reference corpus at `/Users/skeswa/repos/anddav87/bb8-sounds` against the current
+> reference corpus of source recordings against the current
 > `VOICE_V7` output, with a focus on **timbre and texture** rather than the single-clip
 > macro-shape that earlier gap analyses studied.
 >
@@ -77,7 +77,7 @@ the expanded `scripts/acoustic_metrics.py` (driven by `scripts/acoustics`), run 
 `--aggregate` mode to pool clips per group and report `median [p10–p90]`:
 
 ```bash
-scripts/bb8-metrics    # decode corpus + render baseline phrase set
+scripts/bb8-metrics <reference-recordings-dir>    # decode corpus + render baseline phrase set
 
 # 15 emotionally-varied dootdoot renders mirroring the clip contexts:
 #   target/bb8-metrics/dootdoot-expanded/*.wav

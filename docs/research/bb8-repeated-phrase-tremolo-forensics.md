@@ -5,8 +5,7 @@
 After `VOICE_V5`, the phrase
 `I am so excited I am so excited I am so excited I am so excited` was smoother at word
 starts but still sounded repetitive and severe, almost like rapid bowing or tremolo.
-The comparison target was the local clip
-`/Users/skeswa/repos/anddav87/bb8-sounds/bb8-clips/inquisitive-then-chatty.mp3`.
+The comparison target was the local `inquisitive-then-chatty` reference clip.
 
 ## Method
 

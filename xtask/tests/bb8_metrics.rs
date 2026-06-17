@@ -5,6 +5,29 @@ use std::fs;
 const SCRIPT: &str = include_str!("../../scripts/bb8-metrics");
 const ANALYSIS: &str = include_str!("../../docs/research/bb8-sound-signature-analysis.md");
 
+/// Docs whose code blocks invoke `scripts/bb8-metrics`. The script makes the
+/// reference-recordings directory mandatory, so a bare `scripts/bb8-metrics`
+/// command line in any of these would exit immediately with the usage error,
+/// breaking the documented reproduction path.
+const DOCS_WITH_INVOCATIONS: &[(&str, &str)] = &[
+    (
+        "corpus-timbre-texture",
+        include_str!("../../docs/research/bb8-corpus-timbre-texture-analysis.md"),
+    ),
+    (
+        "voice-v8-semantic-engagement",
+        include_str!("../../docs/validation/voice-v8-semantic-engagement.md"),
+    ),
+    (
+        "voice-v2-expressiveness",
+        include_str!("../../docs/validation/voice-v2-expressiveness.md"),
+    ),
+    (
+        "voice-tuning",
+        include_str!("../../docs/validation/voice-tuning.md"),
+    ),
+];
+
 #[test]
 fn bb8_metrics_script_decodes_references_and_runs_xtask_report() {
     for expected in [
@@ -15,12 +38,50 @@ fn bb8_metrics_script_decodes_references_and_runs_xtask_report() {
         "bb8-clips",
         "contextual-wav",
         "contextual",
-        "/Users/skeswa/repos/anddav87/bb8-sounds",
+        "reference-recordings-dir",
     ] {
         assert!(
             SCRIPT.contains(expected),
             "metrics script should mention {expected}",
         );
+    }
+}
+
+#[test]
+fn bb8_metrics_taxonomy_step_guards_empty_wav_directories() {
+    // The taxonomy step must not pass an unexpanded glob to the analyzer when a
+    // decoded directory is empty; it collects matches first and skips with a
+    // warning when there are none, so an empty/mispointed corpus cannot abort
+    // the whole `set -e` workflow.
+    for expected in ["sound_taxonomy.py", "no WAVs", "run_taxonomy"] {
+        assert!(
+            SCRIPT.contains(expected),
+            "metrics script should mention {expected}",
+        );
+    }
+    assert!(
+        !SCRIPT.contains("\"${wav_dir}\"/*.wav"),
+        "taxonomy step must not pass an unguarded glob to the analyzer",
+    );
+}
+
+#[test]
+fn docs_invoke_bb8_metrics_with_a_reference_dir() {
+    for (name, doc) in DOCS_WITH_INVOCATIONS {
+        for line in doc.lines() {
+            // A runnable command line begins (after indentation) with the bare
+            // script path; inline prose mentions are wrapped in backticks or
+            // start with markdown markers, so they do not match here.
+            let Some(rest) = line.trim_start().strip_prefix("scripts/bb8-metrics") else {
+                continue;
+            };
+            let rest = rest.trim_start();
+            assert!(
+                !rest.is_empty() && !rest.starts_with('#'),
+                "{name}: runnable `scripts/bb8-metrics` line must pass a \
+                 reference-recordings dir, found bare invocation: {line:?}",
+            );
+        }
     }
 }
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-reference_dir="${1:-/Users/skeswa/repos/anddav87/bb8-sounds}"
+reference_dir="${1:?usage: scripts/bb8-metrics <reference-recordings-dir> [output-dir]}"
 output_dir="${2:-target/bb8-metrics}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 decoded_dir="${output_dir}/reference-wav"
 contextual_source_dir="${reference_dir}/bb8-clips"
 contextual_decoded_dir="${output_dir}/contextual-wav"
@@ -24,6 +25,34 @@ decode_mp3_dir() {
   done < <(find "${source_dir}" -maxdepth 1 -type f -name '*.mp3' -print0 | sort -z)
 }
 
+# Gesture-level sound-type taxonomy over a directory of decoded WAVs. Writes a
+# frozen text report alongside the band/timing metrics. Directional tuning aid,
+# not the voice contract; skipped (with a warning) when uv is unavailable.
+run_taxonomy() {
+  local wav_dir="$1"
+  local report="$2"
+
+  if ! command -v uv >/dev/null 2>&1; then
+    echo "warning: uv not found; skipping sound-taxonomy for ${wav_dir}" >&2
+    return 0
+  fi
+
+  # Collect matches explicitly so an empty directory does not pass a literal
+  # unexpanded glob to the analyzer (which would abort the `set -e` workflow).
+  local wavs=()
+  while IFS= read -r -d '' wav; do
+    wavs+=("${wav}")
+  done < <(find "${wav_dir}" -maxdepth 1 -type f -name '*.wav' -print0 | sort -z)
+
+  if [ "${#wavs[@]}" -eq 0 ]; then
+    echo "warning: no WAVs in ${wav_dir}; skipping sound-taxonomy" >&2
+    return 0
+  fi
+
+  uv run --quiet "${script_dir}/sound_taxonomy.py" "${wavs[@]}" >"${report}"
+  echo "wrote ${report}"
+}
+
 if ! command -v ffmpeg >/dev/null 2>&1; then
   echo "error: ffmpeg is required to decode BB-8 MP3 clips" >&2
   exit 1
@@ -35,10 +64,14 @@ cargo run -p xtask -- bb8-metrics \
   --reference-wav-dir "${decoded_dir}" \
   --output-dir "${output_dir}"
 
+run_taxonomy "${decoded_dir}" "${output_dir}/sound-taxonomy.txt"
+
 if [ -d "${contextual_source_dir}" ]; then
   decode_mp3_dir "${contextual_source_dir}" "${contextual_decoded_dir}"
 
   cargo run -p xtask -- bb8-metrics \
     --reference-wav-dir "${contextual_decoded_dir}" \
     --output-dir "${contextual_output_dir}"
+
+  run_taxonomy "${contextual_decoded_dir}" "${contextual_output_dir}/sound-taxonomy.txt"
 fi

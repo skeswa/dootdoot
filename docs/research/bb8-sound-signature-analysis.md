@@ -1,7 +1,7 @@
 # BB-8 Sound Signature Analysis
 
-This report compares the current dootdoot synthesis output against the local BB-8
-reference set at `github.com/anddav87/bb8-sounds`. It is intended as input to
+This report compares the current dootdoot synthesis output against a local BB-8
+reference set of source recordings. It is intended as input to
 Phase 7 voice tuning, especially T-45 and T-47. It does not complete T-45 by itself,
 because that task still requires by-ear tuning against the target identity.
 
@@ -9,7 +9,7 @@ because that task still requires by-ear tuning against the target identity.
 
 Reference material:
 
-- 32 MP3 files from `github.com/anddav87/bb8-sounds`, decoded to mono
+- 32 MP3 files from the source recordings, decoded to mono
   44.1 kHz WAV (via `ffmpeg -ac 1 -ar 44100`) for analysis. 31 are named
   `bb8-*`; one is `bb2-02`. The clips are not uniform: durations range from
   roughly 0.8 s to ~15 s, and several are long multi-burst performances rather

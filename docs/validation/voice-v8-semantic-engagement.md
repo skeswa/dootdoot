@@ -40,7 +40,7 @@ dootdoot renders, before (`VOICE_V7`) and after (`VOICE_V8`). All clips decoded 
 frame RMS. Numbers are produced by the locked uv harness and reproduced with:
 
 ```bash
-scripts/bb8-metrics
+scripts/bb8-metrics <reference-recordings-dir>
 uv run scripts/acoustic_metrics.py --aggregate \
   bb8-lib=target/bb8-metrics/reference-wav/*.wav \
   bb8-ctx=target/bb8-metrics/contextual-wav/*.wav \

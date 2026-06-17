@@ -1,7 +1,7 @@
 # BB-8 Inquisitive-Then-Chatty Gap Analysis
 
-> Status: **research / recommendation**. This note compares the local reference clip
-> `/Users/skeswa/repos/anddav87/bb8-sounds/bb8-clips/inquisitive-then-chatty.mp3`
+> Status: **research / recommendation**. This note compares the local
+> `inquisitive-then-chatty` reference clip
 > against the current `VOICE_V6` output for
 > `Hello - good morning Sandile. What are you doing today?!`.
 >
@@ -71,7 +71,7 @@ Reference decode:
 
 ```bash
 ffmpeg -hide_banner -loglevel error -y \
-  -i /Users/skeswa/repos/anddav87/bb8-sounds/bb8-clips/inquisitive-then-chatty.mp3 \
+  -i path/to/inquisitive-then-chatty.mp3 \
   -ac 1 \
   -ar 44100 \
   target/research/bb8-inquisitive-chatty/reference.wav

@@ -15,7 +15,7 @@ active voice contract. V2 remains the frozen expressiveness checkpoint.
 ## Checks
 
 - `dootdoot --version` reports `dootdoot VOICE_V2`.
-- `scripts/bb8-metrics /Users/skeswa/repos/anddav87/bb8-sounds target/bb8-metrics-v2`
+- `scripts/bb8-metrics <reference-recordings-dir> target/bb8-metrics-v2`
   renders the short BB-8 reference corpus and the contextual clips under `bb8-clips/`.
 - The contextual metrics report is written to `target/bb8-metrics-v2/contextual/` after
   decoding clips into `target/bb8-metrics-v2/contextual-wav/`.
