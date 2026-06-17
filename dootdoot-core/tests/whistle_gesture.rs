@@ -1,9 +1,9 @@
 //! `VOICE_V7` swept-oscillator whistle gesture and wider pitch span tests.
 
 use dootdoot_core::{
-    PITCH_SEMITONE_SPAN, WHISTLE_FLOOR_HZ, WHISTLE_PITCH_CEILING_HZ, WHISTLE_TARGET_HZ,
-    WIDE_GESTURE_PITCH_SPAN_SEMITONES, pitch_center_hz, pitch_center_hz_with_span,
-    whistle_sweep_pitch_hz,
+    PITCH_SEMITONE_SPAN, PhraseRole, WHISTLE_FLOOR_HZ, WHISTLE_PITCH_CEILING_HZ, WHISTLE_TARGET_HZ,
+    WIDE_GESTURE_PITCH_SPAN_SEMITONES, apply_whistle_sweep_hz, pitch_center_hz,
+    pitch_center_hz_with_span, whistle_sweep_amount, whistle_sweep_pitch_hz,
 };
 
 fn bits(value: f64) -> u64 {
@@ -138,6 +138,46 @@ fn whistle_sweep_is_deterministic() {
     let second = whistle_sweep_pitch_hz(812.5, 0.63, 0.41);
 
     assert_eq!(first.to_bits(), second.to_bits());
+}
+
+#[test]
+fn body_accent_whistles_hard_enough_to_leave_the_register() {
+    // VOICE_V10: once a body accent engages, it must sweep substantially (not the
+    // near-zero V8 ramp) so the dominant peak actually rides into the whistle
+    // band — the taxonomy gap was that engaged accents barely whistled.
+    let amount = whistle_sweep_amount(PhraseRole::ChattyReply, 0.85, 1.0);
+
+    assert!(
+        amount >= 0.5,
+        "an engaged body accent should sweep hard, got {amount}",
+    );
+}
+
+#[test]
+fn non_accent_body_syllable_does_not_whistle() {
+    // The promoted accent reaches ~0.80+ tension; non-accent body syllables top
+    // out around 0.75, so they must stay below the gate (no shrill multi-whistle).
+    assert!(whistle_sweep_amount(PhraseRole::ChattyReply, 0.75, 1.0).abs() < 1e-12);
+    assert!(whistle_sweep_amount(PhraseRole::Probe, 0.75, 1.0).abs() < 1e-12);
+}
+
+#[test]
+fn whistle_begins_earlier_in_the_syllable() {
+    // VOICE_V10: the sweep starts earlier so more frames ride high. By 35% of the
+    // syllable it has already begun moving off the starting pitch.
+    let start = 760.0;
+    let moved = apply_whistle_sweep_hz(start, 1.0, 0.35, 1.0);
+
+    assert!(
+        moved > start + 1.0,
+        "sweep should have begun by 35% progress, got {moved}",
+    );
+}
+
+#[test]
+fn flourish_amount_follows_pitch_velocity_sign() {
+    assert!(whistle_sweep_amount(PhraseRole::TerminalFlourish, 0.9, -1.0) < 0.0);
+    assert!(whistle_sweep_amount(PhraseRole::TerminalFlourish, 0.9, 1.0) > 0.0);
 }
 
 #[test]

@@ -79,11 +79,11 @@ pub use synth::{
     body_layer_frequency_hz, body_layer_sample, compound_warble_offset_cents, formant_frequencies,
     imperfection_detune_cents, internal_pitch_offset_cents, mouth_open_envelope,
     mouth_resonance_hz, noise_breath_sample, pitch_center_hz, pitch_center_hz_with_span,
-    portamento_pitch_hz, portamento_progress, render_syllable, ring_modulate,
-    source_harmonic_count, source_oscillator_sample, sparkle_event_gain,
+    apply_whistle_sweep_hz, portamento_pitch_hz, portamento_progress, render_syllable,
+    ring_modulate, source_harmonic_count, source_oscillator_sample, sparkle_event_gain,
     upper_mid_sparkle_frequency_hz, upper_mid_sparkle_sample, vowel_trajectory_position,
     warble_depth_cents, warble_offset_cents, warble_phase_offset_for_syllable,
-    whistle_sweep_pitch_hz,
+    whistle_sweep_amount, whistle_sweep_pitch_hz,
 };
 pub use tokenizer::{
     TokenizedInput, TokenizedToken, Tokenizer, TokenizerError, embedded_tokenizer,

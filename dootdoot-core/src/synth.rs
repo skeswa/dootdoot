@@ -11,13 +11,26 @@ use crate::{
 pub const CURVE_PITCH_BIAS_SEMITONES: f64 = 4.0;
 
 const CURVE_BRIGHTNESS_GAIN: f64 = 0.40;
-const CURVE_WHISTLE_START_FRACTION: f64 = 0.45;
+/// Gives the syllable progress at which a whistle sweep begins.
+///
+/// `VOICE_V10` starts the sweep earlier than the `VOICE_V7` 0.45 so the swept
+/// pitch dwells in the whistle band for more of the gesture (the taxonomy gap
+/// was that the whistle reached high too briefly to carry the dominant peak).
+const CURVE_WHISTLE_START_FRACTION: f64 = 0.30;
 
-/// Gives the `VOICE_V8` archetype-tension above which a non-flourish body
-/// syllable (chatty reply / probe) engages the whistle sweep. The planner only
-/// drives tension this high on a semantic accent, so neutral text reaches the
-/// whistle band on its accent syllables without punctuation.
-const WHISTLE_ACCENT_TENSION_THRESHOLD: f64 = 0.75;
+/// Gives the archetype-tension above which a non-flourish body syllable (chatty
+/// reply / probe) engages the whistle sweep. The planner drives tension this
+/// high only on the one promoted semantic accent (which reaches ~0.80+), while
+/// non-accent body syllables top out around 0.75, so this gate cleanly isolates
+/// the accent and prevents a shrill every-syllable whistle.
+const WHISTLE_ACCENT_TENSION_THRESHOLD: f64 = 0.76;
+
+/// Gives the whistle amount a body accent sweeps with the instant it engages.
+///
+/// `VOICE_V10`: the `VOICE_V8` ramp started from zero at the gate, so a just-engaged
+/// accent barely left the register and the dominant peak never rode high. The
+/// engaged sweep now starts from this floor and ramps to [`WHISTLE_ACCENT_SCALE`].
+const WHISTLE_ACCENT_FLOOR: f64 = 0.55;
 
 /// Gives the `VOICE_V8` whistle scale applied to body-syllable accents, keeping
 /// them slightly under a dedicated terminal flourish.
@@ -475,6 +488,50 @@ pub fn whistle_sweep_pitch_hz(start_hz: f64, whistle_amount: f64, progress: f64)
     let swept = start + ((target - start) * amount * shape);
 
     swept.clamp(1.0, WHISTLE_PITCH_CEILING_HZ)
+}
+
+/// Gives the signed whistle-sweep amount for a planned syllable.
+///
+/// Positive rises, negative descends (see [`whistle_sweep_pitch_hz`]), `0` is a
+/// no-op. A terminal flourish sweeps by its full archetype tension; a body
+/// accent (`ChattyReply`/`Probe`) engages only once tension clears
+/// `WHISTLE_ACCENT_TENSION_THRESHOLD` — which the planner reaches only on the one
+/// promoted accent, never on non-accent body syllables — then sweeps from
+/// `WHISTLE_ACCENT_FLOOR` up to `WHISTLE_ACCENT_SCALE`. The sign follows
+/// `pitch_velocity` so the exclamation flourish descends (`VOICE_V10`).
+pub fn whistle_sweep_amount(role: PhraseRole, archetype_tension: f64, pitch_velocity: f64) -> f64 {
+    let tension = if archetype_tension.is_finite() {
+        archetype_tension.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    let magnitude = match role {
+        PhraseRole::TerminalFlourish => tension,
+        // VOICE_V8: a semantic accent in the body of an utterance (the planner
+        // drives tension past the threshold only on accents) reaches the whistle
+        // band even without terminal punctuation.
+        PhraseRole::ChattyReply | PhraseRole::Probe
+            if tension >= WHISTLE_ACCENT_TENSION_THRESHOLD =>
+        {
+            let above = ((tension - WHISTLE_ACCENT_TENSION_THRESHOLD)
+                / (1.0 - WHISTLE_ACCENT_TENSION_THRESHOLD))
+                .clamp(0.0, 1.0);
+
+            (WHISTLE_ACCENT_FLOOR + ((WHISTLE_ACCENT_SCALE - WHISTLE_ACCENT_FLOOR) * above))
+                .clamp(0.0, 1.0)
+        }
+        _ => 0.0,
+    };
+
+    // VOICE_V10: the whistle is signed. A negative pitch velocity (the
+    // exclamation flourish, set by the planner) descends toward
+    // `WHISTLE_FLOOR_HZ`; zero/positive keeps the `VOICE_V7`-`V9` rising sweep.
+    if pitch_velocity < 0.0 {
+        -magnitude
+    } else {
+        magnitude
+    }
 }
 
 /// Computes shaped portamento progress for elapsed time.
@@ -1090,33 +1147,11 @@ impl SyllablePerformance {
     }
 
     fn whistle_amount(self) -> f64 {
-        let tension = self.curves.archetype_tension();
-
-        let magnitude = match self.role {
-            PhraseRole::TerminalFlourish => tension,
-            // VOICE_V8: a semantic accent in the body of an utterance (the
-            // planner drives tension past the threshold only on accents) reaches
-            // the whistle band even without terminal punctuation.
-            PhraseRole::ChattyReply | PhraseRole::Probe
-                if tension >= WHISTLE_ACCENT_TENSION_THRESHOLD =>
-            {
-                let above = (tension - WHISTLE_ACCENT_TENSION_THRESHOLD)
-                    / (1.0 - WHISTLE_ACCENT_TENSION_THRESHOLD);
-
-                (above.clamp(0.0, 1.0) * WHISTLE_ACCENT_SCALE).clamp(0.0, 1.0)
-            }
-            _ => 0.0,
-        };
-
-        // VOICE_V10: the whistle is signed. A negative pitch velocity (the
-        // exclamation flourish, set by the planner) descends toward
-        // `WHISTLE_FLOOR_HZ`; zero/positive keeps the `VOICE_V7`-`V9` rising
-        // sweep, so every already-engaged syllable stays byte-identical.
-        if self.curves.pitch_velocity() < 0.0 {
-            -magnitude
-        } else {
-            magnitude
-        }
+        whistle_sweep_amount(
+            self.role,
+            self.curves.archetype_tension(),
+            self.curves.pitch_velocity(),
+        )
     }
 
     fn roughness_amount(self) -> f64 {
@@ -1750,7 +1785,12 @@ fn apply_imperfection_detune_hz(pitch_hz: f64, tension: f64, warble_phase_offset
     pitch_hz * exp(LN_2 * (cents / 1_200.0))
 }
 
-fn apply_whistle_sweep_hz(
+/// Applies the swept whistle to a syllable's pitch over its progress.
+///
+/// The sweep stays dormant until `CURVE_WHISTLE_START_FRACTION` of the syllable
+/// has elapsed, then runs [`whistle_sweep_pitch_hz`] over the remainder. A zero
+/// amount is a no-op; the sign of the amount sets the sweep direction.
+pub fn apply_whistle_sweep_hz(
     pitch_hz: f64,
     whistle_amount: f64,
     elapsed_seconds: f64,
