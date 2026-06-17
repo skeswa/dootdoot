@@ -596,7 +596,7 @@ fn phrase_syllable_samples(
         PhraseBoundaryStrength::Sentence => SENTENCE_SYLLABLE_SAMPLES,
     };
     let duration_scale = if mood.explicit {
-        (1.08 - (0.24 * mood.mood.arousal())).clamp(0.84, 1.08)
+        text_syllable_duration_scale(mood.mood.arousal())
     } else {
         1.0
     };
@@ -608,6 +608,26 @@ fn phrase_syllable_samples(
     };
 
     round_f64_to_u32(f64::from(base_samples) * duration_scale * complexity_scale)
+}
+
+/// Gives the text-path per-syllable duration scale from utterance arousal.
+///
+/// Applies only to the explicit (text-derived) mood path; hand-built events keep
+/// a scale of exactly `1.0` (`BASE_SYLLABLE_SAMPLES`), so they stay byte-identical.
+/// Higher arousal paces faster (shorter syllables).
+///
+/// `VOICE_V10` lowers the whole curve below `1.0`: the taxonomy found neutral
+/// dootdoot gestures run far longer than BB-8's short blips (calm text used to
+/// pace *longer* than the base). Calm text now paces a touch shorter than the
+/// base and arousal shortens it further, so neutral gestures read as quick pips.
+pub fn text_syllable_duration_scale(arousal: f64) -> f64 {
+    let arousal = if arousal.is_finite() {
+        arousal.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    (0.90 - (0.10 * arousal)).clamp(0.80, 0.90)
 }
 
 fn pitch_with_offset(knobs: KnobSet, offset_semitones: f64) -> f64 {
