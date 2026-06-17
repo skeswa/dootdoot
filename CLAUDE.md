@@ -108,8 +108,9 @@ scripts/acoustics "<phrase>" /path/to/inquisitive-then-chatty.mp3
 # Underlying locked PEP 723 script (numpy/scipy pinned by acoustic_metrics.py.lock):
 uv run scripts/acoustic_metrics.py reference=ref.wav dootdoot=render.wav
 
-# Regenerate golden WAV hashes after an intentional, version-bumped voice change:
-DOOTDOOT_REGEN_GOLDEN=1 cargo test -p dootdoot-core --test golden_wav_hashes
+# Regenerate the committed golden WAV fixtures (tests/fixtures/golden/*.wav)
+# after an intentional, version-bumped voice change:
+DOOTDOOT_REGEN_GOLDEN=1 cargo test -p dootdoot-core --test golden_wav
 ```
 
 ## Key conventions (full guide: `docs/style.md`)
