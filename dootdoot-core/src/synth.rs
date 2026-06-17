@@ -161,6 +161,15 @@ pub const VOWEL_TRAJECTORY_BLOOM: f64 = 0.12;
 /// Gives the fixed final-glide span for prosodic punctuation in semitones.
 pub const PUNCTUATION_GLIDE_SEMITONES: f64 = 3.0;
 
+/// Gives the question's terminal rise span in semitones (`VOICE_V9`, R5). It is
+/// wider than the generic punctuation glide so the inquisitive lift (`H-H%`) is
+/// unmistakable even on a short final word.
+pub const QUESTION_RISE_SEMITONES: f64 = 4.5;
+
+/// Gives the depth of the question's pre-final dip (`L*`) in semitones, applied
+/// mid-glide before the rise so the lift reads as a gather-then-rise.
+const QUESTION_PREFINAL_DIP_SEMITONES: f64 = 1.2;
+
 /// Gives the shallow continuation-rise span for clause punctuation in
 /// semitones (`VOICE_V9`). A clause mark lifts the tail just enough to read as
 /// "more coming" without reaching the full question rise.
@@ -1915,7 +1924,7 @@ fn apply_final_glide_hz(
 ) -> f64 {
     let semitones = match final_glide {
         SyllableFinalGlide::Neutral => return pitch_hz,
-        SyllableFinalGlide::Rising => PUNCTUATION_GLIDE_SEMITONES,
+        SyllableFinalGlide::Rising => QUESTION_RISE_SEMITONES,
         SyllableFinalGlide::Falling => -PUNCTUATION_GLIDE_SEMITONES,
         SyllableFinalGlide::Continuation => CONTINUATION_GLIDE_SEMITONES,
     };
@@ -1927,8 +1936,18 @@ fn apply_final_glide_hz(
 
     let progress = portamento_progress(elapsed_seconds - final_glide_start_seconds, semitones);
     let final_target_hz = target_pitch_hz * exp((LN_2 * semitones) / 12.0);
+    let risen_hz = pitch_hz + ((final_target_hz - pitch_hz) * progress);
 
-    pitch_hz + ((final_target_hz - pitch_hz) * progress)
+    // VOICE_V9 (R5): a question gathers into a small pre-final dip (L*) before
+    // its wide rise (H-H%). The dip is zero at both ends of the glide and peaks
+    // mid-glide, so the syllable still lands on the full rise target.
+    if matches!(final_glide, SyllableFinalGlide::Rising) {
+        let dip_semitones = QUESTION_PREFINAL_DIP_SEMITONES * sin(PI * progress);
+
+        return risen_hz * exp((LN_2 * -dip_semitones) / 12.0);
+    }
+
+    risen_hz
 }
 
 fn apply_phrase_final_shift_hz(
