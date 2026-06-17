@@ -146,6 +146,15 @@ pub const WHISTLE_TARGET_HZ: f64 = 3_400.0;
 /// Gives the hard ceiling for a `VOICE_V7` whistle sweep in hertz.
 pub const WHISTLE_PITCH_CEILING_HZ: f64 = 4_200.0;
 
+/// Gives the nominal bottom of a `VOICE_V10` *descending* whistle sweep in hertz.
+///
+/// The taxonomy comparison found BB-8 falls as readily as it rises, but
+/// dootdoot's whistle only ever climbed. A negative sweep amount now glides the
+/// oscillator fundamental down toward this floor (the downward analogue of
+/// `WHISTLE_TARGET_HZ`), kept well inside the bounded droid register so a
+/// statement flourish lands with a droid descent rather than a sub-bass dive.
+pub const WHISTLE_FLOOR_HZ: f64 = 300.0;
+
 /// Gives the fixed contour-steered internal pitch sweep in cents.
 pub const INTERNAL_PITCH_SWEEP_CENTS: f64 = 220.0;
 
@@ -425,22 +434,27 @@ pub fn pitch_center_hz_with_span(pitch_center: f64, span_semitones: f64) -> f64 
 
 /// Sweeps the oscillator fundamental into the whistle band for a chirp gesture.
 ///
-/// At `progress == 0` the result is `start_hz`; with full `whistle_amount` it
-/// rises smoothly to `WHISTLE_PITCH_CEILING_HZ` at `progress == 1`. The sweep
-/// is pure IEEE arithmetic (no transcendentals), so it is bit-exact across the
-/// verified platforms, and is always finite, positive, and capped at
-/// `WHISTLE_PITCH_CEILING_HZ`.
+/// The sweep is *signed*: a positive `whistle_amount` rises toward
+/// `WHISTLE_PITCH_CEILING_HZ` (the `VOICE_V7` climb), a negative amount
+/// descends toward `WHISTLE_FLOOR_HZ` (the `VOICE_V10` fall), and `0` is a
+/// no-op. At `progress == 0` the result is always `start_hz`; the magnitude
+/// scales how far it travels by `progress == 1`. The sweep is pure IEEE
+/// arithmetic (no transcendentals), so it is bit-exact across the verified
+/// platforms, and is always finite, positive, and inside
+/// `[1, WHISTLE_PITCH_CEILING_HZ]`. The positive path is byte-identical to
+/// `VOICE_V7`–`V9`.
 pub fn whistle_sweep_pitch_hz(start_hz: f64, whistle_amount: f64, progress: f64) -> f64 {
     let start = if start_hz.is_finite() && start_hz > 0.0 {
         start_hz
     } else {
         PITCH_REGISTER_BIAS_HZ
     };
-    let amount = if whistle_amount.is_finite() {
-        whistle_amount.clamp(0.0, 1.0)
+    let signed = if whistle_amount.is_finite() {
+        whistle_amount.clamp(-1.0, 1.0)
     } else {
         0.0
     };
+    let amount = signed.abs();
 
     if amount <= 0.0 {
         return start.min(WHISTLE_PITCH_CEILING_HZ);
@@ -452,8 +466,12 @@ pub fn whistle_sweep_pitch_hz(start_hz: f64, whistle_amount: f64, progress: f64)
         0.0
     };
     let shape = progress * progress * (3.0 - (2.0 * progress));
-    let target = (WHISTLE_TARGET_HZ + ((WHISTLE_PITCH_CEILING_HZ - WHISTLE_TARGET_HZ) * amount))
-        .min(WHISTLE_PITCH_CEILING_HZ);
+    let target = if signed >= 0.0 {
+        (WHISTLE_TARGET_HZ + ((WHISTLE_PITCH_CEILING_HZ - WHISTLE_TARGET_HZ) * amount))
+            .min(WHISTLE_PITCH_CEILING_HZ)
+    } else {
+        WHISTLE_FLOOR_HZ
+    };
     let swept = start + ((target - start) * amount * shape);
 
     swept.clamp(1.0, WHISTLE_PITCH_CEILING_HZ)
