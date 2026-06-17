@@ -245,6 +245,7 @@ pub fn plan_discourse_performance(events: &[SequenceEvent]) -> PerformancePlan {
             } else {
                 base
             };
+            let curves = aim_flourish_whistle(curves, effective_role, segment.terminal);
 
             syllables.push(PerformanceSyllable {
                 syllable_index,
@@ -306,6 +307,34 @@ fn flourish_tail_role(role: PhraseRole, position: usize, length: usize) -> Phras
         PhraseRole::ChattyReply
     } else {
         role
+    }
+}
+
+/// Aims the terminal-flourish whistle by setting its pitch-velocity sign.
+///
+/// `VOICE_V10`: the whistle is bidirectional. An exclamation flourish descends
+/// (negative pitch velocity steers the synth whistle toward `WHISTLE_FLOOR_HZ`),
+/// matching BB-8's falling whistles and the exclamation's settling glide, while a
+/// question flourish keeps its rising velocity. Every other role — and the
+/// question flourish, whose velocity is already positive — is returned unchanged,
+/// so only exclamation-final syllables move off `VOICE_V9`.
+fn aim_flourish_whistle(
+    curves: PerformanceCurves,
+    role: PhraseRole,
+    terminal: Option<ProsodicPunctuation>,
+) -> PerformanceCurves {
+    if role == PhraseRole::TerminalFlourish && terminal == Some(ProsodicPunctuation::Exclamation) {
+        PerformanceCurves::new(
+            curves.pitch_center_bias(),
+            -curves.pitch_velocity().abs(),
+            curves.formant_target(),
+            curves.formant_velocity(),
+            curves.brightness_pressure(),
+            curves.mouth_openness(),
+            curves.archetype_tension(),
+        )
+    } else {
+        curves
     }
 }
 

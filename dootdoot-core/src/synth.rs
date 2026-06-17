@@ -1092,7 +1092,7 @@ impl SyllablePerformance {
     fn whistle_amount(self) -> f64 {
         let tension = self.curves.archetype_tension();
 
-        match self.role {
+        let magnitude = match self.role {
             PhraseRole::TerminalFlourish => tension,
             // VOICE_V8: a semantic accent in the body of an utterance (the
             // planner drives tension past the threshold only on accents) reaches
@@ -1106,6 +1106,16 @@ impl SyllablePerformance {
                 (above.clamp(0.0, 1.0) * WHISTLE_ACCENT_SCALE).clamp(0.0, 1.0)
             }
             _ => 0.0,
+        };
+
+        // VOICE_V10: the whistle is signed. A negative pitch velocity (the
+        // exclamation flourish, set by the planner) descends toward
+        // `WHISTLE_FLOOR_HZ`; zero/positive keeps the `VOICE_V7`-`V9` rising
+        // sweep, so every already-engaged syllable stays byte-identical.
+        if self.curves.pitch_velocity() < 0.0 {
+            -magnitude
+        } else {
+            magnitude
         }
     }
 
@@ -1164,10 +1174,10 @@ impl SyllableRenderControls {
         let roughness_amount = performance.roughness_amount();
         let mouth_openness = curves.mouth_openness();
         let mouth_front_back = curves.formant_target();
-        let pitch_span = if whistle_amount > 0.0 {
-            WIDE_GESTURE_PITCH_SPAN_SEMITONES
-        } else {
+        let pitch_span = if whistle_amount == 0.0 {
             PITCH_SEMITONE_SPAN
+        } else {
+            WIDE_GESTURE_PITCH_SPAN_SEMITONES
         };
         let pitch_bias_semitones = curves.pitch_center_bias() * CURVE_PITCH_BIAS_SEMITONES;
         let target_pitch_hz = pitch_center_hz_with_span(knobs.pitch_center(), pitch_span)
@@ -1746,7 +1756,7 @@ fn apply_whistle_sweep_hz(
     elapsed_seconds: f64,
     duration_seconds: f64,
 ) -> f64 {
-    if whistle_amount <= 0.0 {
+    if whistle_amount == 0.0 {
         return pitch_hz;
     }
 

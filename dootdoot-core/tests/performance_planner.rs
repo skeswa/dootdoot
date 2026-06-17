@@ -152,6 +152,33 @@ fn semantic_engagement_varies_curves_across_a_neutral_phrase() {
 }
 
 #[test]
+fn exclamation_flourish_descends_and_question_flourish_rises() {
+    // VOICE_V10: the terminal flourish whistle is bidirectional — an exclamation
+    // lands with a descending whistle (negative pitch velocity) while a question
+    // rises (positive). Direction is carried by the pitch_velocity sign.
+    let flourish_velocity = |text: &str| {
+        let events = sequence_events_for_text(text).expect("sequence");
+        let plan = plan_discourse_performance(&events);
+        plan.syllables()
+            .iter()
+            .rev()
+            .find(|syllable| syllable.role() == PhraseRole::TerminalFlourish)
+            .expect("text should end in a terminal flourish")
+            .curves()
+            .pitch_velocity()
+    };
+
+    assert!(
+        flourish_velocity("that is amazing!") < 0.0,
+        "an exclamation flourish should descend (negative pitch velocity)",
+    );
+    assert!(
+        flourish_velocity("what are you doing?") > 0.0,
+        "a question flourish should rise (positive pitch velocity)",
+    );
+}
+
+#[test]
 fn leading_phrase_before_a_reset_is_a_probe() {
     let roles = roles("hi there. okay then.");
 
