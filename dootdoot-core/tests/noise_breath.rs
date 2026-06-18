@@ -75,7 +75,7 @@ fn noise_breath_blend_amount_zero_keeps_clean_periodicity() {
         let tonal = 0.4 * f64::from(index % 7);
 
         assert_eq!(
-            bits(blend_noise_excitation(tonal, index, 0.0)),
+            bits(blend_noise_excitation(tonal, index, 0.3, 0.0)),
             bits(tonal),
             "ordinary syllables must stay cleanly periodic",
         );
@@ -145,13 +145,14 @@ fn noise_breath_is_aperiodic_and_active() {
 fn noise_breath_blend_roughens_within_bounds() {
     let amount = 1.0;
     let tonal = 0.5_f64;
-    let mix = amount * NOISE_BREATH_MAX_MIX;
-    // |tonal*(1-mix) + noise*mix| <= |tonal| + mix, since |noise| <= 1.
-    let output_bound = tonal.abs() + mix;
+    // VOICE_V11 adds modulated breath on top of the tone: the breath term is
+    // `noise * modulation * amount * MAX`, and |noise| <= 1, modulation <= 1, so
+    // |tonal + breath| <= |tonal| + amount * MAX.
+    let output_bound = tonal.abs() + (amount * NOISE_BREATH_MAX_MIX);
     let mut max_delta = 0.0_f64;
 
     for index in 0..1_024 {
-        let blended = blend_noise_excitation(tonal, index, amount);
+        let blended = blend_noise_excitation(tonal, index, 0.0, amount);
 
         assert!(blended.is_finite());
         assert!(

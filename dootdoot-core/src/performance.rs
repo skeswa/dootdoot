@@ -93,6 +93,7 @@ struct Segment {
     syllable_indices: Vec<usize>,
     terminal: Option<ProsodicPunctuation>,
     hesitation: bool,
+    trails_into_hesitation: bool,
 }
 
 impl PerformanceCurves {
@@ -395,12 +396,25 @@ fn segment_events(events: &[SequenceEvent]) -> Vec<Segment> {
     for event in events {
         match event {
             SequenceEvent::Syllable(syllable) => {
-                current.syllable_indices.push(voiced_index);
-                voiced_index += 1;
-
                 if syllable_is_hesitation(syllable) {
+                    // VOICE_V11: localize the breathy hesitation to the syllable
+                    // that carries the dash/ellipsis. Flush any preceding
+                    // syllables of this clause as their own (non-hesitation)
+                    // segment first, so a multi-word clause before a dash reads as
+                    // a normal statement that trails off — not a whole sentence of
+                    // breath noise.
+                    if !current.syllable_indices.is_empty() {
+                        current.trails_into_hesitation = true;
+                        segments.push(std::mem::replace(&mut current, Segment::empty()));
+                    }
+
+                    current.syllable_indices.push(voiced_index);
+                    voiced_index += 1;
                     current.hesitation = true;
                     segments.push(std::mem::replace(&mut current, Segment::empty()));
+                } else {
+                    current.syllable_indices.push(voiced_index);
+                    voiced_index += 1;
                 }
             }
             SequenceEvent::Punctuation(punctuation) => {
@@ -428,6 +442,13 @@ fn syllable_is_hesitation(syllable: &SyllableEvent) -> bool {
 fn segment_role(segment: &Segment, is_first: bool, is_last: bool) -> PhraseRole {
     if segment.hesitation {
         return PhraseRole::Hesitation;
+    }
+
+    // A clause that trails off into a dash/ellipsis is a plain statement, not an
+    // inquisitive opener — keep it a chatty reply so it does not pick up the
+    // bright, tense probe treatment from the is-first rule below.
+    if segment.trails_into_hesitation {
+        return PhraseRole::ChattyReply;
     }
 
     match segment.terminal {
@@ -481,6 +502,7 @@ impl Segment {
             syllable_indices: Vec::new(),
             terminal: None,
             hesitation: false,
+            trails_into_hesitation: false,
         }
     }
 }

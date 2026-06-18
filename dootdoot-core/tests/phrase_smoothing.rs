@@ -3,7 +3,7 @@
 use dootdoot_core::{
     BASE_SYLLABLE_SAMPLES, KnobSet, LEADING_SILENCE_SAMPLES, STAGED_REPLY_REST_MAX_SAMPLES,
     SYNTH_SAMPLE_RATE_HZ, SequenceEvent, SquashedVector, TRAILING_SILENCE_SAMPLES,
-    WORD_PAUSE_SAMPLES, assemble_knobs, estimate_utterance_sample_count, render_canonical_buffer,
+    WORD_PAUSE_SAMPLES, assemble_knobs, estimate_syllable_sample_counts, render_canonical_buffer,
     render_text_canonical_buffer, sequence_events_for_text, staged_reply_rest_samples,
 };
 
@@ -54,8 +54,9 @@ fn repeated_connected_subwords_do_not_fire_hard_onsets() {
         "repeated phrase should contain many connected starts",
     );
 
-    let duration_samples = continuous_syllable_duration_samples(&events);
-    let leading = usize::try_from(LEADING_SILENCE_SAMPLES).expect("leading silence fits usize");
+    // VOICE_V11 rubato varies each connected subword's duration, so onsets no
+    // longer sit on a uniform grid — walk the actual per-syllable sample counts.
+    let syllable_starts = continuous_syllable_starts(&events);
     let onset_window =
         usize::try_from((SYNTH_SAMPLE_RATE_HZ * 12) / 1_000).expect("onset window fits usize");
     let body_offset =
@@ -63,7 +64,7 @@ fn repeated_connected_subwords_do_not_fire_hard_onsets() {
     let mut roughness_ratios = Vec::new();
 
     for syllable_index in boundaries {
-        let start = leading + (syllable_index * duration_samples);
+        let start = syllable_starts[syllable_index];
         let onset = &buffer[start..start + onset_window];
         let body_start = start + body_offset;
         let body = &buffer[body_start..body_start + onset_window];
@@ -155,24 +156,34 @@ fn repeated_neutral_phrase_de_bridges_into_silent_word_rests() {
     let trailing = usize::try_from(TRAILING_SILENCE_SAMPLES).expect("trailing silence fits usize");
     let word_rest = usize::try_from(staged_reply_rest_samples(NEUTRAL_WORD_REST_AMOUNT))
         .expect("word rest fits usize");
-    let voiced_samples = buffer
-        .len()
-        .checked_sub(leading + trailing + (word_boundary_count * word_rest))
-        .expect("fixture render should contain voiced samples");
+    // VOICE_V11 rubato gives each syllable its own duration, so walk the actual
+    // per-syllable sample counts rather than assuming a uniform slice. Every
+    // syllable here is its own single-syllable word, so a word rest follows each
+    // but the last.
+    let syllable_samples = estimate_syllable_sample_counts(&events);
 
     assert_eq!(
-        voiced_samples % syllable_count,
-        0,
-        "fixture syllables should have uniform duration",
+        syllable_samples.len(),
+        syllable_count,
+        "per-syllable layout should cover every syllable",
+    );
+    assert_eq!(
+        word_boundary_count + 1,
+        syllable_count,
+        "fixture should rest after every syllable but the last",
     );
 
-    let syllable_samples = voiced_samples / syllable_count;
     let mut rest_level_ratios = Vec::new();
     let mut position = leading;
 
-    for boundary_index in 0..word_boundary_count {
-        let syllable = &buffer[position..position + syllable_samples];
-        let rest_start = position + syllable_samples;
+    for (boundary_index, samples) in syllable_samples
+        .iter()
+        .take(word_boundary_count)
+        .enumerate()
+    {
+        let syllable_len = usize::try_from(*samples).expect("syllable length fits usize");
+        let syllable = &buffer[position..position + syllable_len];
+        let rest_start = position + syllable_len;
         let rest = &buffer[rest_start..rest_start + word_rest];
 
         rest_level_ratios.push(rms(rest) / rms(syllable).max(0.000_001));
@@ -187,8 +198,9 @@ fn repeated_neutral_phrase_de_bridges_into_silent_word_rests() {
     rest_level_ratios.sort_by(f64::total_cmp);
 
     let median_rest_ratio = rest_level_ratios[rest_level_ratios.len() / 2];
+    let mean_syllable_samples = mean_usize(&syllable_samples);
     let cycle_seconds =
-        usize_to_f64(syllable_samples + word_rest) / f64::from(SYNTH_SAMPLE_RATE_HZ);
+        usize_to_f64(mean_syllable_samples + word_rest) / f64::from(SYNTH_SAMPLE_RATE_HZ);
     let word_cycle_hz = 1.0 / cycle_seconds;
     let double_cycle_hz = 2.0 * word_cycle_hz;
     let body = &buffer[leading..buffer.len() - trailing];
@@ -369,26 +381,21 @@ fn syllable_continuations(events: &[SequenceEvent]) -> Vec<bool> {
         .collect()
 }
 
-fn continuous_syllable_duration_samples(events: &[SequenceEvent]) -> usize {
-    let syllable_count = events
-        .iter()
-        .filter(|event| matches!(event, SequenceEvent::Syllable(_)))
-        .count();
-    let leading = u64::from(LEADING_SILENCE_SAMPLES);
-    let trailing = u64::from(TRAILING_SILENCE_SAMPLES);
-    let estimated = estimate_utterance_sample_count(events);
-    let voiced_samples = estimated
-        .checked_sub(leading + trailing)
-        .expect("continuous phrase estimate includes fixed padding");
-    let syllable_count_u64 = u64::try_from(syllable_count).expect("syllable count fits u64");
+/// Gives the absolute start offset of each syllable in a render of a fully
+/// connected (no inter-syllable pause) phrase, walking the actual per-syllable
+/// sample counts so it stays correct under `VOICE_V11` rubato.
+fn continuous_syllable_starts(events: &[SequenceEvent]) -> Vec<usize> {
+    let leading = usize::try_from(LEADING_SILENCE_SAMPLES).expect("leading silence fits usize");
+    let counts = estimate_syllable_sample_counts(events);
+    let mut starts = Vec::with_capacity(counts.len());
+    let mut position = leading;
 
-    assert_eq!(
-        voiced_samples % syllable_count_u64,
-        0,
-        "repeated test phrase should have uniform connected syllable durations",
-    );
+    for count in counts {
+        starts.push(position);
+        position += usize::try_from(count).expect("syllable count fits usize");
+    }
 
-    usize::try_from(voiced_samples / syllable_count_u64).expect("syllable duration fits usize")
+    starts
 }
 
 fn derivative_rms(samples: &[i16]) -> f64 {
@@ -453,4 +460,15 @@ fn envelope_modulation_strength(samples: &[i16], frequency_hz: f64) -> f64 {
 
 fn usize_to_f64(value: usize) -> f64 {
     u32::try_from(value).map_or(f64::from(u32::MAX), f64::from)
+}
+
+fn mean_usize(values: &[u32]) -> usize {
+    if values.is_empty() {
+        return 0;
+    }
+
+    let sum: u64 = values.iter().map(|value| u64::from(*value)).sum();
+    let count = u64::try_from(values.len()).expect("value count fits u64");
+
+    usize::try_from(sum / count).expect("mean fits usize")
 }

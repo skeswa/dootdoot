@@ -51,7 +51,8 @@ fn active_synthesis_constants_are_pinned() {
     assert_eq!(bits(runtime(QUESTION_RISE_SEMITONES)), bits(4.5));
     assert_eq!(bits(runtime(RING_MOD_FREQUENCY_HZ)), bits(72.0));
     assert_eq!(bits(runtime(RING_MOD_MIX)), bits(0.08));
-    assert_eq!(bits(runtime(ENVELOPE_ATTACK_SECONDS)), bits(0.006));
+    // VOICE_V11: a longer onset ramp so syllables bloom rather than click.
+    assert_eq!(bits(runtime(ENVELOPE_ATTACK_SECONDS)), bits(0.015));
     assert_eq!(bits(runtime(ENVELOPE_DECAY_SECONDS)), bits(0.050));
     assert_eq!(bits(runtime(ENVELOPE_RELEASE_SECONDS)), bits(0.060));
     assert_eq!(bits(runtime(ENVELOPE_SUSTAIN_LEVEL)), bits(0.34));
@@ -65,8 +66,10 @@ fn active_synthesis_constants_are_pinned() {
     assert_eq!(bits(runtime(SOURCE_SAW_MIX)), bits(0.55));
     assert_eq!(bits(runtime(SOURCE_PULSE_MIX)), bits(0.45));
     assert_eq!(bits(runtime(SOURCE_PULSE_WIDTH)), bits(0.38));
-    assert_eq!(bits(runtime(ATTACK_TRANSIENT_SECONDS)), bits(0.020));
-    assert_eq!(bits(runtime(ATTACK_TRANSIENT_MIX)), bits(0.07));
+    // VOICE_V11: a longer, quieter word-onset transient — a breathy consonant
+    // instead of a percussive pluck.
+    assert_eq!(bits(runtime(ATTACK_TRANSIENT_SECONDS)), bits(0.030));
+    assert_eq!(bits(runtime(ATTACK_TRANSIENT_MIX)), bits(0.04));
     assert_eq!(bits(runtime(BODY_LAYER_MIX)), bits(0.18));
     assert_eq!(bits(runtime(UPPER_MID_SPARKLE_MIX)), bits(0.045));
 }

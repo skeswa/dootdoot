@@ -463,6 +463,41 @@
   `sound_taxonomy.py` harness), the surfaced `dootdoot VOICE_V10` version string, and
   regenerated golden WAV hashes.
 
+### 1.20 VOICE_V11 natural voice: softer onset, breathing pace, integrated breath
+
+> By-ear feedback found the voice **percussive and metronomic** (syllable onsets clicked; an
+> unpunctuated phrase had no tempo variation), a dash made the **whole preceding clause** a
+> wall of breath noise, and the breath itself sounded **artifacty** (a separate hiss layered
+> over the voice). `VOICE_V11` softens the onset, lets per-syllable pacing breathe, localizes
+> the dash's breath, and integrates the aspiration noise into the voice — all inside the fixed,
+> deterministic, bounded droid parameter space (NFR-16). Explicit non-goals: `VOICE_V11` SHALL
+> NOT change the semantic PCA mapping, SHALL NOT alter the pitch/formant/warble constants,
+> SHALL NOT change punctuation pause lengths, and SHALL NOT add unseeded randomness.
+
+- **FR-109** `VOICE_V11` SHALL soften the syllable onset so it blooms rather than clicks: the
+  envelope attack ramp SHALL be lengthened, and the per-word onset transient SHALL be both
+  quieter and spread over a longer window. The onset SHALL remain a shaped, deterministic
+  attack (no change to the decay/sustain/release shape).
+- **FR-110** `VOICE_V11` SHALL vary per-syllable duration across a phrase so pacing breathes
+  without punctuation: a deterministic positional lilt, agogic lengthening on emphasized
+  syllables, and phrase-final lengthening on the last syllable. The variation SHALL be a
+  closed-form function of syllable index, count, and the existing emphasis flag, bounded
+  inside the droid range. A single-syllable phrase SHALL have no internal rubato (scale
+  exactly `1.0`). The hand-built / empty-chirp / neutral-curve path (no explicit mood) SHALL
+  keep a rubato scale of exactly `1.0` and stay byte-identical; output-length estimation SHALL
+  remain consistent with render.
+- **FR-111** `VOICE_V11` SHALL localize a dash/ellipsis hesitation to the syllable that carries
+  it: the clause that precedes the marker SHALL read as a plain statement that trails off (not
+  a breathy hesitation across the whole clause, and not an inquisitive probe). A single-word
+  pre-marker filler SHALL still read as a hesitation.
+- **FR-112** `VOICE_V11` SHALL make aspiration breath read as integrated voice rather than a
+  separate hiss: the breath noise SHALL be amplitude-modulated pitch-synchronously (peaking at
+  the glottal closure instant), sourced from a near-white spectrum (no fixed-stride comb
+  coloration) shaped by the formant filter, and mixed additively over the tone. The breath
+  SHALL stay deterministic and bounded, and `roughness_amount == 0` SHALL remain exactly clean.
+- **FR-113** The frozen `VOICE_V11` contract SHALL be documented with a by-ear acceptance note,
+  the surfaced `dootdoot VOICE_V11` version string, and regenerated golden WAV fixtures.
+
 ---
 
 ## 2. Non-functional requirements

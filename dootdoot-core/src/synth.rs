@@ -141,7 +141,12 @@ pub const RING_MOD_FREQUENCY_HZ: f64 = 72.0;
 pub const RING_MOD_MIX: f64 = 0.08;
 
 /// Gives the fixed envelope attack in seconds.
-pub const ENVELOPE_ATTACK_SECONDS: f64 = 0.006;
+///
+/// `VOICE_V11` lengthens the onset ramp (was 6 ms) so syllables bloom in rather
+/// than snapping to full amplitude. A 6 ms attack reads as a percussive click on
+/// every syllable; ~15 ms with the quadratic ease-in lets the onset swell, which
+/// is what makes a multi-word phrase feel spoken rather than struck.
+pub const ENVELOPE_ATTACK_SECONDS: f64 = 0.015;
 
 /// Gives the fixed envelope decay in seconds.
 pub const ENVELOPE_DECAY_SECONDS: f64 = 0.050;
@@ -231,10 +236,17 @@ pub const SOURCE_PULSE_WIDTH: f64 = 0.38;
 pub const SOURCE_MAX_HARMONICS: u32 = 48;
 
 /// Gives the fixed attack transient duration in seconds.
-pub const ATTACK_TRANSIENT_SECONDS: f64 = 0.020;
+///
+/// `VOICE_V11` spreads the word-onset transient over a longer window (was 20 ms)
+/// so it reads as a breathy consonant rather than a sharp click.
+pub const ATTACK_TRANSIENT_SECONDS: f64 = 0.030;
 
 /// Gives the fixed attack transient wet mix.
-pub const ATTACK_TRANSIENT_MIX: f64 = 0.07;
+///
+/// `VOICE_V11` softens the word-onset transient (was 0.07): paired with the
+/// longer window above, a quieter transient keeps the onset's articulation
+/// without the percussive pluck on every word.
+pub const ATTACK_TRANSIENT_MIX: f64 = 0.04;
 
 /// Gives the fixed low-body layer wet mix.
 pub const BODY_LAYER_MIX: f64 = 0.18;
@@ -901,18 +913,25 @@ pub fn upper_mid_sparkle_sample(phase: f64, elapsed_seconds: f64, warble_depth: 
     sparkle.clamp(-UPPER_MID_SPARKLE_MIX, UPPER_MID_SPARKLE_MIX)
 }
 
-/// Gives the maximum `VOICE_V7` noise/breath excitation blend mix.
+/// Gives the maximum `VOICE_V11` additive breath excitation gain.
 pub const NOISE_BREATH_MAX_MIX: f64 = 0.5;
 
-/// Gives the value-noise stride that bandlimits the breath excitation.
-const NOISE_BREATH_STRIDE: u32 = 7;
+/// Gives the depth of the pitch-synchronous breath amplitude modulation.
+///
+/// `VOICE_V11`: stationary breath noise is perceived as a separate hiss source
+/// layered over the voice (the "artifacty" quality). Modulating the breath at
+/// the glottal rate — louder near the closure instant, quieter mid-period —
+/// fuses it into the voice so it reads as breath, the dominant naturalness cue
+/// for breathy voice (cf. Klatt's ~50% f0 modulation of the aspiration source).
+const BREATH_MODULATION_DEPTH: f64 = 0.6;
 
-/// Computes one deterministic value-noise breath sample, scaled by roughness.
+/// Computes one deterministic white-noise breath sample, scaled by roughness.
 ///
 /// The source is authored, not random: a fixed integer hash of the sample index
-/// produces a reproducible value-noise curve in `[-1, 1]`. At `roughness_amount
-/// == 0` the result is exactly `0.0`, so ordinary syllables stay cleanly
-/// periodic; otherwise the magnitude is bounded by the (clamped) amount.
+/// produces a reproducible, broadband (near-white) curve in `[-1, 1]`, lightly
+/// smoothed to tame the harshest top octave. At `roughness_amount == 0` the
+/// result is exactly `0.0`, so ordinary syllables stay cleanly periodic;
+/// otherwise the magnitude is bounded by the (clamped) amount.
 pub fn noise_breath_sample(sample_index: u32, roughness_amount: f64) -> f64 {
     let amount = if roughness_amount.is_finite() {
         roughness_amount.clamp(0.0, 1.0)
@@ -927,13 +946,37 @@ pub fn noise_breath_sample(sample_index: u32, roughness_amount: f64) -> f64 {
     (noise_breath_raw(sample_index) * amount).clamp(-1.0, 1.0)
 }
 
-/// Blends a deterministic noise/breath source under a tonal sample.
+/// Gives the pitch-synchronous breath gain at a glottal phase in `[0, 1)`.
 ///
-/// `roughness_amount == 0` returns `tonal` unchanged (clean periodicity);
-/// higher amounts cross-fade toward the breath source up to
-/// `NOISE_BREATH_MAX_MIX`, so a gesture's harmonicity can swing clean→rough
-/// without any runtime randomness.
-pub fn blend_noise_excitation(tonal: f64, sample_index: u32, roughness_amount: f64) -> f64 {
+/// `VOICE_V11`: peaks at the period boundary (the glottal closure instant) and
+/// dips mid-period, so breath noise pulses in step with the voiced fundamental
+/// instead of sitting as a stationary hiss. Ranges in
+/// `[1 - BREATH_MODULATION_DEPTH, 1]`.
+pub fn breath_closure_modulation(phase: f64) -> f64 {
+    let phase = wrap_phase(phase);
+    // A raised cosine, squared, that peaks once per period at the closure
+    // instant (phase 0) and falls to zero mid-period (phase 0.5).
+    let raised = 0.5 + (0.5 * cos(2.0 * PI * phase));
+    let bump = raised * raised;
+
+    (1.0 - BREATH_MODULATION_DEPTH) + (BREATH_MODULATION_DEPTH * bump)
+}
+
+/// Adds a deterministic, pitch-synchronous breath source on top of a tonal
+/// sample.
+///
+/// `VOICE_V11`: `roughness_amount == 0` returns `tonal` unchanged (clean
+/// periodicity); otherwise breath is mixed *additively* (it rides on the tone
+/// rather than cross-fading the harmonics away) and modulated by
+/// [`breath_closure_modulation`] at the glottal `phase`, so it fuses into the
+/// voice rather than reading as a separate hiss. The breath is injected before
+/// the formant filter, so the vocal tract shapes it like real aspiration.
+pub fn blend_noise_excitation(
+    tonal: f64,
+    sample_index: u32,
+    phase: f64,
+    roughness_amount: f64,
+) -> f64 {
     let amount = if roughness_amount.is_finite() {
         roughness_amount.clamp(0.0, 1.0)
     } else {
@@ -944,20 +987,19 @@ pub fn blend_noise_excitation(tonal: f64, sample_index: u32, roughness_amount: f
         return tonal;
     }
 
-    let mix = amount * NOISE_BREATH_MAX_MIX;
+    let breath = noise_breath_raw(sample_index)
+        * breath_closure_modulation(phase)
+        * amount
+        * NOISE_BREATH_MAX_MIX;
 
-    (tonal * (1.0 - mix)) + (noise_breath_raw(sample_index) * mix)
+    tonal + breath
 }
 
 fn noise_breath_raw(sample_index: u32) -> f64 {
-    let base = sample_index / NOISE_BREATH_STRIDE;
-    let step = sample_index % NOISE_BREATH_STRIDE;
-    let fraction = f64::from(step) / f64::from(NOISE_BREATH_STRIDE);
-    let low = hashed_unit(base);
-    let high = hashed_unit(base.wrapping_add(1));
-    let smooth = fraction * fraction * (3.0 - (2.0 * fraction));
-
-    low + ((high - low) * smooth)
+    // A two-tap average of independent per-sample hashes: broadband (near-white,
+    // no fixed-stride comb coloration) with a gentle top-octave rolloff. The
+    // formant filter then shapes it into tract-colored aspiration.
+    0.5 * (hashed_unit(sample_index) + hashed_unit(sample_index.wrapping_sub(1)))
 }
 
 fn hashed_unit(index: u32) -> f64 {
@@ -1455,7 +1497,8 @@ fn render_performance_sample(
     let elapsed_seconds = f64::from(sample_index) / f64::from(SYNTH_SAMPLE_RATE_HZ);
     let parameters = performance_sample_parameters(controls, state, elapsed_seconds);
     let source = source_oscillator_sample(state.phase, parameters.pitch_hz);
-    let source = blend_noise_excitation(source, sample_index, controls.roughness_amount);
+    let source =
+        blend_noise_excitation(source, sample_index, state.phase, controls.roughness_amount);
     let voiced = state
         .formants
         .process_sample(source, parameters.vowel_position);

@@ -1209,6 +1209,55 @@ discourse-role assignment; SHALL NOT raise the global brightness _level_ or boos
 upper-mid sparkle mix (the whistle fundamental is the register lever, not the sparkle); SHALL
 NOT alter the warble; and SHALL NOT introduce unseeded randomness.
 
+### 8.12 Decision: `VOICE_V11` makes the voice sound natural, not artifacty
+
+`VOICE_V11` is the response to a round of by-ear feedback on plain phrases: the voice read as
+**percussive and metronomic**, a dash made the **whole preceding clause** a wall of breath
+noise, and the breath itself sounded **artifacty** (a separate hiss layered over the voice).
+Four fixes — all pure functions of the text plus frozen constants, and bounded:
+
+- **Softer attack.** A 6 ms envelope attack plus a hard per-word onset transient stacked into a
+  click on every syllable. The attack ramp lengthens to 15 ms (the quadratic ease-in is
+  unchanged, so the onset blooms), and the word-onset transient is both quieter
+  (`ATTACK_TRANSIENT_MIX` 0.07 → 0.04) and longer (`ATTACK_TRANSIENT_SECONDS` 20 ms → 30 ms),
+  so it reads as a breathy consonant rather than a pluck. The decay/sustain/release shape is
+  untouched.
+- **Breathing pace.** An unpunctuated phrase had no intra-phrase tempo variation — every
+  word/syllable rendered at one fixed `BASE_SYLLABLE_SAMPLES` duration. `syllable_rubato_scale`
+  now gives each syllable a small deterministic duration multiplier: a sinusoidal lilt
+  (±8%, ~5.7-syllable period so it never locks to a beat), agogic lengthening on emphasized
+  syllables (+10%, the durational correlate of prominence), and phrase-final lengthening on
+  the last syllable (+10%). It is a closed-form function of syllable index, count, and the
+  existing emphasis flag — no randomness. A single-syllable phrase has no internal rubato
+  (scale 1.0), and the rubato is gated on the explicit text path so the hand-built /
+  empty-chirp / neutral-curve path stays byte-identical (like the V10 duration scale).
+- **Localized dash breath.** A dash tagged its *entire* preceding segment as a breathy
+  `Hesitation` (a 0.45 roughness floor on every syllable), so a long clause before a dash
+  became a wall of breath noise. `segment_events` now flushes the preceding syllables as their
+  own segment so only the syllable that carries the dash reads as the hesitation; that
+  preceding segment is marked `trails_into_hesitation` and rendered as a plain `ChattyReply`
+  statement (not the bright, tense `Probe` the is-first rule would otherwise assign). A
+  single-word filler before a dash still reads as a hesitation.
+- **Integrated breath.** The aspiration noise was *stationary* value-noise (a buzzy ~6.3 kHz
+  comb from its fixed 7-sample stride) cross-faded in, so the ear heard it as a separate hiss
+  source — the textbook artifact (Klatt; breathy-vowel synthesis). It is now (a)
+  **pitch-synchronously amplitude-modulated** by `breath_closure_modulation(phase)`, peaking at
+  the glottal closure instant so it pulses with the voiced fundamental and fuses into it; (b)
+  sourced from a **near-white** spectrum (a two-tap average of per-sample hashes, no comb)
+  shaped by the formant filter into tract-colored aspiration; and (c) mixed **additively** on
+  top of the tone rather than cross-fading the harmonics away. It stays deterministic and
+  bounded; `roughness_amount == 0` is still exactly clean.
+
+The new `FR-109…FR-113` requirements (spec §1.20) are the normative form of this scope. The
+frozen `VOICE_V11` contract is documented by the acceptance note
+[`voice-v11-natural-voice.md`](validation/voice-v11-natural-voice.md), with the regenerated
+golden WAV fixtures (compared byte-for-byte) remaining the byte-level contract.
+
+**Non-goals restated for `VOICE_V11`.** It SHALL NOT change the semantic PCA mapping; SHALL NOT
+alter the pitch, formant, or warble constants; SHALL NOT change punctuation pause lengths; and
+SHALL NOT introduce unseeded randomness. (The discourse-role *assignment* does change, but only
+to localize the dash hesitation — §8.12 above — not the semantic four-axis core.)
+
 ---
 
 ## 9. Architecture
@@ -1319,7 +1368,7 @@ These do not change the architecture and are settled during implementation:
 - **Droid identity (goal 3):** research-grounded fixed formant voice with portamento
   (§6.1–6.3) + fixed/variable split that constrains all input to a tasteful droid
   parameter space.
-- **Expressiveness without losing the language (`VOICE_V2`–`VOICE_V10`):** affect,
+- **Expressiveness without losing the language (`VOICE_V2`–`VOICE_V11`):** affect,
   complexity, archetype, and phrase prosody (§8.3) plus the V7 discourse-performance planner
   (§5.5) and expanded synthesis primitives (§6.2, §6.4) add deterministic, bounded
   performance channels layered over — never replacing — the learnable four-axis core, so
@@ -1332,4 +1381,9 @@ These do not change the architecture and are settled during implementation:
   discourse roles. `VOICE_V10` (§8.11) widens the gesture vocabulary itself — a bidirectional
   whistle (falling as well as rising), harder/earlier and wider accents, shorter neutral
   pacing, and an agitation roughness burst — closing the rising-bias and register gaps the
-  frame-by-frame taxonomy found, again as a pure function of the learnable core.
+  frame-by-frame taxonomy found, again as a pure function of the learnable core. `VOICE_V11`
+  (§8.12) softens the syllable onset (a longer attack ramp + gentler word-onset transient, so
+  it blooms rather than clicks) and lets per-syllable pace breathe across a phrase (a
+  positional lilt plus agogic and phrase-final lengthening), so a plain unpunctuated phrase
+  reads as spoken rather than struck — once more a bounded, deterministic function of the
+  learnable core.

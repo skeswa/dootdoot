@@ -7,7 +7,7 @@ use crate::{
     LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES, MEDIUM_PUNCTUATION_PAUSE_SAMPLES,
     PerformanceCurves, PhraseBoundaryStrength, PhraseRole, PhraseSyllablePlan,
     SENTENCE_SYLLABLE_SAMPLES, TRAILING_SILENCE_SAMPLES, UtteranceMood, exp, pitch_center_hz,
-    plan_phrase_prosody,
+    plan_phrase_prosody, sin,
     synth::{
         BASE_SYLLABLE_SAMPLES, SyllableConnection, SyllableFinalGlide, SyllablePerformance,
         SyllableRenderState, render_syllable_with_final_glide,
@@ -456,8 +456,16 @@ pub fn estimate_utterance_sample_count(events: &[SequenceEvent]) -> u64 {
     let complexity = complexity_from_events(events);
     let phrase_plan = plan_phrase_prosody(events);
 
-    for (plan, phrase_syllable) in plans.iter().zip(phrase_plan.syllables()) {
-        sample_count += u64::from(phrase_syllable_samples(*phrase_syllable, mood, complexity));
+    let total = plans.len();
+
+    for (index, (plan, phrase_syllable)) in plans.iter().zip(phrase_plan.syllables()).enumerate() {
+        sample_count += u64::from(phrase_syllable_samples(
+            *phrase_syllable,
+            index,
+            total,
+            mood,
+            complexity,
+        ));
         sample_count += u64::from(effective_pause_samples(
             plan.event.timing(),
             *phrase_syllable,
@@ -465,6 +473,36 @@ pub fn estimate_utterance_sample_count(events: &[SequenceEvent]) -> u64 {
     }
 
     sample_count
+}
+
+/// Gives the rendered voiced sample count for each syllable, in order.
+///
+/// Returns an empty vector for an utterance that renders as the empty chirp. The
+/// sum of these counts plus the inter-syllable pauses and the fixed
+/// leading/trailing padding equals [`estimate_utterance_sample_count`]. Because
+/// `VOICE_V11` rubato varies per-syllable duration, syllable onsets no longer sit
+/// on a uniform grid; this exposes the actual grid so a caller can locate them.
+pub fn estimate_syllable_sample_counts(events: &[SequenceEvent]) -> Vec<u32> {
+    let plans = syllable_plans(events);
+
+    if plans.is_empty() {
+        return Vec::new();
+    }
+
+    let mood = mood_from_events(events);
+    let complexity = complexity_from_events(events);
+    let phrase_plan = plan_phrase_prosody(events);
+    let total = plans.len();
+
+    phrase_plan
+        .syllables()
+        .iter()
+        .take(total)
+        .enumerate()
+        .map(|(index, phrase_syllable)| {
+            phrase_syllable_samples(*phrase_syllable, index, total, mood, complexity)
+        })
+        .collect()
 }
 
 fn effective_pause_samples(timing: SyllableTiming, phrase_syllable: PhraseSyllablePlan) -> u32 {
@@ -524,7 +562,7 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
             plan.final_glide,
             warble_phase_offset_for_syllable(index),
             SyllablePerformance::new(
-                phrase_syllable_samples(phrase_syllable, mood, complexity),
+                phrase_syllable_samples(phrase_syllable, index, plans.len(), mood, complexity),
                 pitch_offset_semitones,
                 phrase_syllable.final_lowering_semitones(),
                 phrase_syllable.is_emphasized(),
@@ -587,6 +625,8 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
 
 fn phrase_syllable_samples(
     phrase_syllable: PhraseSyllablePlan,
+    index: usize,
+    total: usize,
     mood: SequencerMood,
     complexity: SequencerComplexity,
 ) -> u32 {
@@ -607,7 +647,81 @@ fn phrase_syllable_samples(
         1.0
     };
 
-    round_f64_to_u32(f64::from(base_samples) * duration_scale * complexity_scale)
+    // Rubato applies only to the explicit (text-derived) path; hand-built events
+    // keep a scale of exactly 1.0 and stay byte-identical (like the duration and
+    // complexity scales above).
+    let rubato_scale = if mood.explicit {
+        syllable_rubato_scale(index, total, phrase_syllable.is_emphasized())
+    } else {
+        1.0
+    };
+
+    round_f64_to_u32(
+        f64::from(base_samples) * duration_scale * complexity_scale * rubato_scale,
+    )
+}
+
+/// Gives the lilt depth — the peak ± fraction a plain syllable's pace varies as
+/// it moves through the phrase.
+const RUBATO_LILT_DEPTH: f64 = 0.08;
+
+/// Gives the lilt rate in radians per syllable. An irrational-ish rate (period
+/// ~5.7 syllables) keeps the lilt from locking to a mechanical 2- or 3-beat.
+const RUBATO_LILT_RATE: f64 = 1.1;
+
+/// Gives the lilt phase so the first syllable does not start at the zero
+/// crossing.
+const RUBATO_LILT_PHASE: f64 = 0.6;
+
+/// Gives the agogic lengthening added to an emphasized syllable — a stressed
+/// syllable broadens, the natural durational correlate of prominence.
+const RUBATO_EMPHASIS_LENGTHEN: f64 = 0.10;
+
+/// Gives the phrase-final lengthening added to the last syllable — speech slows
+/// into a boundary.
+const RUBATO_FINAL_LENGTHEN: f64 = 0.10;
+
+/// Gives the lower bound on the rubato scale.
+const RUBATO_MIN_SCALE: f64 = 0.85;
+
+/// Gives the upper bound on the rubato scale.
+const RUBATO_MAX_SCALE: f64 = 1.25;
+
+/// Gives a per-syllable duration multiplier that makes phrase pacing breathe.
+///
+/// `VOICE_V11`: without punctuation, every syllable used to render at one fixed
+/// duration, so a phrase read as metronomic. This adds a small, deterministic
+/// variation from the syllable's position — a sinusoidal lilt that quickens and
+/// broadens across the phrase, agogic lengthening on emphasized syllables, and
+/// natural phrase-final broadening on the last syllable. The result stays
+/// bounded inside the droid range and adds no randomness (NFR-16).
+///
+/// A single-syllable phrase (`total <= 1`) has no internal rhythm and returns
+/// exactly `1.0`. Applied only on the explicit text path so hand-built events
+/// stay byte-identical.
+pub fn syllable_rubato_scale(index: usize, total: usize, emphasized: bool) -> f64 {
+    if total <= 1 {
+        return 1.0;
+    }
+
+    let position = f64_from_usize(index);
+    let lilt = RUBATO_LILT_DEPTH * sin((position * RUBATO_LILT_RATE) + RUBATO_LILT_PHASE);
+    let emphasis = if emphasized {
+        RUBATO_EMPHASIS_LENGTHEN
+    } else {
+        0.0
+    };
+    let final_lengthen = if index + 1 == total {
+        RUBATO_FINAL_LENGTHEN
+    } else {
+        0.0
+    };
+
+    (1.0 + lilt + emphasis + final_lengthen).clamp(RUBATO_MIN_SCALE, RUBATO_MAX_SCALE)
+}
+
+fn f64_from_usize(value: usize) -> f64 {
+    u32::try_from(value).map_or(f64::from(u32::MAX), f64::from)
 }
 
 /// Gives the text-path per-syllable duration scale from utterance arousal.

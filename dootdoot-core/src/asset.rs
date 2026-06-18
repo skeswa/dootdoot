@@ -37,8 +37,17 @@ pub const VOICE_V9: &str = "VOICE_V9";
 /// agitated accents can burst into the noisy band.
 pub const VOICE_V10: &str = "VOICE_V10";
 
+/// Identifies the natural-voice output contract: syllable onsets bloom in rather
+/// than clicking (longer envelope attack, gentler word-onset transient),
+/// per-syllable pacing breathes across a phrase (positional lilt + agogic and
+/// phrase-final lengthening), a dash localizes its breathy hesitation to the
+/// pre-dash word instead of the whole clause, and aspiration breath is
+/// pitch-synchronously modulated over a whiter, additive source so it fuses into
+/// the voice instead of reading as a separate hiss.
+pub const VOICE_V11: &str = "VOICE_V11";
+
 /// Identifies the active sample-affecting output contract.
-pub const ACTIVE_VOICE: &str = VOICE_V10;
+pub const ACTIVE_VOICE: &str = VOICE_V11;
 
 /// Identifies the first committed dootdoot asset spec file.
 pub const DOOT_ASSET_FILE_V1: &str = "dootdoot_asset_v1.doot";

@@ -25,7 +25,7 @@ pub use asset::{
     DOOT_ASSET_TOKEN_RECORD_BYTES, DootAsset, DootAssetError, DootAssetHashes, DootAssetParts,
     DootAssetScales, DootAssetSpec, DootAssetSquashAxisStats, DootAssetSquashFunction, VOICE_V1,
     VOICE_V2, VOICE_V3, VOICE_V4, VOICE_V5, VOICE_V6, VOICE_V7, VOICE_V8, VOICE_V9, VOICE_V10,
-    embedded_doot_asset,
+    VOICE_V11, embedded_doot_asset,
 };
 pub use complexity::{ComplexityAnalysis, analyze_complexity_for_text};
 pub use engine::{
@@ -53,8 +53,10 @@ pub use sequence::{
     EMPTY_CHIRP_WARBLE_DEPTH, HesitationMarker, ProsodicPunctuation, ROLE_LONG_PAUSE_MAX_SAMPLES,
     ROLE_LONG_PAUSE_MIN_SAMPLES, STAGED_REPLY_REST_MAX_SAMPLES, STAGED_REPLY_REST_MIN_SAMPLES,
     SequenceEvent, SequencedUtterance, SyllableEvent, SyllableTiming, TailShape,
-    estimate_utterance_sample_count, render_empty_chirp, role_long_pause_samples,
-    sequence_utterance, staged_reply_rest_samples, text_syllable_duration_scale,
+    estimate_syllable_sample_counts, estimate_utterance_sample_count, render_empty_chirp,
+    role_long_pause_samples,
+    sequence_utterance, staged_reply_rest_samples, syllable_rubato_scale,
+    text_syllable_duration_scale,
 };
 pub use synth::{
     ACCENT_PITCH_SPAN_SEMITONES, ATTACK_TRANSIENT_MIX, ATTACK_TRANSIENT_SECONDS,
@@ -76,7 +78,7 @@ pub use synth::{
     WHISTLE_TARGET_HZ, WIDE_GESTURE_PITCH_SPAN_SEMITONES, WORD_PAUSE_SAMPLES, WORD_PAUSE_SECONDS,
     amplitude_envelope, apply_amplitude_envelope, apply_internal_pitch_swoop_hz, apply_warble_hz,
     apply_warble_hz_with_phase, apply_whistle_sweep_hz, attack_transient_sample,
-    blend_noise_excitation, body_layer_frequency_hz, body_layer_sample,
+    blend_noise_excitation, body_layer_frequency_hz, body_layer_sample, breath_closure_modulation,
     compound_warble_offset_cents, formant_frequencies, gesture_pitch_span_semitones,
     imperfection_detune_cents, internal_pitch_offset_cents, mouth_open_envelope,
     mouth_resonance_hz, noise_breath_sample, pitch_center_hz, pitch_center_hz_with_span,

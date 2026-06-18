@@ -55,6 +55,29 @@ fn reference_phrase_stages_opener_reply_and_flourish() {
 }
 
 #[test]
+fn multi_word_clause_before_a_dash_localizes_the_breathy_hesitation() {
+    // VOICE_V11: a dash after a full clause should localize the breathy
+    // hesitation to the word right before the dash, not smear it across the whole
+    // clause (which read as a wall of breath noise on the first sentence).
+    let roles = roles("Hello my name is Sandile - I love cake");
+    let hesitations = roles
+        .iter()
+        .filter(|role| **role == PhraseRole::Hesitation)
+        .count();
+
+    assert!(
+        hesitations <= 2,
+        "only the pre-dash word should be a breathy hesitation, got {hesitations}: {roles:?}",
+    );
+    assert_eq!(
+        roles.first(),
+        Some(&PhraseRole::ChattyReply),
+        "the clause before the dash should read as a plain statement that trails off, \
+         not a breathy hesitation or an inquisitive probe: {roles:?}",
+    );
+}
+
+#[test]
 fn plain_statement_is_a_chatty_reply() {
     assert!(
         roles("hello there")

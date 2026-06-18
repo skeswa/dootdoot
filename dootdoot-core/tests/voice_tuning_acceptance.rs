@@ -10,6 +10,7 @@ const VOICE_V7: &str = include_str!("../../docs/validation/voice-v7-contextual-p
 const VOICE_V8: &str = include_str!("../../docs/validation/voice-v8-semantic-engagement.md");
 const VOICE_V9: &str = include_str!("../../docs/validation/voice-v9-audible-punctuation.md");
 const VOICE_V10: &str = include_str!("../../docs/validation/voice-v10-bidirectional-whistle.md");
+const VOICE_V11: &str = include_str!("../../docs/validation/voice-v11-natural-voice.md");
 
 #[test]
 fn integrated_tuning_acceptance_records_phase_seven_decision() {
@@ -202,6 +203,32 @@ fn voice_v10_bidirectional_whistle_acceptance_records_decision() {
         assert!(
             VOICE_V10.contains(expected),
             "VOICE_V10 acceptance note should mention {expected}",
+        );
+    }
+}
+
+#[test]
+fn voice_v11_natural_voice_acceptance_records_decision() {
+    for expected in [
+        "Accepted for VOICE_V11",
+        "dootdoot VOICE_V11",
+        "percussive",
+        "attack",
+        "transient",
+        "rubato",
+        "lilt",
+        "agogic",
+        "phrase-final",
+        "dash",
+        "Hesitation",
+        "pitch-synchronously",
+        "glottal closure",
+        "artifact",
+        "golden WAV fixtures",
+    ] {
+        assert!(
+            VOICE_V11.contains(expected),
+            "VOICE_V11 acceptance note should mention {expected}",
         );
     }
 }

@@ -714,6 +714,50 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       Deps: T-102, T-103, T-104, T-105, T-106, T-107 · Reqs: FR-108, FR-33, FR-39, NFR-16,
       NFR-17, NFR-18 · Est: 3h
 
+## Phase 20 — VOICE_V11 natural voice: softer onset, breathing pace, integrated breath
+
+> Derived from a round of by-ear feedback. The voice read as **percussive and metronomic**
+> (onsets clicked; an unpunctuated phrase had no intra-phrase tempo variation), a dash put a
+> **wall of breath noise** on the whole preceding clause, and the breath itself sounded
+> **artifacty** (a separate hiss layered over the voice). The four slices are sample-affecting,
+> require `VOICE_V11` and regenerated golden fixtures, and stay inside the fixed, deterministic,
+> bounded droid parameter space (NFR-16). **Non-goals:** no change to the semantic PCA mapping;
+> no change to the pitch/formant/warble constants; no change to punctuation pause lengths; no
+> unseeded randomness. (The discourse-role *assignment* changes only to localize the dash
+> hesitation — T-112 — not the four-axis semantic core.)
+
+- [x] **T-109 — Soften the syllable attack.** Lengthen `ENVELOPE_ATTACK_SECONDS` (6 → 15 ms,
+      quadratic ease-in unchanged) so onsets bloom, and soften the per-word onset transient —
+      quieter (`ATTACK_TRANSIENT_MIX` 0.07 → 0.04) and longer (`ATTACK_TRANSIENT_SECONDS` 20 →
+      30 ms) — so it reads as a breathy consonant, not a click. Tests pin the gentler onset
+      ramp and the softened/longer transient; the decay/sustain/release shape is untouched.
+      Deps: T-108 · Reqs: FR-109, NFR-16 · Est: 1.5h
+- [x] **T-110 — Organic intra-phrase rubato.** Add `syllable_rubato_scale(index, total,
+      emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal lilt (±8%,
+      ~5.7-syllable period), agogic lengthening on emphasized syllables (+10%), and
+      phrase-final lengthening (+10%). Gated on the explicit text path so the hand-built path
+      stays byte-identical; a single-syllable phrase returns exactly 1.0; output-length
+      estimation stays consistent with render. Deps: T-108 · Reqs: FR-110, NFR-16 · Est: 2h
+- [x] **T-112 — Localize the dash hesitation breath.** A dash tagged its whole preceding
+      segment as a breathy `Hesitation` (a 0.45 roughness floor on every syllable), so a long
+      clause before a dash became a wall of breath noise. Split `segment_events` so only the
+      dash-bearing syllable is the hesitation; mark the preceding clause `trails_into_hesitation`
+      and render it as a plain `ChattyReply` statement (not an inquisitive `Probe`). A
+      single-word filler before a dash still reads as a hesitation.
+      Deps: T-108 · Reqs: FR-111, FR-86, NFR-16 · Est: 1.5h
+- [x] **T-113 — Integrate the aspiration breath.** Replace the stationary value-noise (a buzzy
+      ~6.3 kHz comb cross-faded in, heard as a separate hiss) with research-grounded natural
+      aspiration: pitch-synchronous amplitude modulation (`breath_closure_modulation`, peaking
+      at glottal closure), a near-white source shaped by the formant filter, and an additive
+      mix over the tone. Deterministic and bounded; `roughness_amount == 0` stays clean.
+      Deps: T-108, T-82 · Reqs: FR-112, NFR-3, NFR-16 · Est: 2.5h
+- [x] **T-111 — Freeze VOICE_V11 + acceptance doc.** Bump `ACTIVE_VOICE` to `VOICE_V11` and
+      surface the version string; write the by-ear acceptance note; regenerate the golden WAV
+      fixtures (byte-for-byte); and sync `spec.md` (FR-109…FR-113, §1.20) and `design.md`
+      (§8.12 decision + traceability) with what was built.
+      Deps: T-109, T-110, T-112, T-113 · Reqs: FR-113, FR-33, FR-39, NFR-16, NFR-17, NFR-18 ·
+      Est: 1.5h
+
 ---
 
 ## Critical paths
@@ -800,4 +844,19 @@ flowchart LR
     T105 --> T108[T-108 VOICE_V10 freeze]
     T106 --> T108
     T107 --> T108
+```
+
+`VOICE_V11` is four independent by-ear fixes — softer onset, breathing pace, localized dash
+breath, and integrated aspiration — that converge on the freeze:
+
+```mermaid
+flowchart LR
+    T108[T-108 VOICE_V10 freeze] --> T109[T-109 soften attack]
+    T108 --> T110[T-110 organic rubato]
+    T108 --> T112[T-112 localize dash breath]
+    T108 --> T113[T-113 integrate breath]
+    T109 --> T111[T-111 VOICE_V11 freeze]
+    T110 --> T111
+    T112 --> T111
+    T113 --> T111
 ```
