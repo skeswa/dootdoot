@@ -9,6 +9,8 @@ fn ci_runs_build_lint_and_test_on_linux_and_macos() {
         "ubuntu-latest",
         "[self-hosted, macOS, ARM64]",
         "cargo build --workspace --all-targets",
+        // rodio links ALSA on Linux; the dev headers must be installed first.
+        "libasound2-dev",
         "scripts/lint",
         "Golden WAV determinism",
         "cargo test -p dootdoot-core --test golden_wav",
