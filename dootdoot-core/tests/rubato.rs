@@ -2,9 +2,10 @@
 //!
 //! Without punctuation, every syllable used to pace identically, so a phrase
 //! read as metronomic. The rubato scale gives each syllable a small,
-//! deterministic duration variation from its position — a lilt that quickens and
-//! broadens across the phrase, agogic lengthening on emphasized syllables, and
-//! natural phrase-final broadening — so speed breathes without needing commas.
+//! deterministic duration variation from its position — a lilt that quickens
+//! and broadens across the phrase, agogic lengthening on emphasized syllables,
+//! and natural phrase-final broadening — so speed breathes without needing
+//! commas.
 
 use dootdoot_core::syllable_rubato_scale;
 

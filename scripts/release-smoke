@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Verify that the committed release configuration keeps macOS installs ergonomic.
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+require_file() {
+  local path="$1"
+
+  if [[ ! -f "$path" ]]; then
+    printf 'missing required file: %s\n' "$path" >&2
+    exit 1
+  fi
+}
+
+require_pattern() {
+  local path="$1"
+  local pattern="$2"
+
+  if ! rg --quiet --fixed-strings "$pattern" "$path"; then
+    printf 'missing required release setting in %s: %s\n' "$path" "$pattern" >&2
+    exit 1
+  fi
+}
+
+require_file Cargo.toml
+require_file .github/workflows/release.yml
+
+require_pattern Cargo.toml '[workspace.metadata.dist]'
+require_pattern Cargo.toml 'cargo-dist-version = "0.32.0"'
+require_pattern Cargo.toml 'ci = "github"'
+require_pattern Cargo.toml 'installers = ["shell", "homebrew"]'
+require_pattern Cargo.toml 'install-updater = true'
+require_pattern Cargo.toml 'install-path = "CARGO_HOME"'
+require_pattern Cargo.toml 'github-attestations = true'
+require_pattern Cargo.toml 'publish-jobs = ["homebrew"]'
+require_pattern Cargo.toml 'tap = "skeswa/homebrew-tap"'
+require_pattern Cargo.toml 'targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]'
+require_pattern Cargo.toml 'packages = ["dootdoot"]'
+
+require_pattern .github/workflows/release.yml 'HOMEBREW_TAP_TOKEN'
+require_pattern .github/workflows/release.yml 'curl --proto'
+require_pattern .github/workflows/release.yml 'dist ${{ (!github.event.pull_request'
+require_pattern .github/workflows/release.yml 'gh release create'
+require_pattern .github/workflows/release.yml 'repository: "skeswa/homebrew-tap"'

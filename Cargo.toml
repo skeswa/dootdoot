@@ -7,12 +7,25 @@ authors = ["skeswa"]
 categories = ["command-line-utilities", "multimedia::audio"]
 description = "Deterministically turns text into BB-8-style droid sound."
 edition = "2024"
+homepage = "https://github.com/skeswa/dootdoot"
 keywords = ["audio", "cli", "droid", "synthesis", "text"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/skeswa/dootdoot"
 rust-version = "1.92"
 version = "0.1.0"
+
+[workspace.metadata.dist]
+cargo-dist-version = "0.32.0"
+ci = "github"
+installers = ["shell", "homebrew"]
+install-updater = true
+install-path = "CARGO_HOME"
+github-attestations = true
+publish-jobs = ["homebrew"]
+tap = "skeswa/homebrew-tap"
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
+packages = ["dootdoot"]
 
 [workspace.lints.rust]
 missing_debug_implementations = "deny"
@@ -45,3 +58,6 @@ codegen-units = 1
 lto = "thin"
 panic = "abort"
 strip = "symbols"
+
+[profile.dist]
+inherits = "release"

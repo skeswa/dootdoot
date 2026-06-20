@@ -54,8 +54,7 @@ pub use sequence::{
     ROLE_LONG_PAUSE_MIN_SAMPLES, STAGED_REPLY_REST_MAX_SAMPLES, STAGED_REPLY_REST_MIN_SAMPLES,
     SequenceEvent, SequencedUtterance, SyllableEvent, SyllableTiming, TailShape,
     estimate_syllable_sample_counts, estimate_utterance_sample_count, render_empty_chirp,
-    role_long_pause_samples,
-    sequence_utterance, staged_reply_rest_samples, syllable_rubato_scale,
+    role_long_pause_samples, sequence_utterance, staged_reply_rest_samples, syllable_rubato_scale,
     text_syllable_duration_scale,
 };
 pub use synth::{

@@ -14,9 +14,9 @@
 > attacks, adds deterministic intra-phrase rubato, localizes dash hesitation breath, and
 > integrates aspiration so breath reads as part of the voice instead of a separate hiss.
 > Earlier `VOICE_V*` contracts remain historical lock points, and any sample-affecting
-> change still requires a new voice identifier plus regenerated golden WAV fixtures. Local
-> Cargo install is supported; crates.io, Homebrew, and prebuilt binaries remain release
-> decisions. See
+> change still requires a new voice identifier plus regenerated golden WAV fixtures. macOS
+> release automation is committed; the first tagged release will publish Homebrew and
+> prebuilt installer artifacts. See
 > [the roadmap](docs/plan.md) and
 > [packaging notes](docs/reference/packaging.md).
 
@@ -28,6 +28,21 @@ learnable sound language with three defining properties:
 - **Droid by design.** However you phrase the input, the output is unmistakably the same character.
 
 ## Installation
+
+**Homebrew** (recommended on macOS, available after the first tagged release):
+
+```sh
+brew install skeswa/tap/dootdoot
+brew upgrade dootdoot
+```
+
+**Installer script** (macOS fallback without Homebrew, available after the first tagged release):
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/skeswa/dootdoot/releases/latest/download/dootdoot-installer.sh | sh
+dootdoot-update
+```
 
 **From source** (requires the [Rust toolchain](https://rustup.rs)):
 
@@ -43,9 +58,6 @@ cargo build --release
 ```sh
 cargo install --path dootdoot --locked
 ```
-
-Crates.io publication, prebuilt binaries, and Homebrew are deferred until release
-automation exists.
 
 ## Usage
 

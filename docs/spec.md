@@ -584,3 +584,10 @@
 - **NFR-21** Documented behaviors SHALL include: uncased tokenization
   (`Hello`==`hello`), English-oriented handling of non-Latin/emoji input, the empty-
   input "?" chirp, and the input warning/cap thresholds.
+
+### 2.7 Distribution
+
+- **NFR-22** The release process SHALL provide no-Rust-toolchain macOS install and update
+  paths via Homebrew and prebuilt release artifacts for Apple Silicon and Intel Macs.
+  The release configuration SHALL ship only the `dootdoot` binary crate, never `xtask`,
+  and SHALL be guarded by a committed release-packaging smoke check.

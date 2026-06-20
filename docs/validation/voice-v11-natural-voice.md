@@ -60,7 +60,7 @@ the voice — while the droid character is unchanged.
 - The rubato (T-110) is gated on the explicit text path and returns `1.0` for a
   single-syllable phrase, so it does not move the hand-built / empty-chirp /
   neutral-curve path on its own. The attack (T-109) and breath (T-113) are
-  *global* synthesis changes that shift every render — which is what the version
+  _global_ synthesis changes that shift every render — which is what the version
   bump is for; no path is byte-identical to `VOICE_V10`.
 - Sample **counts** are unchanged on every path (the attack/breath reshape
   amplitude within fixed-duration syllables; the rubato preserves hand-built
