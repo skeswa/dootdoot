@@ -1,27 +1,55 @@
 name: CI
 
 on:
-  # Temporarily keep CI manual-only while dootdoot is rapidly iterating.
   workflow_dispatch:
+  push:
+    branches: [main]
+
+# Least privilege by default: every job opts into exactly the scopes it needs.
+# With no top-level grant, a compromised step starts from zero.
+permissions: {}
+
+# One in-flight CI run per ref; cancel superseded runs so queued jobs can't
+# pile up on the single self-hosted Mac.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     name: ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    # Defense in depth: only ever run in the canonical repository. Combined with
+    # the manual/push-only triggers above (no `pull_request`), this guarantees
+    # untrusted fork code can never execute on the self-hosted runner.
+    if: github.repository == 'skeswa/dootdoot'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
 
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
+        include:
+          - os: Linux
+            runner: ubuntu-latest
+          - os: macOS
+            runner: [self-hosted, macOS, ARM64]
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Don't leave the GITHUB_TOKEN behind in .git/config on the persistent
+          # self-hosted disk once the job finishes.
+          persist-credentials: false
 
       - name: Cache Cargo artifacts
-        uses: actions/cache@v4
+        # GitHub-hosted runners are ephemeral and need the network cache. The
+        # self-hosted Mac already persists ~/.cargo and target/ on local disk,
+        # so caching there only wastes upload bandwidth.
+        if: runner.environment == 'github-hosted'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/git
@@ -46,8 +74,18 @@ jobs:
       - name: Packaging smoke
         run: scripts/package-smoke
 
-      - name: Cross-platform Golden WAV hashes
-        run: cargo test -p dootdoot-core --test golden_wav_hashes
+      - name: Release packaging smoke
+        run: scripts/release-smoke
+
+      - name: Cross-platform Golden WAV determinism
+        run: cargo test -p dootdoot-core --test golden_wav
 
       - name: Test
         run: cargo test
+
+      - name: Clean self-hosted workspace
+        # Persistent runners keep the working tree between jobs. Scrub untracked
+        # build output (rendered WAVs, temp files) so it can't leak into the next
+        # run; keep target/ as the local build cache. Never fail the job on this.
+        if: ${{ always() && runner.environment == 'self-hosted' }}
+        run: git clean -ffdx --exclude=target || true

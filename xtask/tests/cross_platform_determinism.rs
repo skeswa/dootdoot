@@ -7,9 +7,9 @@ const CROSS_PLATFORM: &str = include_str!("../../docs/reference/cross-platform-d
 fn ci_verifies_golden_hashes_on_linux_and_macos() {
     for expected in [
         "ubuntu-latest",
-        "macos-latest",
-        "Cross-platform Golden WAV hashes",
-        "cargo test -p dootdoot-core --test golden_wav_hashes",
+        "[self-hosted, macOS, ARM64]",
+        "Cross-platform Golden WAV determinism",
+        "cargo test -p dootdoot-core --test golden_wav",
     ] {
         assert!(
             CI_WORKFLOW.contains(expected),
