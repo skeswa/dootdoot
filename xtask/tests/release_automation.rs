@@ -2,6 +2,7 @@
 
 const CUT_RELEASE: &str = include_str!("../../.github/workflows/cut-release.yml");
 const TAG_RELEASE: &str = include_str!("../../.github/workflows/tag-release.yml");
+const RELEASING_DOC: &str = include_str!("../../docs/reference/releasing.md");
 
 #[test]
 fn cut_release_is_a_dispatch_that_opens_a_version_bump_pr() {
@@ -47,4 +48,25 @@ fn tag_release_tags_version_bumps_with_a_pat() {
         TAG_RELEASE.contains("RELEASE_TOKEN is unset"),
         "tag-release should error clearly when the PAT is missing",
     );
+}
+
+#[test]
+fn releasing_doc_explains_the_flow_and_required_secrets() {
+    for required in [
+        // The maintainer entry point and the chained workflows.
+        "Cut release",
+        "cut-release.yml",
+        "tag-release.yml",
+        "release.yml",
+        // Both secrets must be documented — they are the easy thing to miss.
+        "RELEASE_TOKEN",
+        "HOMEBREW_TAP_TOKEN",
+        // Why the PAT is needed at all.
+        "trigger another workflow",
+    ] {
+        assert!(
+            RELEASING_DOC.contains(required),
+            "releasing.md should document {required}",
+        );
+    }
 }

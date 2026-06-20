@@ -66,15 +66,24 @@ workspace metadata:
 
 The generated workflow lives at [`.github/workflows/release.yml`](../../.github/workflows/release.yml).
 It runs on pull requests in plan mode and publishes on semver-looking tags such as
-`v0.1.0`.
+`v0.1.0`. `dist` owns this file — do not hand-edit it; change
+`[workspace.metadata.dist]` and run `dist generate` instead. Action SHA pins are kept
+durable through `[workspace.metadata.dist.github-action-commits]`.
+
+Cutting a release is automated: dispatch **Cut release**, merge the version-bump PR, and
+the tag and publish happen on their own. The full lifecycle, required secrets
+(`RELEASE_TOKEN` and `HOMEBREW_TAP_TOKEN`), and troubleshooting live in
+[`releasing.md`](releasing.md).
 
 Before the first public release:
 
 1. Create the `skeswa/homebrew-tap` repository.
-2. Create a GitHub token that can push to that tap.
-3. Add the token to this repository as the `HOMEBREW_TAP_TOKEN` secret.
-4. Run `scripts/release-smoke` and `dist plan --tag v0.1.0 --no-local-paths`.
-5. Push a release tag after the normal CI suite is green.
+2. Add the `RELEASE_TOKEN` secret (a PAT with `contents: write`) so the auto-pushed tag
+   triggers the build.
+3. Add the `HOMEBREW_TAP_TOKEN` secret (write access to the tap).
+4. Run `scripts/release-smoke` and `dist plan`.
+5. Tag the current version once by hand (the automation triggers on version _changes_);
+   every release after that goes through **Cut release**.
 
 ## Crates.io
 
