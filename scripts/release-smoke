@@ -17,7 +17,10 @@ require_pattern() {
   local path="$1"
   local pattern="$2"
 
-  if ! rg --quiet --fixed-strings "$pattern" "$path"; then
+  # Use POSIX grep (not ripgrep): rg is not preinstalled on GitHub-hosted
+  # runners or guaranteed on dev machines, and a fixed-string match is all we
+  # need here.
+  if ! grep -qF -- "$pattern" "$path"; then
     printf 'missing required release setting in %s: %s\n' "$path" "$pattern" >&2
     exit 1
   fi
