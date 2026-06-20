@@ -1,0 +1,63 @@
+name: Tag release
+
+# When a version bump lands on main (via a merged "release: vX.Y.Z" PR), push the
+# matching tag so the dist `release.yml` builds and publishes. Robust across merge
+# strategies: it acts only when Cargo.toml's version actually changed and isn't
+# already tagged, rather than relying on the commit message.
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: tag-release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    if: github.repository == 'skeswa/dootdoot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Full history + tags so we can diff the version and check existing tags.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Tag the new version
+        env:
+          # A PAT (contents: write) — the default GITHUB_TOKEN cannot trigger the
+          # tag-driven release workflow, so the tag push must use a PAT.
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          read_version() { awk '/^\[workspace.package\]/{f=1} f&&/^version = /{gsub(/[" ]/,"");sub(/^version=/,"");print;exit}'; }
+          new="$(read_version < Cargo.toml)"
+          prev="$(git show HEAD~1:Cargo.toml 2>/dev/null | read_version || true)"
+
+          if [ "${new}" = "${prev}" ]; then
+            echo "Workspace version unchanged (${new}); nothing to release."
+            exit 0
+          fi
+
+          tag="v${new}"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "Tag ${tag} already exists; nothing to do."
+            exit 0
+          fi
+
+          if [ -z "${RELEASE_TOKEN:-}" ]; then
+            echo "::error::version changed to ${new} but RELEASE_TOKEN is unset. Add a PAT with contents:write as the RELEASE_TOKEN secret so the tag push triggers the release build."
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${tag}" -m "Release ${tag}"
+          git push "https://x-access-token:${RELEASE_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${tag}"
+          echo "Pushed ${tag}; the Release workflow will build and publish."

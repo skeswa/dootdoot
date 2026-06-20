@@ -1,0 +1,30 @@
+version: 2
+updates:
+  # Keep the SHA-pinned GitHub Actions current. Dependabot opens reviewable PRs
+  # that bump both the commit SHA and its `# vX` comment, so the pins stay
+  # patched — but only through changes you review and merge, never silently.
+  # (PRs against the cargo-dist-generated release.yml are expected; dist will
+  # re-pin via its own config on the next `dist generate`.)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # Rust dependencies across the workspace (runtime crates plus the build-time
+  # xtask ML stack). Minor/patch bumps are grouped into one PR to cut noise;
+  # majors come as individual PRs, and security updates open regardless.
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      cargo-minor-patch:
+        update-types:
+          - minor
+          - patch

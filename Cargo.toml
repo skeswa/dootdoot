@@ -7,12 +7,34 @@ authors = ["skeswa"]
 categories = ["command-line-utilities", "multimedia::audio"]
 description = "Deterministically turns text into BB-8-style droid sound."
 edition = "2024"
+homepage = "https://github.com/skeswa/dootdoot"
 keywords = ["audio", "cli", "droid", "synthesis", "text"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/skeswa/dootdoot"
 rust-version = "1.92"
 version = "0.1.0"
+
+[workspace.metadata.dist]
+cargo-dist-version = "0.32.0"
+ci = "github"
+installers = ["shell", "homebrew"]
+install-updater = true
+install-path = "CARGO_HOME"
+github-attestations = true
+publish-jobs = ["homebrew"]
+tap = "skeswa/homebrew-tap"
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
+packages = ["dootdoot"]
+
+# Pin every GitHub Action dist emits to an immutable commit SHA (supply-chain
+# hardening), so a moved tag can never silently change what release CI runs.
+# Dependabot keeps these current via reviewed PRs.
+[workspace.metadata.dist.github-action-commits]
+"actions/checkout" = "df4cb1c069e1874edd31b4311f1884172cec0e10"
+"actions/upload-artifact" = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+"actions/download-artifact" = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
+"actions/attest" = "59d89421af93a897026c735860bf21b6eb4f7b26"
 
 [workspace.lints.rust]
 missing_debug_implementations = "deny"
@@ -45,3 +67,6 @@ codegen-units = 1
 lto = "thin"
 panic = "abort"
 strip = "symbols"
+
+[profile.dist]
+inherits = "release"

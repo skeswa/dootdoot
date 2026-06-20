@@ -26,6 +26,8 @@ Stable contracts and low-level implementation notes.
 - [`reference/mathx.md`](reference/mathx.md) — owned transcendental math contract.
 - [`reference/packaging.md`](reference/packaging.md) — install, package smoke, and
   release-channel decisions.
+- [`reference/releasing.md`](reference/releasing.md) — how a release is cut, tagged,
+  built, and published, plus the required secrets.
 - [`reference/cross-platform-determinism.md`](reference/cross-platform-determinism.md)
   — golden-hash platform guarantee.
 

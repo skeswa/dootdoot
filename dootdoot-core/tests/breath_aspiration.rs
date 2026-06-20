@@ -4,8 +4,9 @@
 //! Stationary broadband breath reads as a separate hiss layered over the voice
 //! (the "artifacty" quality). The fix, grounded in formant-synthesis literature
 //! (Klatt; breathy-vowel synthesis), is to modulate the breath at the glottal
-//! rate — louder near the closure instant, quieter mid-period — so it fuses into
-//! the voice, and to add it on top of the tone rather than cross-fading it in.
+//! rate — louder near the closure instant, quieter mid-period — so it fuses
+//! into the voice, and to add it on top of the tone rather than cross-fading it
+//! in.
 
 use dootdoot_core::{blend_noise_excitation, breath_closure_modulation};
 

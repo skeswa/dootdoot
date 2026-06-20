@@ -1,3 +1,3 @@
 {
-  "ignorePatterns": ["assets/tokenizer.json"]
+  "ignorePatterns": ["assets/tokenizer.json", ".github/workflows/release.yml"]
 }

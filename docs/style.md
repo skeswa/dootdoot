@@ -350,7 +350,8 @@ The mechanical backbone. Config is committed; CI gates are blocking on `main`.
 3. `cargo test` (including doctests)
 4. `cargo llvm-cov` (thresholds per §9)
 5. **Cross-platform determinism** — macOS + Linux, assert identical golden hashes
-6. `cargo deny` and `cargo machete` (§12)
+6. Packaging smoke checks — `scripts/package-smoke` and `scripts/release-smoke`
+7. `cargo deny` and `cargo machete` (§12)
 
 ---
 

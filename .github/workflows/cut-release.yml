@@ -1,0 +1,103 @@
+name: Cut release
+
+# One-click release: pick a bump level (or an explicit version) from the Actions
+# tab. This opens a "release: vX.Y.Z" PR that bumps the workspace version. Merging
+# that PR lands the bump on main, where `tag-release.yml` tags it and the dist
+# `release.yml` builds and publishes. The bump goes through a PR because main is
+# branch-protected.
+on:
+  workflow_dispatch:
+    inputs:
+      level:
+        description: Semver bump level (ignored if an explicit version is given)
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      version:
+        description: "Explicit version, e.g. 1.2.3 (optional; overrides level)"
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: cut-release
+  cancel-in-progress: false
+
+jobs:
+  open-release-pr:
+    if: github.repository == 'skeswa/dootdoot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install Rust toolchain
+        run: rustup show
+
+      - name: Compute the next version
+        id: ver
+        env:
+          LEVEL: ${{ inputs.level }}
+          OVERRIDE: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          current="$(awk '/^\[workspace.package\]/{f=1} f&&/^version = /{gsub(/[" ]/,"");sub(/^version=/,"");print;exit}' Cargo.toml)"
+          if [ -n "${OVERRIDE}" ]; then
+            new="${OVERRIDE}"
+          else
+            IFS=. read -r major minor patch <<EOF
+          ${current}
+          EOF
+            case "${LEVEL}" in
+              major) major=$((major + 1)); minor=0; patch=0 ;;
+              minor) minor=$((minor + 1)); patch=0 ;;
+              patch) patch=$((patch + 1)) ;;
+              *) echo "::error::unknown bump level ${LEVEL}"; exit 1 ;;
+            esac
+            new="${major}.${minor}.${patch}"
+          fi
+          if ! printf '%s' "${new}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::invalid version '${new}' (expected X.Y.Z)"; exit 1
+          fi
+          echo "Bumping ${current} -> ${new}"
+          echo "new=${new}" >> "${GITHUB_OUTPUT}"
+
+      - name: Bump the workspace version
+        env:
+          NEW: ${{ steps.ver.outputs.new }}
+        run: |
+          set -euo pipefail
+          # Only touch `version` inside [workspace.package], never other sections
+          # (e.g. cargo-dist-version under [workspace.metadata.dist]).
+          awk -v newver="${NEW}" '
+            /^\[/ { section = $0 }
+            section == "[workspace.package]" && /^version = / { print "version = \"" newver "\""; next }
+            { print }
+          ' Cargo.toml > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+          # Keep Cargo.lock in sync for the workspace members (no external bumps).
+          cargo update --workspace
+
+      - name: Open the release PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW: ${{ steps.ver.outputs.new }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch="release/v${NEW}"
+          git switch -c "${branch}"
+          git commit -am "release: v${NEW}"
+          git push --force-with-lease -u origin "${branch}"
+          gh pr create --base main --head "${branch}" \
+            --title "release: v${NEW}" \
+            --body "Automated release PR.
+
+          Merging this bumps the workspace to **v${NEW}** on \`main\`, where \`tag-release.yml\` tags it and the dist \`release.yml\` builds and publishes the artifacts (macOS tarballs, shell installer, Homebrew formula).
+
+          Requires the \`RELEASE_TOKEN\` repo secret (a PAT with \`contents: write\`) so the pushed tag triggers the release build."

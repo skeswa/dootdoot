@@ -143,9 +143,9 @@ pub const RING_MOD_MIX: f64 = 0.08;
 /// Gives the fixed envelope attack in seconds.
 ///
 /// `VOICE_V11` lengthens the onset ramp (was 6 ms) so syllables bloom in rather
-/// than snapping to full amplitude. A 6 ms attack reads as a percussive click on
-/// every syllable; ~15 ms with the quadratic ease-in lets the onset swell, which
-/// is what makes a multi-word phrase feel spoken rather than struck.
+/// than snapping to full amplitude. A 6 ms attack reads as a percussive click
+/// on every syllable; ~15 ms with the quadratic ease-in lets the onset swell,
+/// which is what makes a multi-word phrase feel spoken rather than struck.
 pub const ENVELOPE_ATTACK_SECONDS: f64 = 0.015;
 
 /// Gives the fixed envelope decay in seconds.
@@ -237,8 +237,8 @@ pub const SOURCE_MAX_HARMONICS: u32 = 48;
 
 /// Gives the fixed attack transient duration in seconds.
 ///
-/// `VOICE_V11` spreads the word-onset transient over a longer window (was 20 ms)
-/// so it reads as a breathy consonant rather than a sharp click.
+/// `VOICE_V11` spreads the word-onset transient over a longer window (was 20
+/// ms) so it reads as a breathy consonant rather than a sharp click.
 pub const ATTACK_TRANSIENT_SECONDS: f64 = 0.030;
 
 /// Gives the fixed attack transient wet mix.

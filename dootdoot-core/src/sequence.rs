@@ -477,11 +477,12 @@ pub fn estimate_utterance_sample_count(events: &[SequenceEvent]) -> u64 {
 
 /// Gives the rendered voiced sample count for each syllable, in order.
 ///
-/// Returns an empty vector for an utterance that renders as the empty chirp. The
-/// sum of these counts plus the inter-syllable pauses and the fixed
+/// Returns an empty vector for an utterance that renders as the empty chirp.
+/// The sum of these counts plus the inter-syllable pauses and the fixed
 /// leading/trailing padding equals [`estimate_utterance_sample_count`]. Because
-/// `VOICE_V11` rubato varies per-syllable duration, syllable onsets no longer sit
-/// on a uniform grid; this exposes the actual grid so a caller can locate them.
+/// `VOICE_V11` rubato varies per-syllable duration, syllable onsets no longer
+/// sit on a uniform grid; this exposes the actual grid so a caller can locate
+/// them.
 pub fn estimate_syllable_sample_counts(events: &[SequenceEvent]) -> Vec<u32> {
     let plans = syllable_plans(events);
 
@@ -656,9 +657,7 @@ fn phrase_syllable_samples(
         1.0
     };
 
-    round_f64_to_u32(
-        f64::from(base_samples) * duration_scale * complexity_scale * rubato_scale,
-    )
+    round_f64_to_u32(f64::from(base_samples) * duration_scale * complexity_scale * rubato_scale)
 }
 
 /// Gives the lilt depth — the peak ± fraction a plain syllable's pace varies as

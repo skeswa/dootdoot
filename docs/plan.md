@@ -723,7 +723,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
 > require `VOICE_V11` and regenerated golden fixtures, and stay inside the fixed, deterministic,
 > bounded droid parameter space (NFR-16). **Non-goals:** no change to the semantic PCA mapping;
 > no change to the pitch/formant/warble constants; no change to punctuation pause lengths; no
-> unseeded randomness. (The discourse-role *assignment* changes only to localize the dash
+> unseeded randomness. (The discourse-role _assignment_ changes only to localize the dash
 > hesitation — T-112 — not the four-axis semantic core.)
 
 - [x] **T-109 — Soften the syllable attack.** Lengthen `ENVELOPE_ATTACK_SECONDS` (6 → 15 ms,
@@ -733,7 +733,7 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       ramp and the softened/longer transient; the decay/sustain/release shape is untouched.
       Deps: T-108 · Reqs: FR-109, NFR-16 · Est: 1.5h
 - [x] **T-110 — Organic intra-phrase rubato.** Add `syllable_rubato_scale(index, total,
-      emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal lilt (±8%,
+emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal lilt (±8%,
       ~5.7-syllable period), agogic lengthening on emphasized syllables (+10%), and
       phrase-final lengthening (+10%). Gated on the explicit text path so the hand-built path
       stays byte-identical; a single-syllable phrase returns exactly 1.0; output-length
@@ -757,6 +757,17 @@ lo_k, hi_k)` where `B_k`/`T_k` are the squashed baseline/per-token knobs and `α
       (§8.12 decision + traceability) with what was built.
       Deps: T-109, T-110, T-112, T-113 · Reqs: FR-113, FR-33, FR-39, NFR-16, NFR-17, NFR-18 ·
       Est: 1.5h
+
+---
+
+## Phase 21 — macOS distribution ergonomics
+
+- [x] **T-114 — Homebrew and prebuilt macOS release automation.** Add `dist`
+      (`cargo-dist`) release metadata and generated GitHub release workflow that builds
+      only the `dootdoot` binary crate for Apple Silicon and Intel Macs, publishes a custom
+      Homebrew tap formula, uploads a shell installer with `dootdoot-update`, enables GitHub
+      artifact attestations, and guards the release contract with `scripts/release-smoke`.
+      Deps: T-63 · Reqs: NFR-22 · Est: 2.5h
 
 ---
 
