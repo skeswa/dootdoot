@@ -65,6 +65,14 @@ jobs:
       - name: Install nightly rustfmt
         run: rustup toolchain install nightly --profile minimal --component rustfmt
 
+      - name: Install Linux audio dependencies
+        # rodio (playback) links ALSA on Linux; GitHub-hosted Ubuntu lacks the
+        # dev headers. macOS uses CoreAudio and needs nothing extra.
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev pkg-config
+
       - name: Build
         run: cargo build --workspace --all-targets
 
