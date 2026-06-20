@@ -10,12 +10,13 @@
 
 <!-- Add these once the project ships: CI status, crates.io version, downloads. -->
 
-> **Status: VOICE_V6 repeated-phrase smoothing is active.** `VOICE_V1` remains the locked
-> v1 contract, `VOICE_V2` remains the locked expressiveness contract, `VOICE_V3` remains
-> the locked phrase-continuity contract, `VOICE_V4` remains the locked repeated-onset
-> smoothing contract, `VOICE_V5` remains the locked word-attack smoothing contract, and
-> the active branch now smooths repeated phrase pulsing. Packaging work is still in
-> progress. See
+> **Status: VOICE_V11 natural-voice tuning is active.** `VOICE_V11` softens syllable
+> attacks, adds deterministic intra-phrase rubato, localizes dash hesitation breath, and
+> integrates aspiration so breath reads as part of the voice instead of a separate hiss.
+> Earlier `VOICE_V*` contracts remain historical lock points, and any sample-affecting
+> change still requires a new voice identifier plus regenerated golden WAV fixtures. Local
+> Cargo install is supported; crates.io, Homebrew, and prebuilt binaries remain release
+> decisions. See
 > [the roadmap](docs/plan.md) and
 > [packaging notes](docs/reference/packaging.md).
 
@@ -43,7 +44,8 @@ cargo build --release
 cargo install --path dootdoot --locked
 ```
 
-Prebuilt binaries and Homebrew are deferred until tag-based release automation exists.
+Crates.io publication, prebuilt binaries, and Homebrew are deferred until release
+automation exists.
 
 ## Usage
 
@@ -86,19 +88,31 @@ and `control:` rows are not voiced tokens; they shape neighboring syllables and 
 - Empty or whitespace-only input emits the fixed inquisitive `?` chirp and exits 0.
 - Literal `[PAD]`, `[CLS]`, `[SEP]`, and `[MASK]` are dropped. `[UNK]` is kept and voiced
   with its own mapping.
-- Prosodic punctuation (`.`, `!`, `?`, `,`, `;`, `:`) is control-only; other symbols are
-  tokenized and voiced normally.
-- Non-Latin text and emoji are accepted, but v1 is English-oriented and will often route
-  through `[UNK]` or repetitive WordPiece shapes.
+- Prosodic punctuation (`.`, `!`, `?`, `,`, `;`, `:`) is control-only; question,
+  statement, exclamation, and clause marks each shape the preceding syllable and pause.
+- Standalone dash forms (`-`, `--`, en dash, em dash) and ellipses (`...`, `…`) are
+  control-only hesitation markers. A dash clips the previous tail; an ellipsis trails off.
+- Other symbols are tokenized and voiced normally when the tokenizer produces a voiced
+  token.
+- Neutral multi-word text still gets deterministic semantic accents, short word rests, and
+  V11 rubato; punctuation is not required for the voice to move.
+- Non-Latin text and emoji are accepted, but the semantic mapping is English-oriented and
+  will often route through `[UNK]` or repetitive WordPiece shapes.
 - Very large input warns past about 8 minutes of rendered audio and errors before the
   fixed 30 minute / 160 MB ceiling.
 
 ## How it works
 
-Text is tokenized, each token is mapped to a semantic vector, those vectors are reduced
-to four perceptual "knobs" (pitch, vowel, glide, warble), and a fixed formant-synthesis
-voice turns the knobs into sound. Because the whole mapping is frozen and uses only
-pinned math, identical input yields identical output everywhere.
+Text is tokenized, each token is mapped through the embedded `.doot` asset to a semantic
+vector, those vectors are reduced to four perceptual knobs (pitch, vowel, glide, warble),
+and a deterministic performance planner adds phrase roles, local affect/archetypes,
+pauses, rests, and motion curves. A fixed formant-synthesis voice then renders the plan
+to one canonical 44.1 kHz / 16-bit / mono buffer for both playback and WAV output.
+
+The runtime does not load `model2vec`, `candle`, or any tensor framework. `xtask`
+generates `assets/dootdoot_asset_v1.doot` ahead of time; the shipped CLI embeds that
+asset and uses pinned math, so identical input yields identical output on the
+CI-verified platforms.
 
 Full rationale lives in [`docs/design.md`](docs/design.md); the requirements are in
 [`docs/spec.md`](docs/spec.md). The full documentation map is
