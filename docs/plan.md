@@ -765,8 +765,10 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
 - [x] **T-114 — Homebrew and prebuilt macOS release automation.** Add `dist`
       (`cargo-dist`) release metadata and generated GitHub release workflow that builds
       only the `dootdoot` binary crate for Apple Silicon and Intel Macs, publishes a custom
-      Homebrew tap formula, uploads a shell installer with `dootdoot-update`, enables GitHub
-      artifact attestations, and guards the release contract with `scripts/release-smoke`.
+      Homebrew tap formula, uploads a shell installer with `dootdoot-update`, routes macOS
+      binary builds to the `dootdoot-macos-arm64` self-hosted Apple Silicon runner, enables
+      GitHub artifact attestations, and guards the release contract with
+      `scripts/release-smoke`.
       Deps: T-63 · Reqs: NFR-22 · Est: 2.5h
 
 ---

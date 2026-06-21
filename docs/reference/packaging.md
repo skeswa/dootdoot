@@ -59,6 +59,9 @@ workspace metadata:
 - `packages = ["dootdoot"]` ensures `xtask` is never shipped.
 - `targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]` covers Apple Silicon and
   Intel Macs.
+- `[workspace.metadata.dist.github-custom-runners]` routes both macOS target builds to
+  the `dootdoot-macos-arm64` self-hosted Apple Silicon runner; the Intel archive is
+  cross-built there by `dist`.
 - `installers = ["shell", "homebrew"]` produces `dootdoot-installer.sh` and
   `dootdoot.rb`.
 - `install-updater = true` adds `dootdoot-update` for shell-installer users.

@@ -590,4 +590,5 @@
 - **NFR-22** The release process SHALL provide no-Rust-toolchain macOS install and update
   paths via Homebrew and prebuilt release artifacts for Apple Silicon and Intel Macs.
   The release configuration SHALL ship only the `dootdoot` binary crate, never `xtask`,
-  and SHALL be guarded by a committed release-packaging smoke check.
+  SHALL route macOS binary builds to the dedicated `dootdoot-macos-arm64` self-hosted
+  Apple Silicon runner, and SHALL be guarded by a committed release-packaging smoke check.

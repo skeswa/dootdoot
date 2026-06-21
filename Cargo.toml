@@ -27,6 +27,10 @@ tap = "skeswa/homebrew-tap"
 targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
 packages = ["dootdoot"]
 
+[workspace.metadata.dist.github-custom-runners]
+aarch64-apple-darwin = { runner = "dootdoot-macos-arm64", host = "aarch64-apple-darwin" }
+x86_64-apple-darwin = { runner = "dootdoot-macos-arm64", host = "aarch64-apple-darwin" }
+
 # Pin every GitHub Action dist emits to an immutable commit SHA (supply-chain
 # hardening), so a moved tag can never silently change what release CI runs.
 # Dependabot keeps these current via reviewed PRs.
