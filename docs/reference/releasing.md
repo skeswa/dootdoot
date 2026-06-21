@@ -66,6 +66,11 @@ The tag is always `v` + that version (e.g. `v0.2.0`), which matches both the
 Only the `dootdoot` binary ships — `packages = ["dootdoot"]` keeps the build-time
 `xtask` crate (and its ML stack) out of every release.
 
+Both macOS target builds are routed to the `dootdoot-macos-arm64` self-hosted Apple
+Silicon runner. The Intel archive is cross-built from that Apple Silicon host, so the
+runner must stay online, have that GitHub Actions label, and have working Rust plus
+Xcode command-line tools.
+
 ## Required repository secrets
 
 Both must exist in **Settings → Secrets and variables → Actions**:
