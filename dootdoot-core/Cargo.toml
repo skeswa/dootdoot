@@ -16,7 +16,7 @@ version.workspace = true
 hound = "3.5.1"
 prost = { version = "0.14.1", default-features = false, features = ["derive", "std"] }
 thiserror = { version = "2.0.17", default-features = false }
-tokenizers = { version = "0.21.4", default-features = false, features = ["fancy-regex"] }
+tokenizers = { version = "0.23.1", default-features = false, features = ["fancy-regex"] }
 
 [dev-dependencies]
 insta = { version = "1.48.0", default-features = false }
