@@ -544,6 +544,15 @@ _bounds_, not by the literal count of moving parameters (the broadened NFR-16; �
   structure- or affect-driven duration variation (phrase-final lengthening, complexity-
   or mood-driven pacing) is permitted and explored in
   [`bb8-expressiveness-gap-analysis.md`](./research/bb8-expressiveness-gap-analysis.md).
+  **Superseded for marked content words by `VOICE_V12` (FR-117):** a word classified
+  noun/verb expands to a compound `stem → class-resolution` silhouette — the resolution
+  syllable is a frozen per-class transform of the stem's own knobs (noun settles, verb
+  pushes), joined as a glided subword continuation, with a shortened compound
+  per-syllable duration (FR-119) so the pace holds. The syllable target is
+  `max(subword_count, 2)` capped at 3. The semantic baseline still pools over the
+  original tokenizer tokens only (FR-118), and every syllable remains one continuous
+  formant-glide gesture. Unclassified (`Other`) words keep the one-token-one-syllable
+  rule unchanged.
 - **Within a word, syllables glide together** — consecutive subword tokens of the same
   word (detected via WordPiece `##` continuation marking) are connected by portamento
   with **no silence**, so a multi-token word sounds like one flowing multi-syllable

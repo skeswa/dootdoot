@@ -54,7 +54,10 @@
 ### 1.4 Synthesis (voice)
 
 - **FR-15** The tool SHALL synthesize each token as a single continuous formant-glide
-  syllable (not a cluster of discrete beeps).
+  syllable (not a cluster of discrete beeps). _`VOICE_V12` intentionally supersedes the
+  one-token-one-syllable rule for **marked content words**, which gain a derived
+  class-resolution syllable (FR-117); every syllable remains a continuous formant-glide
+  gesture._
 - **FR-16** The voice SHALL be a signal graph in which a control layer (pitch center +
   portamento glide + warble LFO) computes the instantaneous pitch that drives the audio
   path: harmonically-rich source/oscillator → formant filter bank (2–3 resonant
@@ -497,6 +500,67 @@
   SHALL stay deterministic and bounded, and `roughness_amount == 0` SHALL remain exactly clean.
 - **FR-113** The frozen `VOICE_V11` contract SHALL be documented with a by-ear acceptance note,
   the surfaced `dootdoot VOICE_V11` version string, and regenerated golden WAV fixtures.
+
+### 1.21 VOICE_V12 noun/verb recognizability
+
+> Recurring content words were hard to recognize by ear because their identity rode on
+> absolute pitch in a continuous, arbitrary mapping
+> ([research](./research/noun-verb-recognizability.md) §1). `VOICE_V12` gives nouns and
+> verbs a systematic two-pillar signature — a layered co-onset class marker and a
+> compound `stem → class-resolution` silhouette — validated by the T-118 spike and
+> by-ear evaluation ([worksheet](./research/voice-v12-spike-evaluation.md)). Explicit
+> non-goals: `VOICE_V12` SHALL NOT change the semantic PCA mapping, SHALL NOT introduce
+> a runtime tensor framework, and SHALL NOT add unseeded randomness. Verb
+> reduplication/aspect, noun size iconicity, and the learnability regression are
+> `VOICE_V13` follow-ons.
+
+- **FR-114** The noun/verb class data SHALL come from a **pinned build-time POS
+  source**: `xtask` SHALL derive a per-lemma dominant class table from a
+  permissively-licensed POS source ranked by a pinned coding-domain corpus snapshot
+  (not general English), with both pinned by hash in `assets/source_manifest.toml`, and
+  SHALL bake the result as a **committed sidecar class-table asset** (its own spec
+  version + source hashes; the semantic `.doot` asset stays at spec v1). The shipped
+  binary SHALL contain no tagger and no tensor runtime — the class lookup is a pure
+  baked table.
+- **FR-115** The POS class SHALL be a **word-level** property: the word-initial token
+  establishes the class for its whole word (keyed by the assembled word/lemma) and
+  continuation tokens inherit it. Closed-class/function words SHALL classify `Other`.
+  Noun/verb-ambiguous lemmas SHALL follow the **conservative policy** locked by the
+  T-118 A/B: they fall back to `Other` (unmarked) rather than being marked with a
+  dominant class.
+- **FR-116** Word-initial content (noun/verb) syllables SHALL carry a **layered
+  co-onset class marker** mixed into the syllable's first milliseconds, starting
+  together with the tonal body (zero added duration) and rising with a short attack
+  ramp so it fuses into the word's attack rather than reading as a separate pre-beat:
+  noun = broadband click/pop splash (~30 ms window, ~8 ms ramp), verb = up-swept
+  dual-sine chirp (~50 ms window, ~25% attack fraction). Markers SHALL be deterministic
+  owned-math gestures, louder than the `VOICE_V11` softened word transient and layered
+  over it (not replacing it); continuation tokens, function words, and the
+  neutral/hand-built path SHALL never fire a marker.
+- **FR-117** Marked content words SHALL render as a **compound
+  `stem → class-resolution` silhouette**: the resolution syllable derives from the
+  stem's own knobs via a frozen per-class transform (noun **settle**: pitch steps down,
+  vowel rounds toward `oo`, contour flattens, steadier tail; verb **push**: brighter
+  toward `ee`, rising/gliding continuation) — never random padding. A word's syllable
+  target SHALL be `max(subword_count, 2)` capped at 3, with multi-token words shaping
+  their **last** subword as the resolution. This supersedes FR-15's
+  one-token-one-syllable rule for marked content words only.
+- **FR-118** The sequence semantic baseline SHALL remain pooled over the **original
+  tokenizer tokens**; derived resolution syllables SHALL NOT join the pool or alter
+  the mood/complexity analyses.
+- **FR-119** Compound words SHALL shorten their per-syllable base duration (scale
+  ~0.62) so a two-syllable word reads as one heavier gesture rather than two blips,
+  preserving the `VOICE_V11` breathing pace; function words SHALL stay single light
+  blips. Output-length estimation SHALL remain exactly consistent with rendering, and
+  unscaled syllables (scale exactly `1.0`) SHALL stay byte-identical.
+- **FR-120** `--explain` SHALL show each token's POS class, onset marker, and syllable
+  silhouette as a learnability training aid.
+- **FR-121** The frozen `VOICE_V12` contract SHALL be documented with a by-ear
+  acceptance note (`docs/validation/voice-v12-noun-verb.md`) including directional
+  `scripts/acoustics` + `scripts/sound_taxonomy.py` checks on the minimal pairs, the
+  surfaced `dootdoot VOICE_V12` version string, and regenerated golden WAV fixtures.
+  Until that freeze, the class-conditioned behavior SHALL stay behind the local
+  default-off spike gate with the no-class path byte-identical.
 
 ---
 

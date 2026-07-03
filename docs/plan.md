@@ -840,7 +840,7 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
       (POS source/storage, marker aggressiveness, foley boldness, syllable
       count/pacing); record the target constants the ship tasks will implement.
       Deps: T-116, T-117 · Reqs: NFR-14, NFR-15, NFR-16 · Est: 2.5h
-- [ ] **T-119 — Decide VOICE_V12 contract scope + add spec FRs.** Update `spec.md` with
+- [x] **T-119 — Decide VOICE_V12 contract scope + add spec FRs.** Update `spec.md` with
       the new `FR-114…FR-121` these tasks cite: pinned build-time POS source + baked
       class table as a committed voice asset; word-level class semantics (word-initial
       establishes, continuation inherits) with the closed-class/function-word override
