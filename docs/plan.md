@@ -864,7 +864,7 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
       T-119 ambiguity policy (e.g. `can`, `will` → `Other`; `build`/`fix`/`run` per the
       locked rule). Unit-test the policy cases and regeneration reproducibility.
       Deps: T-119 · Reqs: FR-114, FR-42, FR-43, NFR-8 · Est: 4h
-- [ ] **T-121 — Bake, commit, and load the class table.** Emit the class table as a
+- [x] **T-121 — Bake, commit, and load the class table.** Emit the class table as a
       sidecar embedded asset (per the §9.1 recommendation — leaves the semantic `.doot`
       spec at v1) with its own spec version and source hashes; `include_bytes!` and
       parse it in `dootdoot-core`; replace the spike lexicon with the baked lookup;

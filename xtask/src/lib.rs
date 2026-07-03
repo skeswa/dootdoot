@@ -5,6 +5,7 @@ mod doot_asset;
 mod pca_projection;
 mod pos_class_table;
 mod pos_source_manifest;
+mod pos_table_asset;
 mod run;
 mod source_files;
 mod source_manifest;
@@ -19,6 +20,7 @@ pub use pos_class_table::{
     parse_tagged_counts,
 };
 pub use pos_source_manifest::PosSourceManifest;
+pub use pos_table_asset::serialize_pos_table;
 pub use run::{run, run_with_args};
 pub use source_files::SourceFiles;
 pub use source_manifest::SourceManifest;

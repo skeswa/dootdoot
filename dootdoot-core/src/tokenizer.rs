@@ -3,7 +3,7 @@
 use thiserror::Error;
 use tokenizers::Tokenizer as HfTokenizer;
 
-use crate::{DootAsset, PosClass, embedded_doot_asset, pos_class::word_pos_class};
+use crate::{DootAsset, PosClass, PosTable, embedded_doot_asset, embedded_pos_table};
 
 const CONTINUATION_PREFIX: &str = "##";
 const CONTROL_TOKENS: [&str; 4] = ["[PAD]", "[CLS]", "[SEP]", "[MASK]"];
@@ -15,6 +15,7 @@ pub struct Tokenizer {
     inner: HfTokenizer,
     control_token_ids: [u32; CONTROL_TOKENS.len()],
     unknown_token_id: u32,
+    pos_table: PosTable,
 }
 
 /// Gives the tokenized form of user input after control-token filtering.
@@ -60,11 +61,15 @@ impl Tokenizer {
             token_id(&inner, CONTROL_TOKENS[3])?,
         ];
         let unknown_token_id = token_id(&inner, UNKNOWN_TOKEN)?;
+        let pos_table = embedded_pos_table().map_err(|error| {
+            TokenizerError::new(format!("failed to load embedded pos table: {error}"))
+        })?;
 
         Ok(Self {
             inner,
             control_token_ids,
             unknown_token_id,
+            pos_table,
         })
     }
 
@@ -107,7 +112,7 @@ impl Tokenizer {
             })
             .collect::<Vec<_>>();
 
-        assign_word_pos_classes(&mut tokens);
+        assign_word_pos_classes(&mut tokens, &self.pos_table);
 
         let empty_chirp = tokens.is_empty();
 
@@ -187,10 +192,14 @@ pub fn embedded_tokenizer() -> Result<Tokenizer, TokenizerError> {
 /// Stamps each token with its word-level POS class.
 ///
 /// A word spans one word-initial token plus its following continuation tokens;
-/// the whole word's text (continuation prefixes stripped) is classified once
-/// and every token in the span carries the result, so the word-initial token
-/// establishes the class and continuations inherit it.
-fn assign_word_pos_classes(tokens: &mut [TokenizedToken]) {
+/// the whole word's text (continuation prefixes stripped) is looked up once in
+/// the baked class table and every token in the span carries the result, so
+/// the word-initial token establishes the class and continuations inherit it.
+///
+/// With the `spike-noun-verb` gate off every word classifies
+/// [`PosClass::Other`], keeping every rendered path byte-identical until the
+/// `VOICE_V12` freeze; the `cfg!` branch constant-folds.
+fn assign_word_pos_classes(tokens: &mut [TokenizedToken], pos_table: &PosTable) {
     let mut index = 0;
 
     while index < tokens.len() {
@@ -215,7 +224,11 @@ fn assign_word_pos_classes(tokens: &mut [TokenizedToken]) {
             index += 1;
         }
 
-        let pos_class = word_pos_class(&word);
+        let pos_class = if cfg!(feature = "spike-noun-verb") {
+            pos_table.class_of(&word)
+        } else {
+            PosClass::Other
+        };
 
         for token in &mut tokens[start..index] {
             token.pos_class = pos_class;

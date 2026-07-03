@@ -62,3 +62,23 @@ fn committed_snapshot_derives_the_expected_policy_outcomes() {
     assert_eq!(class_of("the"), None);
     assert_eq!(class_of("can"), None);
 }
+
+#[test]
+fn committed_sidecar_asset_reproduces_from_the_snapshot() {
+    // Regeneration reproducibility (FR-114): deriving + serializing from the
+    // committed snapshot must reproduce the committed sidecar byte-for-byte,
+    // and the core parser must accept it.
+    let manifest_text =
+        fs::read_to_string(workspace_path("assets/source_manifest.toml")).expect("manifest reads");
+    let manifest = PosSourceManifest::parse(&manifest_text).expect("pos section parses");
+    let snapshot_text =
+        fs::read_to_string(workspace_path("assets/pos/tagged_counts.tsv")).expect("snapshot reads");
+    let snapshot = parse_tagged_counts(&snapshot_text).expect("committed snapshot parses");
+    let table = derive_pos_class_table(&snapshot, &PosPolicyConfig::default());
+    let payload = xtask::serialize_pos_table(&table, &manifest).expect("table serializes");
+    let committed = fs::read(workspace_path("assets/dootdoot_pos_v1.doot"))
+        .expect("committed sidecar asset reads");
+
+    assert_eq!(payload, committed);
+    dootdoot_core::PosTable::parse(&committed).expect("committed sidecar parses in core");
+}

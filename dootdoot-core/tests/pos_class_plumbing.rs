@@ -96,10 +96,12 @@ mod gate_on {
     #[test]
     fn ambiguous_lemmas_stay_unmarked_under_the_locked_conservative_policy() {
         // T-118 round-1 by-ear decision: the conservative policy won the A/B,
-        // so noun/verb-ambiguous coding lemmas classify `Other`.
+        // so noun/verb-ambiguous coding lemmas classify `Other`. (`fix`,
+        // `run`, `update`, and `build` all exceed the 25% minority-use
+        // threshold in the pinned corpus snapshot.)
         let tokenizer = embedded_tokenizer().expect("the embedded tokenizer loads");
         let encoded = tokenizer
-            .tokenize("fix run update sync build")
+            .tokenize("fix run update build")
             .expect("text tokenizes");
 
         assert!(
@@ -113,7 +115,9 @@ mod gate_on {
     #[test]
     fn continuation_tokens_inherit_the_word_class() {
         let tokenizer = embedded_tokenizer().expect("the embedded tokenizer loads");
-        let encoded = tokenizer.tokenize("the workflow").expect("text tokenizes");
+        let encoded = tokenizer
+            .tokenize("the deployment")
+            .expect("text tokenizes");
         let tokens = encoded.tokens();
 
         // Every token of one word carries the same class as its word-initial

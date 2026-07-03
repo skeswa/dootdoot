@@ -10,6 +10,7 @@ mod mathx;
 mod performance;
 mod phrase;
 mod pos_class;
+mod pos_table;
 mod sequence;
 mod synth;
 mod tokenizer;
@@ -49,6 +50,10 @@ pub use performance::{
 };
 pub use phrase::{PhraseBoundaryStrength, PhrasePlan, PhraseSyllablePlan, plan_phrase_prosody};
 pub use pos_class::{PosClass, class_resolution_knobs};
+pub use pos_table::{
+    POS_TABLE_FILE_V1, POS_TABLE_HASH_BYTES, POS_TABLE_MAGIC, POS_TABLE_SPEC_VERSION, PosTable,
+    PosTableError, embedded_pos_table,
+};
 pub use sequence::{
     COMPOUND_SYLLABLE_DURATION_SCALE, DASH_HESITATION_PAUSE_SAMPLES,
     ELLIPSIS_HESITATION_PAUSE_SAMPLES, EMPTY_CHIRP_CONTOUR, EMPTY_CHIRP_PITCH_CENTER,
