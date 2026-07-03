@@ -250,17 +250,26 @@ pub const ATTACK_TRANSIENT_MIX: f64 = 0.04;
 
 /// Gives the noun class-marker window in seconds (`VOICE_V12`, T-116).
 ///
-/// A broadband click/pop splash: very fast, near-instant attack — *impact = a
-/// thing*.
-pub const NOUN_MARKER_SECONDS: f64 = 0.020;
+/// A broadband click/pop splash — *impact = a thing*. The T-118 round-1
+/// listen widened this (was 20 ms) so the splash's decay overlaps the tonal
+/// body's 15 ms attack bloom and the two fuse into one onset.
+pub const NOUN_MARKER_SECONDS: f64 = 0.030;
+
+/// Gives the noun class-marker attack ramp in seconds (`VOICE_V12`, T-116).
+///
+/// T-118 round 1 heard the instant-attack marker as a separate pre-beat: its
+/// energy peaked before the tonal body (15 ms quadratic ease-in) was audible.
+/// A short quadratic rise makes the splash bloom *with* the body (common-onset
+/// binding) while staying fast enough to read as an impact.
+pub const NOUN_MARKER_ATTACK_SECONDS: f64 = 0.008;
 
 /// Gives the noun class-marker wet mix (`VOICE_V12`, T-116).
 ///
 /// Louder than the `VOICE_V11` softened transient — the marker is a lexical
 /// cue, not articulation — but it fires only on scarce word-initial content
 /// tokens, so the pluck-on-everything problem the softening fixed does not
-/// recur.
-pub const NOUN_MARKER_MIX: f64 = 0.16;
+/// recur. T-118 round 1 heard 0.16 as severe/percussive; dialed back.
+pub const NOUN_MARKER_MIX: f64 = 0.10;
 
 /// Gives the verb class-marker window in seconds (`VOICE_V12`, T-116).
 ///
@@ -268,7 +277,9 @@ pub const NOUN_MARKER_MIX: f64 = 0.16;
 pub const VERB_MARKER_SECONDS: f64 = 0.050;
 
 /// Gives the verb class-marker wet mix (`VOICE_V12`, T-116).
-pub const VERB_MARKER_MIX: f64 = 0.14;
+///
+/// T-118 round 1 heard 0.14 as severe; dialed back.
+pub const VERB_MARKER_MIX: f64 = 0.09;
 
 /// Gives the noun marker's inharmonic click partials in hertz.
 ///
@@ -288,7 +299,10 @@ const VERB_MARKER_SWEEP_START_HZ: [f64; 2] = [1_400.0, 2_050.0];
 const VERB_MARKER_SWEEP_END_HZ: [f64; 2] = [3_600.0, 5_150.0];
 
 /// Gives the fraction of the verb chirp window spent on its attack ramp.
-const VERB_MARKER_ATTACK_FRACTION: f64 = 0.12;
+///
+/// T-118 round 1: lengthened (was 0.12) so the chirp swells in with the tonal
+/// body instead of leading it as a pre-beat.
+const VERB_MARKER_ATTACK_FRACTION: f64 = 0.25;
 
 /// Gives the fixed low-body layer wet mix.
 pub const BODY_LAYER_MIX: f64 = 0.18;
@@ -903,8 +917,12 @@ fn noun_marker_sample(elapsed_seconds: f64) -> f64 {
 
     let progress = (elapsed_seconds / NOUN_MARKER_SECONDS).clamp(0.0, 1.0);
     let remaining = 1.0 - progress;
-    let splash_envelope = remaining * remaining * remaining;
-    let thud_envelope = remaining * remaining;
+    // The quadratic rise synchronizes the splash with the tonal body's attack
+    // bloom so the marker fuses into the word's onset (T-118 round 1).
+    let attack = (elapsed_seconds / NOUN_MARKER_ATTACK_SECONDS).clamp(0.0, 1.0);
+    let attack = attack * attack;
+    let splash_envelope = attack * remaining * remaining;
+    let thud_envelope = attack * remaining;
     let partial_count = f64::from(u32::try_from(NOUN_MARKER_PARTIALS_HZ.len()).unwrap_or(u32::MAX));
     let mut splash = 0.0;
 

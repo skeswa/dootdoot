@@ -76,7 +76,7 @@ mod gate_on {
     #[test]
     fn word_initial_tokens_establish_their_lexicon_class() {
         let tokenizer = embedded_tokenizer().expect("the embedded tokenizer loads");
-        let encoded = tokenizer.tokenize("fix the bug").expect("text tokenizes");
+        let encoded = tokenizer.tokenize("add the bug").expect("text tokenizes");
         let classes = encoded
             .tokens()
             .iter()
@@ -86,10 +86,27 @@ mod gate_on {
         assert_eq!(
             classes,
             [
-                ("fix".to_owned(), PosClass::Verb),
+                ("add".to_owned(), PosClass::Verb),
                 ("the".to_owned(), PosClass::Other),
                 ("bug".to_owned(), PosClass::Noun),
             ]
+        );
+    }
+
+    #[test]
+    fn ambiguous_lemmas_stay_unmarked_under_the_locked_conservative_policy() {
+        // T-118 round-1 by-ear decision: the conservative policy won the A/B,
+        // so noun/verb-ambiguous coding lemmas classify `Other`.
+        let tokenizer = embedded_tokenizer().expect("the embedded tokenizer loads");
+        let encoded = tokenizer
+            .tokenize("fix run update sync build")
+            .expect("text tokenizes");
+
+        assert!(
+            encoded
+                .tokens()
+                .iter()
+                .all(|token| token.pos_class() == PosClass::Other)
         );
     }
 

@@ -1,9 +1,27 @@
 # VOICE_V12 spike evaluation worksheet (T-118)
 
-> Status: **awaiting the by-ear session.** The spike (T-115…T-117) is built and the
-> automated half of the T-118 evaluation has run; this note records those results, the
-> listening checklist, and the open decisions the by-ear session must lock. The go/no-go
-> and the locked recipe get recorded here, then T-119 turns them into contract FRs.
+> Status: **round 2 — awaiting the confirmation listen.** Round 1 (2026-07-03, by ear)
+> was a directional **go**: the classes are tellable apart and the pace still breathes,
+> but the marker read as a separate percussive pre-beat and the conservative ambiguity
+> policy won the A/B. The recipe was retuned accordingly (see "Round-1 outcomes");
+> round 2 confirms fusion/severity, then the locked recipe goes to T-119.
+
+## Round-1 outcomes (by ear, 2026-07-03)
+
+| #   | Question        | Verdict                                                     | Action taken                                                                                                                           |
+| --- | --------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Fusion          | **Fail** — read as a separate pre-beat                      | Markers now bloom with the tonal body: noun gets an 8 ms quadratic attack ramp + wider 30 ms window; verb attack fraction 0.12 → 0.25. |
+| 2   | Class identity  | **Pass** — noun vs verb tellable                            | —                                                                                                                                      |
+| 3   | Pace            | **Pass** — still breathes                                   | `COMPOUND_SYLLABLE_DURATION_SCALE` stays 0.62.                                                                                         |
+| 4   | Ambiguity A/B   | **Conservative preferred**                                  | `SPIKE_AMBIGUITY_POLICY` locked to `FallBackToOther`; `build/fix/run/update/sync/…` stay unmarked blips.                               |
+| 5   | Marker severity | **Too percussive/severe** (though marked = easier to parse) | Mixes dialed back: noun 0.16 → 0.10, verb 0.14 → 0.09 (still ≳2× the 0.04 soft transient).                                             |
+
+Round-2 renders (`*-v2.wav` in `target/spike-v12/`): `a-bug-marked-v2`,
+`a-run-marked-v2`, `b-fix-the-bug-marked-v2` (note: `fix` is now unmarked under the
+conservative policy — only `bug` carries a mark), and `d-content-heavy-v2`
+("verify the release and deploy the server", two unambiguous verbs + one unambiguous
+noun). Taxonomy still separates the retuned pair: `bug` = flat tonal blip, `run` =
+rising chirp (+9.2 st).
 
 ## How to reproduce the renders
 
@@ -82,13 +100,14 @@ policy**.
 
 ## Decisions to lock before T-119 (research §9)
 
-| #   | Decision                | Spike setting (starting point)                                       | Locked value |
-| --- | ----------------------- | -------------------------------------------------------------------- | ------------ |
-| 1   | POS source & storage    | hard-coded lexicon; ship = sidecar baked table, coding-domain-ranked | _tbd_        |
-| 2   | Marker aggressiveness   | word-initial content nouns/verbs only                                | _tbd_        |
-| 3   | Foley boldness          | mixes 0.16 / 0.14 (vs 0.04 soft transient)                           | _tbd_        |
-| 4   | Syllable count & pacing | uniform 2 syllables, cap 3; compound scale 0.62                      | _tbd_        |
-| 5   | Aspect marking          | out of scope (`VOICE_V13`)                                           | —            |
-| 6   | Ambiguity policy        | dominant-class (A/B'd; conservative leg = silent on coding text)     | _tbd_        |
+| #   | Decision                | Spike setting (starting point)                                       | Locked value                                                 |
+| --- | ----------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 1   | POS source & storage    | hard-coded lexicon; ship = sidecar baked table, coding-domain-ranked | _tbd at T-119/T-120_                                         |
+| 2   | Marker aggressiveness   | word-initial content nouns/verbs only                                | **locked: word-initial content only** (round 1 #2 passed)    |
+| 3   | Foley boldness          | mixes 0.16 / 0.14 (vs 0.04 soft transient)                           | **0.10 / 0.09 + fused attack ramps** (pending round-2 ear)   |
+| 4   | Syllable count & pacing | uniform 2 syllables, cap 3; compound scale 0.62                      | **locked: uniform 2, cap 3, scale 0.62** (round 1 #3 passed) |
+| 5   | Aspect marking          | out of scope (`VOICE_V13`)                                           | —                                                            |
+| 6   | Ambiguity policy        | dominant-class (A/B'd; conservative leg = silent on coding text)     | **locked: conservative / fall-back-to-`Other`** (round 1 #4) |
 
-**Go/no-go:** _tbd by ear._
+**Go/no-go:** **go** (round 1: classes tellable, pace holds, marked renders easier to
+parse), pending the round-2 fusion/severity confirmation before T-119 freezes the FRs.

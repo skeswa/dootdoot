@@ -122,22 +122,26 @@ pub fn class_resolution_knobs(stem: KnobSet, pos_class: PosClass) -> KnobSet {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AmbiguityPolicy {
     /// Mark an ambiguous lemma with its dominant class — consistent, sometimes
-    /// grammatically wrong.
-    DominantClass,
-    /// Leave ambiguous lemmas unmarked (`Other`) — conservative, but unmarks
-    /// much of the highest-frequency coding vocabulary.
+    /// grammatically wrong. The T-118 round-1 A/B preferred the conservative
+    /// policy; this variant stays as the flip-back lever (and for tests).
     #[allow(
         dead_code,
         reason = "the T-118 A/B lever: constructed only when \
                   SPIKE_AMBIGUITY_POLICY is flipped locally (and in tests)"
     )]
+    DominantClass,
+    /// Leave ambiguous lemmas unmarked (`Other`) — conservative, but unmarks
+    /// much of the highest-frequency coding vocabulary.
     FallBackToOther,
 }
 
-/// Gives the active spike ambiguity policy — the local A/B lever for T-118.
+/// Gives the active spike ambiguity policy.
 ///
-/// Flip to `FallBackToOther` and re-render to hear the conservative leg.
-const SPIKE_AMBIGUITY_POLICY: AmbiguityPolicy = AmbiguityPolicy::DominantClass;
+/// The T-118 round-1 by-ear A/B preferred the conservative leg: ambiguous
+/// lemmas stay unmarked (`Other`) even though that leaves much of the
+/// highest-frequency coding vocabulary (`build`, `fix`, `run`, `update`,
+/// `sync`) as plain blips. Flip to `DominantClass` to re-hear the other leg.
+const SPIKE_AMBIGUITY_POLICY: AmbiguityPolicy = AmbiguityPolicy::FallBackToOther;
 
 /// Gives the spike's unambiguous coding-domain nouns, sorted for binary
 /// search.
