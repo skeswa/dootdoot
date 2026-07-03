@@ -59,6 +59,7 @@ struct EngineSyllable {
     timing: SyllableTiming,
     pos_class: PosClass,
     duration_scale: f64,
+    is_resolution: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -108,6 +109,10 @@ pub struct ExplainTokenRow {
     archetype: GestureArchetype,
     curves: PerformanceCurves,
     timing: SyllableTiming,
+    pos_class: PosClass,
+    onset_class: PosClass,
+    resolution_class: PosClass,
+    syllable_count: usize,
 }
 
 /// Gives one prosodic punctuation row in the `--explain` table.
@@ -407,8 +412,10 @@ fn voiced_analysis(
 /// Emits the sequencer events and the `--explain` row for one voiced token's
 /// expanded syllable range.
 ///
-/// The explain row reports the stem; resolution syllables are rendered but not
-/// separately rowed until T-126 extends `--explain` with the silhouette.
+/// The explain row reports the stem's sound profile plus the `VOICE_V12`
+/// class metadata (FR-120): the word class, whether this token fires an onset
+/// marker, whether its range ends in a class resolution, and how many
+/// syllables it renders as.
 fn push_voiced_token(
     events: &mut Vec<SequenceEvent>,
     explain_rows: &mut Vec<ExplainRow>,
@@ -440,15 +447,30 @@ fn push_voiced_token(
         ));
 
         if syllable_index == start {
-            explain_rows.push(ExplainRow::token(
-                token.text.clone(),
-                syllable.knobs,
-                syllable.continuation,
+            let onset_class = if !syllable.continuation && syllable.pos_class.is_content() {
+                syllable.pos_class
+            } else {
+                PosClass::Other
+            };
+            let resolution_class = if syllables[end - 1].is_resolution {
+                syllable.pos_class
+            } else {
+                PosClass::Other
+            };
+
+            explain_rows.push(ExplainRow::Token(ExplainTokenRow {
+                token: token.text.clone(),
+                knobs: syllable.knobs,
+                continuation: syllable.continuation,
                 role,
-                archetype.archetype(),
+                archetype: archetype.archetype(),
                 curves,
-                deployed[syllable_index],
-            ));
+                timing: deployed[syllable_index],
+                pos_class: syllable.pos_class,
+                onset_class,
+                resolution_class,
+                syllable_count: end - start,
+            }));
         }
     }
 }
@@ -496,6 +518,7 @@ fn expand_engine_syllables(
                     timing: SyllableTiming::default(),
                     pos_class: token.pos_class,
                     duration_scale: COMPOUND_SYLLABLE_DURATION_SCALE,
+                    is_resolution: false,
                 });
                 syllables.push(EngineSyllable {
                     knobs: class_resolution_knobs(knobs, token.pos_class),
@@ -503,6 +526,7 @@ fn expand_engine_syllables(
                     timing: token.timing,
                     pos_class: token.pos_class,
                     duration_scale: COMPOUND_SYLLABLE_DURATION_SCALE,
+                    is_resolution: true,
                 });
             } else {
                 // Member of a multi-token content word: one-to-one, with the
@@ -519,6 +543,7 @@ fn expand_engine_syllables(
                     timing: token.timing,
                     pos_class: token.pos_class,
                     duration_scale: COMPOUND_SYLLABLE_DURATION_SCALE,
+                    is_resolution: word_final,
                 });
             }
         } else {
@@ -528,6 +553,7 @@ fn expand_engine_syllables(
                 timing: token.timing,
                 pos_class: token.pos_class,
                 duration_scale: 1.0,
+                is_resolution: false,
             });
         }
 
@@ -592,26 +618,6 @@ impl ExplainRow {
 
     fn complexity(complexity: ComplexityAnalysis) -> Self {
         Self::Complexity(ExplainComplexityRow { complexity })
-    }
-
-    fn token(
-        token: String,
-        knobs: KnobSet,
-        continuation: bool,
-        role: PhraseRole,
-        archetype: GestureArchetype,
-        curves: PerformanceCurves,
-        timing: SyllableTiming,
-    ) -> Self {
-        Self::Token(ExplainTokenRow {
-            token,
-            knobs,
-            continuation,
-            role,
-            archetype,
-            curves,
-            timing,
-        })
     }
 
     fn punctuation(token: String, punctuation: ProsodicPunctuation) -> Self {
@@ -789,6 +795,29 @@ impl ExplainTokenRow {
     /// Returns the deployed timing directive for this voiced row.
     pub fn timing(&self) -> SyllableTiming {
         self.timing
+    }
+
+    /// Returns the word-level POS class this token carries (`VOICE_V12`).
+    pub fn pos_class(&self) -> PosClass {
+        self.pos_class
+    }
+
+    /// Returns the class whose co-onset marker this token fires
+    /// (`VOICE_V12`); [`PosClass::Other`] means no marker.
+    pub fn onset_class(&self) -> PosClass {
+        self.onset_class
+    }
+
+    /// Returns the class resolution this token's rendering ends in
+    /// (`VOICE_V12`); [`PosClass::Other`] means no resolution shaping.
+    pub fn resolution_class(&self) -> PosClass {
+        self.resolution_class
+    }
+
+    /// Returns how many syllables this token renders as after `VOICE_V12`
+    /// compound expansion.
+    pub fn syllable_count(&self) -> usize {
+        self.syllable_count
     }
 }
 

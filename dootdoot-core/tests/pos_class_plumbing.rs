@@ -69,6 +69,28 @@ fn gate_off_classifies_every_word_other() {
     );
 }
 
+#[cfg(not(feature = "spike-noun-verb"))]
+#[test]
+fn gate_off_explain_rows_carry_neutral_class_metadata() {
+    let rows = dootdoot_core::explain_rows_for_text("verify the bug").expect("text explains");
+    let token_rows = rows
+        .iter()
+        .filter_map(|row| match row {
+            dootdoot_core::ExplainRow::Token(token) => Some(token),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    assert!(!token_rows.is_empty());
+
+    for token in token_rows {
+        assert_eq!(token.pos_class(), PosClass::Other);
+        assert_eq!(token.onset_class(), PosClass::Other);
+        assert_eq!(token.resolution_class(), PosClass::Other);
+        assert_eq!(token.syllable_count(), 1);
+    }
+}
+
 #[cfg(feature = "spike-noun-verb")]
 mod gate_on {
     use super::*;
@@ -89,6 +111,45 @@ mod gate_on {
                 ("add".to_owned(), PosClass::Verb),
                 ("the".to_owned(), PosClass::Other),
                 ("bug".to_owned(), PosClass::Noun),
+            ]
+        );
+    }
+
+    #[test]
+    fn gate_on_explain_rows_carry_class_marker_and_silhouette() {
+        let rows =
+            dootdoot_core::explain_rows_for_text("verify the changelog").expect("text explains");
+        let token_rows = rows
+            .iter()
+            .filter_map(|row| match row {
+                dootdoot_core::ExplainRow::Token(token) => Some(token),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let summary = token_rows
+            .iter()
+            .map(|token| {
+                (
+                    token.token(),
+                    token.pos_class(),
+                    token.onset_class(),
+                    token.resolution_class(),
+                    token.syllable_count(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            summary,
+            [
+                // `verify`: single-token verb — marked onset, expands to a
+                // stem→push pair.
+                ("verify", PosClass::Verb, PosClass::Verb, PosClass::Verb, 2),
+                ("the", PosClass::Other, PosClass::Other, PosClass::Other, 1),
+                // `changelog` splits: the word-initial subword fires the
+                // marker, the final subword is the settle resolution.
+                ("change", PosClass::Noun, PosClass::Noun, PosClass::Other, 1),
+                ("##log", PosClass::Noun, PosClass::Other, PosClass::Noun, 1),
             ]
         );
     }

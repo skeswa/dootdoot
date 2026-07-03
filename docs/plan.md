@@ -900,7 +900,7 @@ plan_discourse_performance` and the class field on
       pace survives; function words stay single light blips. Update duration estimation
       and add a directional pacing check.
       Deps: T-124 · Reqs: FR-117, FR-119, FR-36, FR-37, NFR-16 · Est: 3h
-- [ ] **T-126 — Extend `--explain` with class, marker, and silhouette.** Show each
+- [x] **T-126 — Extend `--explain` with class, marker, and silhouette.** Show each
       token's POS class, onset marker, and syllable silhouette (training aid, research
       P9); `insta` snapshots for a mixed noun/verb/function sentence and a multi-subword
       content word.

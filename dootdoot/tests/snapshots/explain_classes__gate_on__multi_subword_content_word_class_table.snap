@@ -1,0 +1,19 @@
+---
+source: dootdoot/tests/explain_classes.rs
+assertion_line: 31
+expression: "explain_table_for_text(\"changelog\").expect(\"text explains\")"
+---
+mood        valence:+0.000  arousal:+0.218
+complexity  scalar:+0.376  subtokens:1  chars:9
+
+token  │  pitch │  vowel │ contour │ warble │ role              │ archetype
+change │ -0.549 │ -0.088 │  -0.233 │ -0.113 │ chatty-reply      │ chatter
+##log  │ -0.923 │ +0.647 │  +0.039 │ -0.274 │ chatty-reply      │ stutter-burst
+
+curves │ p.bias │  p.vel │  f.tgt │  f.vel │ bright │  mouth │   tens │ gap
+change │ +0.000 │ +0.458 │ +0.000 │ +0.272 │  0.608 │  0.443 │  0.908 │ -
+##log  │ +0.088 │ +0.194 │ +0.000 │ +0.263 │  0.294 │  0.438 │  0.494 │ -
+
+class  │ pos  │ marker │ silhouette
+change │ noun │ click  │ stem…
+##log  │ noun │ -      │ →settle
