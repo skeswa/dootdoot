@@ -313,6 +313,62 @@ frequency-tagged POS wordlist, WordNet lexnames, or a one-time tagged-corpus pas
 stays reproducible. If this lands as a sidecar table rather than a `.doot` record bump,
 the sidecar is still a committed runtime asset and part of the voice contract.
 
+### 5.1 Empirical check — coverage on a coding-domain corpus (2026-07-03)
+
+The primary intended use is **narrating coding work** (commit messages, build/test
+status, agent output), so the table-sizing intuitions from the conversational
+literature (≈2,000 word families ≈ 95% coverage; verb usage extremely top-heavy —
+Adolphs & Schmitt 2003; Biber et al. 1999) were checked empirically against that
+register: ~552k alphabetic tokens of real commit-message text (subjects + bodies across
+all local repos, trailers/URLs stripped), POS-tagged with spaCy `en_core_web_sm`
+(tagger + lemmatizer), with candidate tables modeled as the top-N words of the
+`wordfreq` general-English ranking. Three findings **overturn the general-English
+assumptions**, one confirms the risk already flagged above:
+
+1. **Coding text is noun-heavy, not verb-heavy.** 40.7% `NOUN`, 13.8% lexical `VERB`,
+   10.1% `PROPN` — the opposite of conversation (~12–15% nouns). Commit messages talk
+   about _things_ (APIs, workflows, deployments). Noun coverage matters at least as
+   much as verb coverage; do not weight the lexicon toward verbs for this register.
+2. **A general-English frequency table transfers badly.** Coverage of the corpus's
+   noun/verb _tokens_ by a top-N general-English word table, versus an oracle table
+   built from the coding corpus's own top lemmas:
+
+   | Table                             | Noun cov | Verb cov | Combined |
+   | --------------------------------- | -------- | -------- | -------- |
+   | top-2,000 general English         | 40%      | 54%      | **~44%** |
+   | top-5,000 general English         | 61%      | 73%      | 64%      |
+   | top-1,000-each from coding corpus | 89%      | 97%      | —        |
+   | top-2,000-each from coding corpus | **95%**  | **99%**  | —        |
+
+   The misses are the daily vocabulary: _deployment, sync, api, workflow, bump, doc,
+   error, path, log_ (nouns); _update, remove, verify, skip, generate, fail, deploy,
+   merge, render_ (verbs). A 50+50 spike lexicon picked by **general** frequency covers
+   only ~5% of coding noun tokens / ~15% of verb tokens; picked from **coding-domain**
+   frequency it covers ~35% / ~49%. Consequences: the Phase 0 spike lexicon and the
+   baked table's entry ranking must be **domain-weighted** (e.g. a pinned snapshot of a
+   commit-message/dev-text corpus), with the ranking source hash-pinned in
+   `source_manifest.toml` so regeneration stays reproducible. Domain top-2,000-each
+   reaches the ~95% coverage the conversational literature promised from a general list.
+
+3. **Noun/verb ambiguity is the dominant cost, not coverage.** 17.4% of open-class
+   tokens would be mis-marked under single-dominant-POS, and the ambiguous lemmas are
+   the _core_ of the register — English zero-derivation ("the build" / "to build")
+   concentrates exactly in dev vocabulary: _sync_ (46% minority-class use), _build_
+   (48%), _fix_ (43%), _update_ (43%), _run_ (41%), _delete_, _deploy_, _share_, _log_,
+   _filter_, _gate_, _check_. The conservative fall-back-to-`Other` policy above would
+   therefore **unmark much of the highest-frequency coding vocabulary**, so the marking
+   rate actually heard would sit far below the raw coverage numbers. This turns the
+   ambiguity policy from a footnote into a first-order design decision: "always marked
+   as its dominant class" (consistent, sometimes grammatically wrong) may beat "usually
+   unmarked" for learnability, and the Phase 0 evaluation should A/B exactly that by
+   ear (see §9.6).
+
+Caveats: single-user corpus; spaCy `sm` mis-tags sentence-initial imperatives ("**Fix**
+release workflow" → `NOUN`), which inflates both the noun share and the ambiguity
+figures somewhat (commit subjects are imperative-heavy) — a better tagger or an
+imperative-aware heuristic would soften but not eliminate finding 3; occasional
+lemmatizer artifacts (_datum_ for _data_) don't move the aggregates.
+
 ---
 
 ## 6. Where it plugs into the code
@@ -451,7 +507,11 @@ tag bolted onto an unchanged blip.
 
 1. **POS source & storage** — sidecar embedded table (smaller blast radius, leaves the
    semantic `.doot` contract untouched) vs `.doot` spec-version bump (single canonical
-   asset). Recommendation: sidecar for V12, fold into `.doot` later if desired.
+   asset). Recommendation: sidecar for V12, fold into `.doot` later if desired. Per the
+   §5.1 empirical check, whatever source is chosen, the table's **entry ranking must be
+   coding-domain-weighted** (general-English top-2,000 covers only ~44% of coding
+   noun/verb tokens vs ~95% for a domain-built table), with the ranking corpus snapshot
+   pinned in `source_manifest.toml`.
 2. **Marker aggressiveness** — content nouns/verbs only (recommended), or also mark a
    third class? Marking everything defeats the purpose.
 3. **How far to lean into foley** — subtle servo-tick/chirp vs. bolder pop/whistle. Bolder
@@ -464,3 +524,11 @@ tag bolted onto an unchanged blip.
 5. **Aspect marking (Phase 3)** — verb reduplication + noun size iconicity as a V13
    refinement, or fold into V12? Recommendation: ship the V12 unit first, judge by ear
    before committing to V13.
+6. **Ambiguity policy under coding-domain data** — the §5 conservative rule (ambiguous
+   lemmas → `Other`) versus always marking the dominant class. The §5.1 empirical check
+   shows the conservative rule would unmark much of the highest-frequency coding
+   vocabulary (_build, fix, run, update, sync, deploy, log, check_ are all >25%
+   minority-class use), so this is a first-order learnability tradeoff: consistently
+   marked-but-sometimes-grammatically-wrong vs consistently unmarked. Recommendation:
+   A/B both by ear during the Phase 0 evaluation before locking the policy into the
+   contract.
