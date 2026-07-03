@@ -3,7 +3,7 @@
 use thiserror::Error;
 use tokenizers::Tokenizer as HfTokenizer;
 
-use crate::{DootAsset, embedded_doot_asset};
+use crate::{DootAsset, PosClass, embedded_doot_asset, pos_class::word_pos_class};
 
 const CONTINUATION_PREFIX: &str = "##";
 const CONTROL_TOKENS: [&str; 4] = ["[PAD]", "[CLS]", "[SEP]", "[MASK]"];
@@ -30,6 +30,7 @@ pub struct TokenizedToken {
     id: u32,
     text: String,
     continuation: bool,
+    pos_class: PosClass,
 }
 
 /// Reports why the embedded tokenizer could not be loaded or run.
@@ -93,7 +94,7 @@ impl Tokenizer {
                 "failed to tokenize input with VOICE_V1 tokenizer: {error}"
             ))
         })?;
-        let tokens = encoding
+        let mut tokens = encoding
             .get_ids()
             .iter()
             .zip(encoding.get_tokens())
@@ -102,8 +103,12 @@ impl Tokenizer {
                 id: *id,
                 text: token.clone(),
                 continuation: token.starts_with(CONTINUATION_PREFIX),
+                pos_class: PosClass::Other,
             })
             .collect::<Vec<_>>();
+
+        assign_word_pos_classes(&mut tokens);
+
         let empty_chirp = tokens.is_empty();
 
         Ok(TokenizedInput {
@@ -151,6 +156,15 @@ impl TokenizedToken {
     pub fn is_continuation(&self) -> bool {
         self.continuation
     }
+
+    /// Returns the word-level POS class this token carries (`VOICE_V12`).
+    ///
+    /// The word-initial token establishes the class for its whole word and
+    /// continuation tokens inherit it. Without the `spike-noun-verb` gate this
+    /// is always [`PosClass::Other`].
+    pub fn pos_class(&self) -> PosClass {
+        self.pos_class
+    }
 }
 
 impl TokenizerError {
@@ -168,6 +182,45 @@ impl TokenizerError {
 /// Returns an error if the embedded tokenizer cannot be loaded or validated.
 pub fn embedded_tokenizer() -> Result<Tokenizer, TokenizerError> {
     Tokenizer::embedded()
+}
+
+/// Stamps each token with its word-level POS class.
+///
+/// A word spans one word-initial token plus its following continuation tokens;
+/// the whole word's text (continuation prefixes stripped) is classified once
+/// and every token in the span carries the result, so the word-initial token
+/// establishes the class and continuations inherit it.
+fn assign_word_pos_classes(tokens: &mut [TokenizedToken]) {
+    let mut index = 0;
+
+    while index < tokens.len() {
+        if tokens[index].continuation {
+            // A leading continuation has no word-initial token to inherit
+            // from; it stays `Other`.
+            index += 1;
+            continue;
+        }
+
+        let start = index;
+        let mut word = tokens[index].text.clone();
+
+        index += 1;
+        while index < tokens.len() && tokens[index].continuation {
+            word.push_str(
+                tokens[index]
+                    .text
+                    .strip_prefix(CONTINUATION_PREFIX)
+                    .unwrap_or(&tokens[index].text),
+            );
+            index += 1;
+        }
+
+        let pos_class = word_pos_class(&word);
+
+        for token in &mut tokens[start..index] {
+            token.pos_class = pos_class;
+        }
+    }
 }
 
 fn token_id(tokenizer: &HfTokenizer, token: &str) -> Result<u32, TokenizerError> {

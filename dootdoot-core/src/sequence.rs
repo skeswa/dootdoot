@@ -5,7 +5,7 @@ use core::f64::consts::LN_2;
 use crate::{
     ArchetypeSelection, CLAUSE_SYLLABLE_SAMPLES, ComplexityAnalysis, KnobSet,
     LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES, MEDIUM_PUNCTUATION_PAUSE_SAMPLES,
-    PerformanceCurves, PhraseBoundaryStrength, PhraseRole, PhraseSyllablePlan,
+    PerformanceCurves, PhraseBoundaryStrength, PhraseRole, PhraseSyllablePlan, PosClass,
     SENTENCE_SYLLABLE_SAMPLES, TRAILING_SILENCE_SAMPLES, UtteranceMood, exp, pitch_center_hz,
     plan_phrase_prosody, sin,
     synth::{
@@ -237,6 +237,7 @@ pub struct SyllableEvent {
     timing: SyllableTiming,
     role: PhraseRole,
     curves: PerformanceCurves,
+    pos_class: PosClass,
 }
 
 /// Gives one prosodic punctuation marker.
@@ -330,6 +331,7 @@ impl SyllableEvent {
             timing: SyllableTiming::default(),
             role: PhraseRole::default(),
             curves: PerformanceCurves::neutral(),
+            pos_class: PosClass::default(),
         }
     }
 
@@ -348,6 +350,20 @@ impl SyllableEvent {
         self.curves = curves;
 
         self
+    }
+
+    /// Returns a copy of this syllable carrying a word-level POS class
+    /// (`VOICE_V12`).
+    #[must_use]
+    pub fn with_pos_class(mut self, pos_class: PosClass) -> Self {
+        self.pos_class = pos_class;
+
+        self
+    }
+
+    /// Returns the word-level POS class this syllable carries (`VOICE_V12`).
+    pub fn pos_class(&self) -> PosClass {
+        self.pos_class
     }
 
     /// Returns the discourse role assigned to this syllable.

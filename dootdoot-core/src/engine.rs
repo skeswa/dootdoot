@@ -4,8 +4,8 @@ use thiserror::Error;
 
 use crate::{
     ComplexityAnalysis, GestureArchetype, HesitationMarker, KnobSet, MappingError,
-    PerformanceCurves, PerformanceSyllable, PhraseRole, ProsodicPunctuation, SequenceEvent,
-    SyllableEvent, SyllableTiming, TokenVector, TokenizerError, UtteranceMood,
+    PerformanceCurves, PerformanceSyllable, PhraseRole, PosClass, ProsodicPunctuation,
+    SequenceEvent, SyllableEvent, SyllableTiming, TokenVector, TokenizerError, UtteranceMood,
     analyze_affect_for_text, analyze_complexity_for_text, archetype_for_role, assemble_knobs,
     embedded_mapping, embedded_tokenizer, plan_discourse_performance, plan_gesture_archetypes,
     pool_sequence, render_canonical_buffer, role_long_pause_samples, staged_reply_rest_samples,
@@ -43,6 +43,7 @@ struct VoicedToken {
     vector: TokenVector,
     continuation: bool,
     timing: SyllableTiming,
+    pos_class: PosClass,
 }
 
 #[derive(Debug, Clone)]
@@ -242,6 +243,7 @@ fn parse_tokens(
                 vector: token_vector,
                 continuation: token.is_continuation(),
                 timing: SyllableTiming::default(),
+                pos_class: token.pos_class(),
             });
             index += 1;
         }
@@ -378,7 +380,8 @@ fn voiced_analysis(
                 events.push(SequenceEvent::Syllable(
                     SyllableEvent::new(knobs, token.continuation)
                         .with_timing(deployed[*index])
-                        .with_performance(role, curves),
+                        .with_performance(role, curves)
+                        .with_pos_class(token.pos_class),
                 ));
                 explain_rows.push(ExplainRow::token(
                     token.text.clone(),
@@ -418,10 +421,13 @@ fn base_events_for_plan(
                 ));
             }
             EventTemplate::Voiced(index) => {
-                base_events.push(SequenceEvent::syllable_with_timing(
-                    knobs_per_voiced[*index],
-                    parsed.voiced_tokens[*index].continuation,
-                    parsed.voiced_tokens[*index].timing,
+                base_events.push(SequenceEvent::Syllable(
+                    SyllableEvent::new(
+                        knobs_per_voiced[*index],
+                        parsed.voiced_tokens[*index].continuation,
+                    )
+                    .with_timing(parsed.voiced_tokens[*index].timing)
+                    .with_pos_class(parsed.voiced_tokens[*index].pos_class),
                 ));
             }
             EventTemplate::Hesitation(_) => {}

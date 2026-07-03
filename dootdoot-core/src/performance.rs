@@ -8,7 +8,7 @@
 //! `VOICE_V7` primitives by role rather than applying one global affect to
 //! every syllable.
 
-use crate::{KnobSet, ProsodicPunctuation, SequenceEvent, SyllableEvent};
+use crate::{KnobSet, PosClass, ProsodicPunctuation, SequenceEvent, SyllableEvent};
 
 /// Gives the `VOICE_V8` per-syllable movement normalizer (axis-space distance).
 ///
@@ -80,6 +80,7 @@ pub struct PerformanceSyllable {
     syllable_index: usize,
     role: PhraseRole,
     curves: PerformanceCurves,
+    pos_class: PosClass,
 }
 
 /// Gives the deterministic discourse-performance plan for an utterance.
@@ -184,6 +185,11 @@ impl PerformanceSyllable {
     pub fn curves(&self) -> PerformanceCurves {
         self.curves
     }
+
+    /// Returns the word-level POS class for this syllable (`VOICE_V12`).
+    pub fn pos_class(&self) -> PosClass {
+        self.pos_class
+    }
 }
 
 impl PerformancePlan {
@@ -201,6 +207,7 @@ impl PerformancePlan {
 /// Plans deterministic discourse performance from sequencer events.
 pub fn plan_discourse_performance(events: &[SequenceEvent]) -> PerformancePlan {
     let voiced_knobs = collect_voiced_knobs(events);
+    let voiced_classes = collect_voiced_classes(events);
     let segments = segment_events(events);
     let segment_count = segments.len();
     let mut syllables = Vec::new();
@@ -252,6 +259,10 @@ pub fn plan_discourse_performance(events: &[SequenceEvent]) -> PerformancePlan {
                 syllable_index,
                 role: effective_role,
                 curves,
+                pos_class: voiced_classes
+                    .get(syllable_index)
+                    .copied()
+                    .unwrap_or_default(),
             });
         }
     }
@@ -264,6 +275,19 @@ fn collect_voiced_knobs(events: &[SequenceEvent]) -> Vec<KnobSet> {
         .iter()
         .filter_map(|event| match event {
             SequenceEvent::Syllable(syllable) => Some(syllable.knobs()),
+            SequenceEvent::Mood(_)
+            | SequenceEvent::Complexity(_)
+            | SequenceEvent::Archetype(_)
+            | SequenceEvent::Punctuation(_) => None,
+        })
+        .collect()
+}
+
+fn collect_voiced_classes(events: &[SequenceEvent]) -> Vec<PosClass> {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            SequenceEvent::Syllable(syllable) => Some(syllable.pos_class()),
             SequenceEvent::Mood(_)
             | SequenceEvent::Complexity(_)
             | SequenceEvent::Archetype(_)

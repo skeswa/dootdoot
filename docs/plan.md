@@ -800,7 +800,7 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
 > locked. The `VOICE_V13` follow-ons (verb reduplication/aspect, noun size iconicity,
 > learnability regression) are out of scope for this phase.
 
-- [ ] **T-115 — Spike POS lexicon + word-class plumbing.** Behind a local, default-off,
+- [x] **T-115 — Spike POS lexicon + word-class plumbing.** Behind a local, default-off,
       compile-time spike gate (not a user-facing alternate voice), hard-code a
       ~50–100-word noun/verb lexicon (research §5 Option B) drawn from
       **coding-domain frequency** (top commit-message/dev-text lemmas — research §5.1: a
@@ -888,7 +888,7 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
       resolution syllable after the stem for single-token nouns/verbs; keep the
       semantic baseline pooled over the original tokenizer tokens (FR-118). Update event
       counts, planner index mapping (`performance.rs:202
-  plan_discourse_performance` and the class field on
+plan_discourse_performance` and the class field on
       `Segment`/`PerformanceSyllable`), and exact output-length estimation plus the
       input-limit tests.
       Deps: T-121, T-123 · Reqs: FR-117, FR-118, FR-36, FR-37, NFR-16 · Est: 4h

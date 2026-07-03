@@ -9,6 +9,7 @@ mod mapping;
 mod mathx;
 mod performance;
 mod phrase;
+mod pos_class;
 mod sequence;
 mod synth;
 mod tokenizer;
@@ -47,6 +48,7 @@ pub use performance::{
     PerformanceCurves, PerformancePlan, PerformanceSyllable, PhraseRole, plan_discourse_performance,
 };
 pub use phrase::{PhraseBoundaryStrength, PhrasePlan, PhraseSyllablePlan, plan_phrase_prosody};
+pub use pos_class::PosClass;
 pub use sequence::{
     DASH_HESITATION_PAUSE_SAMPLES, ELLIPSIS_HESITATION_PAUSE_SAMPLES, EMPTY_CHIRP_CONTOUR,
     EMPTY_CHIRP_PITCH_CENTER, EMPTY_CHIRP_START_PITCH_CENTER, EMPTY_CHIRP_VOWEL_POSITION,
