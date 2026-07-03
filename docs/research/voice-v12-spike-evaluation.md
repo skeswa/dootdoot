@@ -48,7 +48,12 @@ rising chirp (+9.2 st).
 
 ## How to reproduce the renders
 
-The spike is behind the default-off `spike-noun-verb` cargo feature (a local
+> **Historical note:** the commands below date from the spike, when the class
+> behavior sat behind the `spike-noun-verb` cargo feature. The T-127 freeze removed
+> the gate — `VOICE_V12` is now the active voice, so a plain `cargo run -p dootdoot`
+> renders marked audio and the `--features` flags no longer exist.
+
+The spike was behind the default-off `spike-noun-verb` cargo feature (a local
 compile-time gate, not a user-facing voice). Evaluation WAVs land in
 `target/spike-v12/`:
 

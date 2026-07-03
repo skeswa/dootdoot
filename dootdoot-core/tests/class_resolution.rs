@@ -153,8 +153,7 @@ fn estimation_matches_rendering_for_compound_events() {
     );
 }
 
-#[cfg(feature = "spike-noun-verb")]
-mod gate_on {
+mod text_path {
     use dootdoot_core::{PosClass, SequenceEvent, sequence_events_for_text};
 
     fn syllables(text: &str) -> Vec<dootdoot_core::SyllableEvent> {

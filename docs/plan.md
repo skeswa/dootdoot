@@ -905,7 +905,7 @@ plan_discourse_performance` and the class field on
       P9); `insta` snapshots for a mixed noun/verb/function sentence and a multi-subword
       content word.
       Deps: T-124 · Reqs: FR-120, FR-31, FR-32, NFR-20 · Est: 2h
-- [ ] **T-127 — Freeze VOICE_V12 + acceptance doc.** Final by-ear tuning of the marker
+- [x] **T-127 — Freeze VOICE_V12 + acceptance doc.** Final by-ear tuning of the marker
       gain and resolution shapes; bump `ACTIVE_VOICE` (`asset.rs:50`) and surface the
       version string; regenerate the golden WAV fixtures; write
       `docs/validation/voice-v12-noun-verb.md` (asserted by

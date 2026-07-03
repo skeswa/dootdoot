@@ -1267,6 +1267,54 @@ alter the pitch, formant, or warble constants; SHALL NOT change punctuation paus
 SHALL NOT introduce unseeded randomness. (The discourse-role _assignment_ does change, but only
 to localize the dash hesitation — §8.12 above — not the semantic four-axis core.)
 
+### 8.13 Decision: `VOICE_V12` gives nouns and verbs a learnable class signature
+
+`VOICE_V12` is the first **grammatical** channel in the voice, built from the
+[noun/verb-recognizability research](research/noun-verb-recognizability.md): recurring
+content words were hard to recognize because their identity rode on absolute pitch in a
+continuous, arbitrary mapping (the earcon failure mode). The fix moves class identity
+onto the dimensions listeners actually identify — timbre, attack, and contour shape —
+as a systematic signature shared by every word of a class:
+
+- **Layered co-onset class markers** generalize the `VOICE_V11` word transient into
+  class-conditioned variants mixed at the same onset point: noun = broadband click/pop
+  splash (impact = a thing), verb = up-swept dual-sine chirp (motion = an action). Both
+  start together with the tonal body (common-onset binding, zero added duration) and
+  rise with a short attack ramp so they bloom with the body's 15 ms attack — the
+  round-1 by-ear session heard instant-attack markers as a separate pre-beat, and the
+  fused ramps were confirmed in round 2. Markers fire only on scarce word-initial
+  content tokens, well above the softened neutral transient in level but layered over
+  it, never replacing it.
+- **The compound `stem → class-resolution` silhouette** supersedes one-token-one-
+  syllable for marked content words (§6.4): the resolution derives from the stem's own
+  knobs via a frozen per-class transform — noun **settles** (vowel toward `oo`, pitch
+  steps down, contour flattens, warble calms), verb **pushes** (brighter toward `ee`,
+  rising floor). Single-token words gain one derived syllable; multi-token words shape
+  their **last** subword (target `max(subword_count, 2)`, cap 3 — derived syllables are
+  only added, never removed). Every content-word syllable takes the 0.62 compound
+  duration scale, so content words read rhythmically heavy while the `VOICE_V11` pace
+  survives; the semantic baseline still pools over the original tokenizer tokens only.
+- **Classes come from a baked, pinned pipeline** (§9.1 posture, extended): a public
+  CommitChronicle corpus shard and the spaCy tagger are pinned in
+  `source_manifest.toml`; only derived per-word statistics are committed; `xtask`
+  applies the unit-tested policy — dominant class per lemma, closed-class override,
+  and the **conservative ambiguity fallback** the by-ear A/B locked (ambiguous coding
+  lemmas like `build`/`fix`/`run`/`update` stay unmarked) — and bakes a sidecar
+  `dootdoot_pos_v1.doot` asset the runtime embeds as a pure lookup. No tagger and no
+  tensor runtime ship.
+
+The `FR-114…FR-121` requirements (spec §1.21) are the normative form of this scope; the
+frozen contract is documented by the acceptance note
+[`voice-v12-noun-verb.md`](validation/voice-v12-noun-verb.md), with regenerated golden
+WAV fixtures as the byte-level contract. Unclassified words, hand-built events, and the
+empty chirp render exactly as `VOICE_V11` — only text-path fixtures containing baked
+content words moved.
+
+**Non-goals restated for `VOICE_V12`.** It SHALL NOT change the semantic PCA mapping,
+SHALL NOT introduce a runtime tagger or tensor framework, and SHALL NOT add unseeded
+randomness. Verb reduplication/aspect, noun size iconicity, and the learnability
+regression are `VOICE_V13` follow-ons.
+
 ---
 
 ## 9. Architecture
@@ -1416,4 +1464,8 @@ These do not change the architecture and are settled during implementation:
   it blooms rather than clicks) and lets per-syllable pace breathe across a phrase (a
   positional lilt plus agogic and phrase-final lengthening), so a plain unpunctuated phrase
   reads as spoken rather than struck — once more a bounded, deterministic function of the
-  learnable core.
+  learnable core. `VOICE_V12` (§8.13) adds the first grammatical channel: baked noun/verb
+  classes drive a layered co-onset marker (click/pop vs up-swept chirp) and a compound
+  `stem → class-resolution` silhouette (settle vs push), so the words that carry meaning pop
+  out with a learnable class signature — still deterministic, still tensor-free, with the
+  semantic baseline pooled over the original tokens.

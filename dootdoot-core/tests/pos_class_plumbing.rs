@@ -1,9 +1,8 @@
-//! Black-box tests for the `VOICE_V12` spike word-class plumbing (T-115).
+//! Black-box tests for the `VOICE_V12` word-class plumbing (T-115/FR-115).
 //!
-//! The POS class is a word-level property: word-initial tokens establish it and
-//! continuation tokens inherit it. With the default-off `spike-noun-verb` gate
-//! disabled, every word classifies `PosClass::Other`, so no downstream path can
-//! change and all rendered audio stays byte-identical.
+//! The POS class is a word-level property: word-initial tokens establish it
+//! from the baked class table and continuation tokens inherit it; hand-built
+//! events default to `PosClass::Other` and render exactly as `VOICE_V11`.
 
 use dootdoot_core::{
     KnobSet, PerformanceSyllable, PosClass, SequenceEvent, SquashedVector, SyllableEvent,
@@ -52,47 +51,7 @@ fn planner_rows_carry_the_syllable_class() {
     assert_eq!(classes, [PosClass::Other, PosClass::Verb, PosClass::Noun]);
 }
 
-#[cfg(not(feature = "spike-noun-verb"))]
-#[test]
-fn gate_off_classifies_every_word_other() {
-    let tokenizer = embedded_tokenizer().expect("the embedded tokenizer loads");
-    let encoded = tokenizer
-        .tokenize("fix the bug in deployment")
-        .expect("plain text tokenizes");
-
-    assert!(!encoded.tokens().is_empty());
-    assert!(
-        encoded
-            .tokens()
-            .iter()
-            .all(|token| token.pos_class() == PosClass::Other)
-    );
-}
-
-#[cfg(not(feature = "spike-noun-verb"))]
-#[test]
-fn gate_off_explain_rows_carry_neutral_class_metadata() {
-    let rows = dootdoot_core::explain_rows_for_text("verify the bug").expect("text explains");
-    let token_rows = rows
-        .iter()
-        .filter_map(|row| match row {
-            dootdoot_core::ExplainRow::Token(token) => Some(token),
-            _ => None,
-        })
-        .collect::<Vec<_>>();
-
-    assert!(!token_rows.is_empty());
-
-    for token in token_rows {
-        assert_eq!(token.pos_class(), PosClass::Other);
-        assert_eq!(token.onset_class(), PosClass::Other);
-        assert_eq!(token.resolution_class(), PosClass::Other);
-        assert_eq!(token.syllable_count(), 1);
-    }
-}
-
-#[cfg(feature = "spike-noun-verb")]
-mod gate_on {
+mod classified {
     use super::*;
 
     #[test]
@@ -116,7 +75,7 @@ mod gate_on {
     }
 
     #[test]
-    fn gate_on_explain_rows_carry_class_marker_and_silhouette() {
+    fn explain_rows_carry_class_marker_and_silhouette() {
         let rows =
             dootdoot_core::explain_rows_for_text("verify the changelog").expect("text explains");
         let token_rows = rows

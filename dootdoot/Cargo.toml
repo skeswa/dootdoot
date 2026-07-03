@@ -12,12 +12,6 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
-[features]
-# Forwards the dootdoot-core VOICE_V12 spike gate (T-115…T-118) so the local
-# A/B evaluation can render marked WAVs via the CLI. Default-off; not a
-# user-facing alternate voice.
-spike-noun-verb = ["dootdoot-core/spike-noun-verb"]
-
 [dependencies]
 clap = { version = "4.5.0", features = ["derive"] }
 dootdoot-core = { path = "../dootdoot-core" }

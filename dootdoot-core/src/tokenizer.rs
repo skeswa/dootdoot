@@ -164,9 +164,8 @@ impl TokenizedToken {
 
     /// Returns the word-level POS class this token carries (`VOICE_V12`).
     ///
-    /// The word-initial token establishes the class for its whole word and
-    /// continuation tokens inherit it. Without the `spike-noun-verb` gate this
-    /// is always [`PosClass::Other`].
+    /// The word-initial token establishes the class for its whole word (a
+    /// baked class-table lookup) and continuation tokens inherit it.
     pub fn pos_class(&self) -> PosClass {
         self.pos_class
     }
@@ -189,16 +188,12 @@ pub fn embedded_tokenizer() -> Result<Tokenizer, TokenizerError> {
     Tokenizer::embedded()
 }
 
-/// Stamps each token with its word-level POS class.
+/// Stamps each token with its word-level POS class (`VOICE_V12`, FR-115).
 ///
 /// A word spans one word-initial token plus its following continuation tokens;
 /// the whole word's text (continuation prefixes stripped) is looked up once in
 /// the baked class table and every token in the span carries the result, so
 /// the word-initial token establishes the class and continuations inherit it.
-///
-/// With the `spike-noun-verb` gate off every word classifies
-/// [`PosClass::Other`], keeping every rendered path byte-identical until the
-/// `VOICE_V12` freeze; the `cfg!` branch constant-folds.
 fn assign_word_pos_classes(tokens: &mut [TokenizedToken], pos_table: &PosTable) {
     let mut index = 0;
 
@@ -224,11 +219,7 @@ fn assign_word_pos_classes(tokens: &mut [TokenizedToken], pos_table: &PosTable) 
             index += 1;
         }
 
-        let pos_class = if cfg!(feature = "spike-noun-verb") {
-            pos_table.class_of(&word)
-        } else {
-            PosClass::Other
-        };
+        let pos_class = pos_table.class_of(&word);
 
         for token in &mut tokens[start..index] {
             token.pos_class = pos_class;
