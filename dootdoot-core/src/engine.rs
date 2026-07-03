@@ -453,16 +453,24 @@ fn push_voiced_token(
     }
 }
 
-/// Expands voiced tokens into render syllables (`VOICE_V12`, T-117).
+/// Expands voiced tokens into render syllables (`VOICE_V12`, T-117/T-125).
 ///
-/// A single-token content word (word-initial, classed noun/verb, not followed
-/// by a continuation) becomes a `stem → class-resolution` pair: the resolution
-/// derives from the stem's own knobs via the frozen per-class transform, joins
-/// the stem as a subword continuation, and both syllables take the shortened
-/// compound duration. The word-final timing (hesitation rests, tail shapes)
-/// moves to the resolution so the rest still follows the whole word. Everything
-/// else maps through one-to-one. Returns the syllables plus each token's
-/// `(start, end)` range into them.
+/// A content word's syllable target is `max(subword_count, 2)`, capped at 3 —
+/// derived syllables are only ever added, never removed, so at two or more
+/// natural subwords nothing is inserted. Concretely:
+///
+/// - A **single-token** content word becomes a `stem → class-resolution` pair:
+///   the resolution derives from the stem's own knobs via the frozen per-class
+///   transform and joins the stem as a subword continuation.
+/// - A **multi-token** content word keeps its natural subword syllables and
+///   shapes its **last** subword as the class resolution, so the silhouette is
+///   consistent at any length.
+/// - Every syllable of a content word takes the shortened compound duration;
+///   unclassified words map through one-to-one at scale `1.0`.
+///
+/// The word-final timing (hesitation rests, tail shapes) stays on the word's
+/// last syllable so the rest still follows the whole word. Returns the
+/// syllables plus each token's `(start, end)` range into them.
 fn expand_engine_syllables(
     parsed: &ParsedTokens,
     knobs_per_voiced: &[KnobSet],
@@ -477,23 +485,42 @@ fn expand_engine_syllables(
             .voiced_tokens
             .get(index + 1)
             .is_some_and(|next| next.continuation);
-        let expands = token.pos_class.is_content() && !token.continuation && !next_is_continuation;
+        let word_final = !next_is_continuation;
 
-        if expands {
-            syllables.push(EngineSyllable {
-                knobs,
-                continuation: false,
-                timing: SyllableTiming::default(),
-                pos_class: token.pos_class,
-                duration_scale: COMPOUND_SYLLABLE_DURATION_SCALE,
-            });
-            syllables.push(EngineSyllable {
-                knobs: class_resolution_knobs(knobs, token.pos_class),
-                continuation: true,
-                timing: token.timing,
-                pos_class: token.pos_class,
-                duration_scale: COMPOUND_SYLLABLE_DURATION_SCALE,
-            });
+        if token.pos_class.is_content() {
+            if !token.continuation && word_final {
+                // Single-token content word: stem plus derived resolution.
+                syllables.push(EngineSyllable {
+                    knobs,
+                    continuation: false,
+                    timing: SyllableTiming::default(),
+                    pos_class: token.pos_class,
+                    duration_scale: COMPOUND_SYLLABLE_DURATION_SCALE,
+                });
+                syllables.push(EngineSyllable {
+                    knobs: class_resolution_knobs(knobs, token.pos_class),
+                    continuation: true,
+                    timing: token.timing,
+                    pos_class: token.pos_class,
+                    duration_scale: COMPOUND_SYLLABLE_DURATION_SCALE,
+                });
+            } else {
+                // Member of a multi-token content word: one-to-one, with the
+                // final subword shaped as the class resolution.
+                let shaped_knobs = if word_final {
+                    class_resolution_knobs(knobs, token.pos_class)
+                } else {
+                    knobs
+                };
+
+                syllables.push(EngineSyllable {
+                    knobs: shaped_knobs,
+                    continuation: token.continuation,
+                    timing: token.timing,
+                    pos_class: token.pos_class,
+                    duration_scale: COMPOUND_SYLLABLE_DURATION_SCALE,
+                });
+            }
         } else {
             syllables.push(EngineSyllable {
                 knobs,

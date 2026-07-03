@@ -199,13 +199,57 @@ mod gate_on {
 
     #[test]
     fn estimation_matches_rendering_for_expanded_text() {
-        let events = sequence_events_for_text("fix the bug").expect("text renders");
+        let events =
+            sequence_events_for_text("fix the bug in the changelog").expect("text renders");
         let rendered = dootdoot_core::sequence_utterance(&events);
         let estimated = dootdoot_core::estimate_utterance_sample_count(&events);
 
         assert_eq!(
             u64::try_from(rendered.samples().len()).expect("length fits u64"),
             estimated
+        );
+    }
+
+    #[test]
+    fn multi_token_content_word_shapes_its_last_subword_without_adding() {
+        // `changelog` is a baked corpus noun that WordPiece splits into two
+        // subwords (`change` + `##log`): the word keeps its natural syllable
+        // count (T-125's `max(subword_count, 2)` target adds nothing at two
+        // subwords) and the last subword becomes the class resolution.
+        let rows = syllables("changelog");
+
+        assert_eq!(rows.len(), 2);
+        assert!(!rows[0].is_continuation());
+        assert!(rows[1].is_continuation());
+        assert!(rows.iter().all(|row| row.pos_class() == PosClass::Noun));
+
+        // The final subword carries the noun-settle silhouette: the vowel
+        // rounds toward `oo`, the contour flattens, and the warble calms —
+        // bands only the frozen transform produces.
+        let resolution = rows[1].knobs();
+
+        assert!(resolution.vowel_position() >= 0.3);
+        assert!(resolution.contour().abs() <= 0.15);
+        assert!(resolution.warble_depth().abs() <= 0.5);
+    }
+
+    #[test]
+    fn multi_token_content_words_pace_compound() {
+        let events = sequence_events_for_text("the changelog").expect("text renders");
+        let rows = syllables("the changelog");
+        let counts = dootdoot_core::estimate_syllable_sample_counts(&events);
+
+        // The function word stays a full-length blip; every syllable of the
+        // content word carries the shortened compound duration.
+        assert!((rows[0].duration_scale() - 1.0).abs() < f64::EPSILON);
+        assert!(rows[1..].iter().all(|row| {
+            (row.duration_scale() - dootdoot_core::COMPOUND_SYLLABLE_DURATION_SCALE).abs()
+                < f64::EPSILON
+        }));
+        assert!(
+            counts[1..]
+                .iter()
+                .all(|count| *count < dootdoot_core::BASE_SYLLABLE_SAMPLES)
         );
     }
 }

@@ -871,7 +871,7 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
       commit the asset with a regeneration note; extend the asset layout/embedded-asset
       contract tests (`tests/asset_spec_layout.rs`, `tests/embedded_asset.rs`).
       Deps: T-120 · Reqs: FR-114, NFR-7, NFR-8 · Est: 4h
-- [ ] **T-122 — Ship the class onset markers.** Promote the T-116 spike variants to the
+- [x] **T-122 — Ship the class onset markers.** Promote the T-116 spike variants to the
       real `VOICE_V12` path: the class flag rides `SyllablePerformance` (`synth.rs:295`)
       so `SyllableRenderControls` selects the noun/verb/neutral variant; add the
       marker-gain constant near `ATTACK_TRANSIENT_MIX` (`synth.rs:249`) as its own
@@ -879,12 +879,12 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
       word-initial content tokens. Tests: determinism, bounded/finite output,
       marker-fires-only-on-content-word-initial, and the no-class path byte-identical.
       Deps: T-118, T-121 · Reqs: FR-116, NFR-3, NFR-4, NFR-16 · Est: 3h
-- [ ] **T-123 — Resolution-syllable knob transform.** Implement the frozen per-class
+- [x] **T-123 — Resolution-syllable knob transform.** Implement the frozen per-class
       transform as a pure `KnobSet → KnobSet` function (noun settle / verb push, per the
       T-118 locked recipe), clamped to knob bounds. Value tests pin the transform
       endpoints, clamping, and determinism; no sequencing changes yet.
       Deps: T-118, T-119 · Reqs: FR-117, NFR-16 · Est: 2h
-- [ ] **T-124 — Expand single-token content words in the sequencer.** Emit the derived
+- [x] **T-124 — Expand single-token content words in the sequencer.** Emit the derived
       resolution syllable after the stem for single-token nouns/verbs; keep the
       semantic baseline pooled over the original tokenizer tokens (FR-118). Update event
       counts, planner index mapping (`performance.rs:202
@@ -892,7 +892,7 @@ plan_discourse_performance` and the class field on
       `Segment`/`PerformanceSyllable`), and exact output-length estimation plus the
       input-limit tests.
       Deps: T-121, T-123 · Reqs: FR-117, FR-118, FR-36, FR-37, NFR-16 · Est: 4h
-- [ ] **T-125 — Multi-token resolution shaping + compound pacing.** Shape the **last**
+- [x] **T-125 — Multi-token resolution shaping + compound pacing.** Shape the **last**
       subword of multi-token content words as the class resolution; enforce the
       syllable target `max(subword_count, class_minimum)` capped at 3; apply the
       shortened compound base duration and integrate with `syllable_rubato_scale`
