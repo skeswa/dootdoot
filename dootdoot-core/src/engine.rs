@@ -3,12 +3,13 @@
 use thiserror::Error;
 
 use crate::{
-    ComplexityAnalysis, GestureArchetype, HesitationMarker, KnobSet, MappingError,
-    PerformanceCurves, PerformanceSyllable, PhraseRole, PosClass, ProsodicPunctuation,
-    SequenceEvent, SyllableEvent, SyllableTiming, TokenVector, TokenizerError, UtteranceMood,
-    analyze_affect_for_text, analyze_complexity_for_text, archetype_for_role, assemble_knobs,
-    embedded_mapping, embedded_tokenizer, plan_discourse_performance, plan_gesture_archetypes,
-    pool_sequence, render_canonical_buffer, role_long_pause_samples, staged_reply_rest_samples,
+    COMPOUND_SYLLABLE_DURATION_SCALE, ComplexityAnalysis, GestureArchetype, HesitationMarker,
+    KnobSet, MappingError, PerformanceCurves, PerformanceSyllable, PhraseRole, PosClass,
+    ProsodicPunctuation, SequenceEvent, SyllableEvent, SyllableTiming, TokenVector, TokenizerError,
+    UtteranceMood, analyze_affect_for_text, analyze_complexity_for_text, archetype_for_role,
+    assemble_knobs, class_resolution_knobs, embedded_mapping, embedded_tokenizer,
+    plan_discourse_performance, plan_gesture_archetypes, pool_sequence, render_canonical_buffer,
+    role_long_pause_samples, staged_reply_rest_samples,
 };
 
 /// Reports why text could not be rendered.
@@ -44,6 +45,20 @@ struct VoicedToken {
     continuation: bool,
     timing: SyllableTiming,
     pos_class: PosClass,
+}
+
+/// Gives one render-ready syllable after `VOICE_V12` compound expansion.
+///
+/// A single-token content word contributes two of these (stem + derived
+/// resolution); everything else contributes exactly one. The semantic baseline
+/// stays pooled over the original tokens — resolutions never join the pool.
+#[derive(Debug, Clone, Copy)]
+struct EngineSyllable {
+    knobs: KnobSet,
+    continuation: bool,
+    timing: SyllableTiming,
+    pos_class: PosClass,
+    duration_scale: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -329,16 +344,20 @@ fn voiced_analysis(
         .iter()
         .map(|token| token.vector)
         .collect::<Vec<_>>();
+    // The semantic baseline pools over the ORIGINAL tokenizer tokens, before
+    // any VOICE_V12 compound expansion, so derived resolution syllables never
+    // distort the sequence mood.
     let baseline = mapping.squash_pooled(pool_sequence(&token_vectors)?);
     let knobs_per_voiced = token_vectors
         .iter()
         .copied()
         .map(|token_vector| assemble_knobs(baseline, mapping.squash_token(token_vector)))
         .collect::<Vec<_>>();
-    let base_events = base_events_for_plan(mood, complexity, parsed, &knobs_per_voiced);
+    let (syllables, token_ranges) = expand_engine_syllables(parsed, &knobs_per_voiced);
+    let base_events = base_events_for_plan(mood, complexity, parsed, &syllables, &token_ranges);
     let plan = plan_discourse_performance(&base_events);
     let plan_rows = plan.syllables();
-    let deployed = deploy_performance_timing(&parsed.voiced_tokens, plan_rows);
+    let deployed = deploy_performance_timing(&syllables, plan_rows);
 
     let mut events = vec![
         SequenceEvent::mood(mood),
@@ -366,32 +385,15 @@ fn voiced_analysis(
                 ));
             }
             EventTemplate::Voiced(index) => {
-                let token = &parsed.voiced_tokens[*index];
-                let knobs = knobs_per_voiced[*index];
-                let role = plan_rows
-                    .get(*index)
-                    .map_or(PhraseRole::ChattyReply, PerformanceSyllable::role);
-                let curves = plan_rows
-                    .get(*index)
-                    .map_or_else(PerformanceCurves::neutral, PerformanceSyllable::curves);
-                let archetype = archetype_for_role(role, *index);
-
-                events.push(SequenceEvent::archetype(archetype));
-                events.push(SequenceEvent::Syllable(
-                    SyllableEvent::new(knobs, token.continuation)
-                        .with_timing(deployed[*index])
-                        .with_performance(role, curves)
-                        .with_pos_class(token.pos_class),
-                ));
-                explain_rows.push(ExplainRow::token(
-                    token.text.clone(),
-                    knobs,
-                    token.continuation,
-                    role,
-                    archetype.archetype(),
-                    curves,
-                    deployed[*index],
-                ));
+                push_voiced_token(
+                    &mut events,
+                    &mut explain_rows,
+                    &parsed.voiced_tokens[*index],
+                    &syllables,
+                    token_ranges[*index],
+                    plan_rows,
+                    &deployed,
+                );
             }
         }
     }
@@ -402,11 +404,118 @@ fn voiced_analysis(
     })
 }
 
+/// Emits the sequencer events and the `--explain` row for one voiced token's
+/// expanded syllable range.
+///
+/// The explain row reports the stem; resolution syllables are rendered but not
+/// separately rowed until T-126 extends `--explain` with the silhouette.
+fn push_voiced_token(
+    events: &mut Vec<SequenceEvent>,
+    explain_rows: &mut Vec<ExplainRow>,
+    token: &VoicedToken,
+    syllables: &[EngineSyllable],
+    token_range: (usize, usize),
+    plan_rows: &[PerformanceSyllable],
+    deployed: &[SyllableTiming],
+) {
+    let (start, end) = token_range;
+
+    for syllable_index in start..end {
+        let syllable = &syllables[syllable_index];
+        let role = plan_rows
+            .get(syllable_index)
+            .map_or(PhraseRole::ChattyReply, PerformanceSyllable::role);
+        let curves = plan_rows
+            .get(syllable_index)
+            .map_or_else(PerformanceCurves::neutral, PerformanceSyllable::curves);
+        let archetype = archetype_for_role(role, syllable_index);
+
+        events.push(SequenceEvent::archetype(archetype));
+        events.push(SequenceEvent::Syllable(
+            SyllableEvent::new(syllable.knobs, syllable.continuation)
+                .with_timing(deployed[syllable_index])
+                .with_performance(role, curves)
+                .with_pos_class(syllable.pos_class)
+                .with_duration_scale(syllable.duration_scale),
+        ));
+
+        if syllable_index == start {
+            explain_rows.push(ExplainRow::token(
+                token.text.clone(),
+                syllable.knobs,
+                syllable.continuation,
+                role,
+                archetype.archetype(),
+                curves,
+                deployed[syllable_index],
+            ));
+        }
+    }
+}
+
+/// Expands voiced tokens into render syllables (`VOICE_V12`, T-117).
+///
+/// A single-token content word (word-initial, classed noun/verb, not followed
+/// by a continuation) becomes a `stem → class-resolution` pair: the resolution
+/// derives from the stem's own knobs via the frozen per-class transform, joins
+/// the stem as a subword continuation, and both syllables take the shortened
+/// compound duration. The word-final timing (hesitation rests, tail shapes)
+/// moves to the resolution so the rest still follows the whole word. Everything
+/// else maps through one-to-one. Returns the syllables plus each token's
+/// `(start, end)` range into them.
+fn expand_engine_syllables(
+    parsed: &ParsedTokens,
+    knobs_per_voiced: &[KnobSet],
+) -> (Vec<EngineSyllable>, Vec<(usize, usize)>) {
+    let mut syllables = Vec::with_capacity(parsed.voiced_tokens.len());
+    let mut token_ranges = Vec::with_capacity(parsed.voiced_tokens.len());
+
+    for (index, token) in parsed.voiced_tokens.iter().enumerate() {
+        let start = syllables.len();
+        let knobs = knobs_per_voiced[index];
+        let next_is_continuation = parsed
+            .voiced_tokens
+            .get(index + 1)
+            .is_some_and(|next| next.continuation);
+        let expands = token.pos_class.is_content() && !token.continuation && !next_is_continuation;
+
+        if expands {
+            syllables.push(EngineSyllable {
+                knobs,
+                continuation: false,
+                timing: SyllableTiming::default(),
+                pos_class: token.pos_class,
+                duration_scale: COMPOUND_SYLLABLE_DURATION_SCALE,
+            });
+            syllables.push(EngineSyllable {
+                knobs: class_resolution_knobs(knobs, token.pos_class),
+                continuation: true,
+                timing: token.timing,
+                pos_class: token.pos_class,
+                duration_scale: COMPOUND_SYLLABLE_DURATION_SCALE,
+            });
+        } else {
+            syllables.push(EngineSyllable {
+                knobs,
+                continuation: token.continuation,
+                timing: token.timing,
+                pos_class: token.pos_class,
+                duration_scale: 1.0,
+            });
+        }
+
+        token_ranges.push((start, syllables.len()));
+    }
+
+    (syllables, token_ranges)
+}
+
 fn base_events_for_plan(
     mood: UtteranceMood,
     complexity: ComplexityAnalysis,
     parsed: &ParsedTokens,
-    knobs_per_voiced: &[KnobSet],
+    syllables: &[EngineSyllable],
+    token_ranges: &[(usize, usize)],
 ) -> Vec<SequenceEvent> {
     let mut base_events = vec![
         SequenceEvent::mood(mood),
@@ -421,14 +530,15 @@ fn base_events_for_plan(
                 ));
             }
             EventTemplate::Voiced(index) => {
-                base_events.push(SequenceEvent::Syllable(
-                    SyllableEvent::new(
-                        knobs_per_voiced[*index],
-                        parsed.voiced_tokens[*index].continuation,
-                    )
-                    .with_timing(parsed.voiced_tokens[*index].timing)
-                    .with_pos_class(parsed.voiced_tokens[*index].pos_class),
-                ));
+                let (start, end) = token_ranges[*index];
+
+                for syllable in &syllables[start..end] {
+                    base_events.push(SequenceEvent::Syllable(
+                        SyllableEvent::new(syllable.knobs, syllable.continuation)
+                            .with_timing(syllable.timing)
+                            .with_pos_class(syllable.pos_class),
+                    ));
+                }
             }
             EventTemplate::Hesitation(_) => {}
         }
@@ -530,7 +640,7 @@ fn with_archetype_events(events: Vec<SequenceEvent>) -> Vec<SequenceEvent> {
 }
 
 fn deploy_performance_timing(
-    voiced: &[VoicedToken],
+    syllables: &[EngineSyllable],
     plan: &[PerformanceSyllable],
 ) -> Vec<SyllableTiming> {
     // Only stage long turn gaps and reply rests when the utterance has real
@@ -539,15 +649,15 @@ fn deploy_performance_timing(
     let has_structure = plan
         .iter()
         .any(|syllable| syllable.role() != PhraseRole::ChattyReply);
-    let mut timings = Vec::with_capacity(voiced.len());
+    let mut timings = Vec::with_capacity(syllables.len());
 
-    for index in 0..voiced.len() {
-        let base = voiced[index].timing;
+    for index in 0..syllables.len() {
+        let base = syllables[index].timing;
         let role = plan
             .get(index)
             .map_or(PhraseRole::ChattyReply, PerformanceSyllable::role);
         let next_role = plan.get(index + 1).map(PerformanceSyllable::role);
-        let next_continuation = voiced.get(index + 1).map(|token| token.continuation);
+        let next_continuation = syllables.get(index + 1).map(|next| next.continuation);
 
         timings.push(deploy_one_timing(
             base,

@@ -48,11 +48,12 @@ pub use performance::{
     PerformanceCurves, PerformancePlan, PerformanceSyllable, PhraseRole, plan_discourse_performance,
 };
 pub use phrase::{PhraseBoundaryStrength, PhrasePlan, PhraseSyllablePlan, plan_phrase_prosody};
-pub use pos_class::PosClass;
+pub use pos_class::{PosClass, class_resolution_knobs};
 pub use sequence::{
-    DASH_HESITATION_PAUSE_SAMPLES, ELLIPSIS_HESITATION_PAUSE_SAMPLES, EMPTY_CHIRP_CONTOUR,
-    EMPTY_CHIRP_PITCH_CENTER, EMPTY_CHIRP_START_PITCH_CENTER, EMPTY_CHIRP_VOWEL_POSITION,
-    EMPTY_CHIRP_WARBLE_DEPTH, HesitationMarker, ProsodicPunctuation, ROLE_LONG_PAUSE_MAX_SAMPLES,
+    COMPOUND_SYLLABLE_DURATION_SCALE, DASH_HESITATION_PAUSE_SAMPLES,
+    ELLIPSIS_HESITATION_PAUSE_SAMPLES, EMPTY_CHIRP_CONTOUR, EMPTY_CHIRP_PITCH_CENTER,
+    EMPTY_CHIRP_START_PITCH_CENTER, EMPTY_CHIRP_VOWEL_POSITION, EMPTY_CHIRP_WARBLE_DEPTH,
+    HesitationMarker, ProsodicPunctuation, ROLE_LONG_PAUSE_MAX_SAMPLES,
     ROLE_LONG_PAUSE_MIN_SAMPLES, STAGED_REPLY_REST_MAX_SAMPLES, STAGED_REPLY_REST_MIN_SAMPLES,
     SequenceEvent, SequencedUtterance, SyllableEvent, SyllableTiming, TailShape,
     estimate_syllable_sample_counts, estimate_utterance_sample_count, render_empty_chirp,

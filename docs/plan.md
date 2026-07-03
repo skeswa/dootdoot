@@ -821,7 +821,7 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
       content tokens. Render A/B minimal pairs (_dog_ vs _run_) and confirm by ear the
       mark fuses into the word's attack rather than reading as a separate pre-beat.
       Deps: T-115, T-109 · Reqs: NFR-3, NFR-4, NFR-16 · Est: 3h
-- [ ] **T-117 — Spike the compound `stem → resolution` silhouette.** Behind the gate,
+- [x] **T-117 — Spike the compound `stem → resolution` silhouette.** Behind the gate,
       expand single-token content words to 2 syllables via a frozen per-class transform
       of the stem's own knobs — noun **settle** (vowel rounds toward `oo`, pitch steps
       down, contour flattens, sustained tail) vs verb **push** (brighter, rising/gliding
