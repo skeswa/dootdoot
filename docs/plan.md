@@ -851,7 +851,7 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
       pacing bounds; `--explain` class rows; freeze/acceptance. In `design.md`,
       explicitly supersede §6.4's "one token = one syllable" for marked content words.
       Deps: T-118 · Reqs: FR-33, FR-38, FR-39, NFR-16 · Est: 3h
-- [ ] **T-120 — Choose + pin the build-time POS source; derive classes in `xtask`.**
+- [x] **T-120 — Choose + pin the build-time POS source; derive classes in `xtask`.**
       Pick a permissively-licensed POS source (frequency-tagged wordlist, WordNet
       lexnames, or a one-time tagged-corpus pass) **and rank the table's entries by
       coding-domain frequency** (a pinned snapshot of a commit-message/dev-text corpus),

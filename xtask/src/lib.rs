@@ -3,6 +3,8 @@
 mod bb8_metrics;
 mod doot_asset;
 mod pca_projection;
+mod pos_class_table;
+mod pos_source_manifest;
 mod run;
 mod source_files;
 mod source_manifest;
@@ -12,6 +14,11 @@ mod squash_stats;
 
 pub use doot_asset::{dequantize_i16, quantize_symmetric_i16, serialize_doot_asset};
 pub use pca_projection::{PcaProjection, compute_pca_projection};
+pub use pos_class_table::{
+    PosClassEntry, PosPolicyConfig, PosSnapshot, PosTableClass, derive_pos_class_table,
+    parse_tagged_counts,
+};
+pub use pos_source_manifest::PosSourceManifest;
 pub use run::{run, run_with_args};
 pub use source_files::SourceFiles;
 pub use source_manifest::SourceManifest;
