@@ -366,6 +366,19 @@ impl SyllableEvent {
         self.pos_class
     }
 
+    /// Returns the class whose onset marker this syllable fires (`VOICE_V12`).
+    ///
+    /// Only the word-initial syllable of a content word is marked; a
+    /// continuation inherits its word's class for downstream shaping but never
+    /// re-fires the marker.
+    pub(crate) fn onset_class(&self) -> PosClass {
+        if self.continuation {
+            PosClass::Other
+        } else {
+            self.pos_class
+        }
+    }
+
     /// Returns the discourse role assigned to this syllable.
     pub fn role(&self) -> PhraseRole {
         self.role
@@ -592,7 +605,8 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
                 plan.archetype,
             )
             .with_curves(syllable.role(), syllable.curves())
-            .with_tail_shape(syllable.timing().tail_shape()),
+            .with_tail_shape(syllable.timing().tail_shape())
+            .with_onset_class(syllable.onset_class()),
             &mut synth_state,
             &mut samples,
         );

@@ -812,7 +812,7 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
       with word-initial tokens establishing the class and continuation tokens inheriting
       it. No audio change; all paths byte-identical with the gate off.
       Deps: T-111 · Reqs: NFR-16 · Est: 3h
-- [ ] **T-116 — Spike the two layered co-onset class markers.** Behind the gate,
+- [x] **T-116 — Spike the two layered co-onset class markers.** Behind the gate,
       generalize `attack_transient_sample` (`synth.rs:815`) into class-conditioned
       variants mixed at the existing onset point (`synth.rs:1508`): noun = broadband
       click/pop splash (~15–25 ms, near-instant attack), verb = up-swept dual-sine chirp
