@@ -1,10 +1,33 @@
 # VOICE_V12 spike evaluation worksheet (T-118)
 
-> Status: **round 2 — awaiting the confirmation listen.** Round 1 (2026-07-03, by ear)
-> was a directional **go**: the classes are tellable apart and the pace still breathes,
-> but the marker read as a separate percussive pre-beat and the conservative ambiguity
-> policy won the A/B. The recipe was retuned accordingly (see "Round-1 outcomes");
-> round 2 confirms fusion/severity, then the locked recipe goes to T-119.
+> Status: **complete — GO, recipe locked (2026-07-03).** Round 1 passed class
+> identity and pacing but heard the markers as a separate percussive pre-beat and
+> preferred the conservative ambiguity policy; the recipe was retuned (fused attack
+> ramps, softer mixes, `FallBackToOther`). **Round 2 confirmed by ear: the mark now
+> fuses into the word and the softened gain sounds right.** The locked recipe below
+> is what the ship tasks (T-119…T-127) implement.
+
+## Locked recipe (the T-118 output — target constants for the ship tasks)
+
+- **Marking scope**: word-initial content nouns/verbs only; continuations and
+  function words never marked.
+- **Ambiguity policy**: conservative — noun/verb-ambiguous lemmas fall back to
+  `Other` (by-ear A/B winner). Closed-class words are simply absent from the table.
+- **Noun marker**: broadband click/pop splash + 620 Hz thud; partials
+  {1670, 2390, 3110, 3970, 4830, 5660, 6420} Hz; window 30 ms; quadratic attack ramp
+  8 ms (fuses with the body's 15 ms bloom); mix 0.10.
+- **Verb marker**: dual-sine up-swept chirp, 1400→3600 Hz and 2050→5150 Hz; window
+  50 ms; attack fraction 0.25; mix 0.09.
+- **Compound silhouette**: uniform `stem → resolution` (2 syllables), target
+  `max(subword_count, 2)` capped at 3; per-syllable compound duration scale 0.62.
+- **Noun settle transform**: pitch −0.28; vowel `×0.35 + 0.65` (toward `oo`);
+  contour ×0.15; warble ×0.5.
+- **Verb push transform**: pitch +0.18; vowel `×0.35 − 0.65` (toward `ee`);
+  contour `0.70 + 0.30×stem`; warble `0.6×stem + 0.25`.
+- **POS source & storage**: sidecar baked class table (research §9.1), entries
+  ranked by a pinned coding-domain corpus snapshot, keyed by **lemma** with an
+  explicit inflection rule (the spike's surface-form-only matching is a known gap);
+  source + corpus pinned in `assets/source_manifest.toml` (T-120).
 
 ## Round-1 outcomes (by ear, 2026-07-03)
 
@@ -100,14 +123,14 @@ policy**.
 
 ## Decisions to lock before T-119 (research §9)
 
-| #   | Decision                | Spike setting (starting point)                                       | Locked value                                                 |
-| --- | ----------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------ |
-| 1   | POS source & storage    | hard-coded lexicon; ship = sidecar baked table, coding-domain-ranked | _tbd at T-119/T-120_                                         |
-| 2   | Marker aggressiveness   | word-initial content nouns/verbs only                                | **locked: word-initial content only** (round 1 #2 passed)    |
-| 3   | Foley boldness          | mixes 0.16 / 0.14 (vs 0.04 soft transient)                           | **0.10 / 0.09 + fused attack ramps** (pending round-2 ear)   |
-| 4   | Syllable count & pacing | uniform 2 syllables, cap 3; compound scale 0.62                      | **locked: uniform 2, cap 3, scale 0.62** (round 1 #3 passed) |
-| 5   | Aspect marking          | out of scope (`VOICE_V13`)                                           | —                                                            |
-| 6   | Ambiguity policy        | dominant-class (A/B'd; conservative leg = silent on coding text)     | **locked: conservative / fall-back-to-`Other`** (round 1 #4) |
+| #   | Decision                | Spike setting (starting point)                                       | Locked value                                                  |
+| --- | ----------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------- |
+| 1   | POS source & storage    | hard-coded lexicon; ship = sidecar baked table, coding-domain-ranked | _tbd at T-119/T-120_                                          |
+| 2   | Marker aggressiveness   | word-initial content nouns/verbs only                                | **locked: word-initial content only** (round 1 #2 passed)     |
+| 3   | Foley boldness          | mixes 0.16 / 0.14 (vs 0.04 soft transient)                           | **locked: 0.10 / 0.09 + fused attack ramps** (round 2 passed) |
+| 4   | Syllable count & pacing | uniform 2 syllables, cap 3; compound scale 0.62                      | **locked: uniform 2, cap 3, scale 0.62** (round 1 #3 passed)  |
+| 5   | Aspect marking          | out of scope (`VOICE_V13`)                                           | —                                                             |
+| 6   | Ambiguity policy        | dominant-class (A/B'd; conservative leg = silent on coding text)     | **locked: conservative / fall-back-to-`Other`** (round 1 #4)  |
 
-**Go/no-go:** **go** (round 1: classes tellable, pace holds, marked renders easier to
-parse), pending the round-2 fusion/severity confirmation before T-119 freezes the FRs.
+**Go/no-go:** **GO** — round 1: classes tellable, pace holds, marked renders easier to
+parse; round 2: the mark fuses into the word and the softened gain sounds right.

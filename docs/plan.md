@@ -829,7 +829,7 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
       compound words so a 2-syllable word is not 2× a single blip. Render minimal pairs
       (_the cat sits_) and check pace against `VOICE_V11` by ear.
       Deps: T-115, T-110 · Reqs: NFR-16 · Est: 4h
-- [ ] **T-118 — Evaluate the spike & lock the recipe (go/no-go).** By ear plus
+- [x] **T-118 — Evaluate the spike & lock the recipe (go/no-go).** By ear plus
       `scripts/acoustics` and `scripts/sound_taxonomy.py`: confirm the marker lands as a
       distinct gesture and the two classes separate on onset category, contour, and
       timbre/attack — not just pitch. **A/B the ambiguity policy by ear** (research
