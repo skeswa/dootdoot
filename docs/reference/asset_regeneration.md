@@ -28,13 +28,35 @@ outputs to work around it.
 cargo run -p xtask
 cp target/generated/dootdoot_asset_v1.doot assets/dootdoot_asset_v1.doot
 cargo test -p xtask
-cargo test -p dootdoot-core --test golden_wav_hashes
+cargo test -p dootdoot-core --test golden_wav
 scripts/lint
 ```
 
 If the source manifest changes, review and commit it with the regenerated asset. The
 tokenizer JSON is embedded inside the `.doot` payload, so there is no separate runtime
 tokenizer file to copy.
+
+## The VOICE_V12 class-table sidecar
+
+`assets/dootdoot_pos_v1.doot` (the baked noun/verb class table, FR-114) regenerates
+separately from the semantic asset and needs no model download:
+
+```sh
+# Only if the statistics snapshot itself changes (new corpus shard, new tagger):
+uv run scripts/derive_pos_table.py       # rewrites assets/pos/tagged_counts.tsv
+#   ...then update tagged_counts_sha256 in assets/source_manifest.toml.
+
+cargo run -p xtask -- pos-table          # validates the [pos] manifest pin first
+cp target/generated/dootdoot_pos_v1.doot assets/dootdoot_pos_v1.doot
+cargo test -p xtask --test pos_snapshot_pinning
+```
+
+The `[pos]` section of `source_manifest.toml` pins the public ranking-corpus shard
+(repo/revision/file/SHA-256), the tagger name and version, and the committed
+tagged-counts snapshot hash; `xtask pos-table` aborts on any mismatch. A pinning test
+asserts the committed sidecar reproduces byte-for-byte from the committed snapshot.
+Because classifications affect rendered samples, any regeneration that changes them is
+a voice bump like every other sample-affecting change.
 
 ## When to Bump the Voice
 
@@ -48,6 +70,8 @@ Examples that require a new voice identifier (`VOICE_V2`, `VOICE_V3`, etc.):
 - Different squash statistics or squash function.
 - Changes to knob assembly, synthesis constants, timing constants, punctuation rules,
   empty-chirp constants, owned math, float-to-i16 rounding, or WAV serialization.
+- A `VOICE_V12` class-table change that alters any word's classification (new corpus
+  snapshot, policy thresholds, closed-class list) or the marker/resolution constants.
 
 Examples that do not require a voice bump:
 

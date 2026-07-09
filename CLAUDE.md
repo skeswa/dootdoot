@@ -20,12 +20,15 @@ _semantically similar text sounds similar_ (a learnable sound-language). Pipelin
 is in `docs/design.md` §2; the workspace has three crates:
 
 - **`dootdoot-core`** — pure, deterministic engine (functional core): `.doot` asset
-  parser, tokenizer, mapping, synth, owned math, WAV, `VOICE_V*` constants. No I/O, no
+  parser, tokenizer, mapping, `VOICE_V12` word-class table (`PosTable` sidecar parser +
+  class markers/resolutions), synth, owned math, WAV, `VOICE_V*` constants. No I/O, no
   audio device.
 - **`dootdoot`** — thin CLI shell (imperative shell): `clap`, stdin, `rodio` playback,
   `--explain`, error/exit mapping. Holds essentially all side effects.
 - **`xtask`** — build-time only, never shipped: generates
-  `assets/dootdoot_asset_v1.doot` from `potion-base-8M` via `model2vec-rs`.
+  `assets/dootdoot_asset_v1.doot` from `potion-base-8M` via `model2vec-rs`, and (via
+  `pos-table`) bakes the `VOICE_V12` class-table sidecar `assets/dootdoot_pos_v1.doot`
+  from the pinned `assets/pos/tagged_counts.tsv` statistics snapshot.
 
 ### Load-bearing invariants (violating these breaks the core promises)
 
@@ -99,6 +102,11 @@ cargo deny check && cargo machete
 
 # Regenerate the baked asset (ONLY when intentionally changing mapping/tokenizer inputs)
 cargo run -p xtask
+
+# Regenerate the VOICE_V12 class-table sidecar (ONLY when intentionally changing the
+# POS snapshot or classification policy; classification changes are a voice bump)
+cargo run -p xtask -- pos-table    # then copy target/generated/dootdoot_pos_v1.doot to assets/
+uv run scripts/derive_pos_table.py # only if the statistics snapshot itself changes
 
 # Directional BB-8 acoustic comparison (TUNING AID, not the voice contract).
 # Renders a phrase, decodes a reference clip, and reports gap-analysis metrics

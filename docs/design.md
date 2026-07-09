@@ -56,6 +56,8 @@ flowchart TD
     ids --> lookup["§4 · look up each token's semantic vector<br/>via a precomputed, baked table<br/><i>gives MEANING — goal 2</i>"]
     lookup --> pca["4-dim PCA vector per token<br/>(+ pooling weight)"]
     pca --> squash["§5 · squash to 4 perceptual knobs<br/>per-token = local gesture<br/>weighted-mean of tokens = sequence baseline<br/><i>learnable, bounded — goal 2</i>"]
+    tok --> classes["§8.13 · word-class lookup via the baked<br/>sidecar noun/verb table<br/><i>VOICE_V12: class markers + silhouettes</i>"]
+    classes --> plan
     squash --> plan["§5.4/§6.4 · discourse-performance planner<br/>local phrase roles + bounded performance curves<br/><i>VOICE_V7: schedules gestures by role</i>"]
     plan --> voice["§6 · formant-synthesis voice engine<br/>fixed DNA + 4 semantic knobs + V7 primitives<br/><i>DROID identity — goal 3</i>"]
     voice --> buf["§7 · canonical Vec&lt;i16&gt; @ 44.1 kHz / 16-bit / mono<br/><i>single source of truth</i>"]
@@ -92,7 +94,8 @@ A subword tokenizer gives us, for free, a desirable cadence property: **frequent
 words become a single token (one compact syllable), while rare or long words split
 into multiple sub-tokens (a longer, multi-syllable utterance).** This mirrors how
 BB-8 speaks in bursts of varying length, and it is the natural unit at which semantic
-vectors are available (§4).
+vectors are available (§4). (`VOICE_V12` refines this for classed content words:
+single-token nouns/verbs gain a derived resolution syllable — §6.4, §8.13.)
 
 ### 3.2 Decision: use model2vec's tokenizer (WordPiece), not tiktoken / cl100k_base
 
@@ -1331,6 +1334,10 @@ to build time. The resulting split:
 - the committed `assets/dootdoot_asset_v1.doot` Protocol Buffers asset, embedded with
   `include_bytes!`; it contains the tokenizer JSON, provenance hashes, squash stats, and
   compact per-token records (4×int16 axes + int16 weight).
+- the committed `assets/dootdoot_pos_v1.doot` sidecar class table (`VOICE_V12`, §8.13),
+  also `include_bytes!`-embedded: a small deterministic binary keyed by surface word,
+  with its own spec version and provenance hashes. Word classification is a pure baked
+  lookup — no tagger ships.
 - the **owned math** module.
 - `hound`, `rodio`, `clap`.
 - **No `model2vec-rs`, no `candle`, no tensor framework.** Smaller, faster-starting,
@@ -1339,6 +1346,10 @@ to build time. The resulting split:
 **Build-time only (`xtask`, never shipped):**
 
 - `model2vec-rs` (loads `potion-base-8M`), `nalgebra`/`linfa` (PCA/SVD).
+- the `pos-table` bake (`VOICE_V12`): validates the pinned tagged-counts snapshot
+  against the `[pos]` manifest section and serializes the sidecar class table. The
+  one-time corpus tagging itself lives outside the build in the locked
+  `scripts/derive_pos_table.py` (spaCy, uv-pinned).
 
 ### 9.2 Decision: workspace layout (lib + bin + xtask)
 
@@ -1365,6 +1376,13 @@ to build time. The resulting split:
 upstream source (repo, commit SHA, file hashes, `hidden_dim`, `normalize`, dtype) that
 `xtask` validates before regenerating, so the build input is as reviewable and
 reproducible as the output.
+
+`VOICE_V12` follows the same posture for its class data: the sidecar
+`assets/dootdoot_pos_v1.doot` is committed and embedded, the derived per-word
+statistics it bakes from (`assets/pos/tagged_counts.tsv`) are committed and
+human-readable, and the `[pos]` manifest section pins the public ranking-corpus shard,
+tagger version, and snapshot hash. A pinning test asserts the committed sidecar
+reproduces byte-for-byte from the committed snapshot.
 
 Two distinct build paths, with different network stories:
 

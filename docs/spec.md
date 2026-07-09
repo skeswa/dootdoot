@@ -171,13 +171,18 @@
   reproducible.
 - **FR-42** `assets/dootdoot_asset_v1.doot` SHALL be the only committed runtime asset
   needed for tokenization and mapping, and it SHALL be embedded into the shipped binary.
+  _`VOICE_V12` adds one further committed, embedded runtime asset — the sidecar
+  noun/verb class table `assets/dootdoot_pos_v1.doot` (FR-114) — which serves word
+  classification only; tokenization and mapping still need only the `.doot` asset._
 - **FR-43** A committed `assets/source_manifest.toml` SHALL pin the immutable upstream
   source: HF repo, exact commit revision (SHA, not a branch/tag), expected SHA-256 of
   `model.safetensors` and `tokenizer.json`, and the structural expectations
   `hidden_dim = 256`, `normalize = true`, and dtype. `xtask` SHALL validate the acquired
   files against this manifest (revision, file hashes, structural fields) **before**
   computing or writing any asset, and SHALL abort on any mismatch, so that regeneration is
-  reproducible.
+  reproducible. _`VOICE_V12` extends the same manifest with a `[pos]` section pinning
+  the class-table pipeline (FR-114): ranking-corpus repo/revision/file/SHA-256, tagger
+  name/version, and the committed tagged-counts snapshot hash._
 
 ### 1.11 VOICE_V2 expressiveness
 
