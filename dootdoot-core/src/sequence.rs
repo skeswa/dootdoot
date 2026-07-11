@@ -5,9 +5,9 @@ use core::f64::consts::LN_2;
 use crate::{
     ArchetypeSelection, CLAUSE_SYLLABLE_SAMPLES, ComplexityAnalysis, KnobSet,
     LEADING_SILENCE_SAMPLES, LONG_PUNCTUATION_PAUSE_SAMPLES, MEDIUM_PUNCTUATION_PAUSE_SAMPLES,
-    PerformanceCurves, PhraseBoundaryStrength, PhraseRole, PhraseSyllablePlan,
-    SENTENCE_SYLLABLE_SAMPLES, TRAILING_SILENCE_SAMPLES, UtteranceMood, exp, pitch_center_hz,
-    plan_phrase_prosody, sin,
+    PerformanceCurves, PhraseBoundaryStrength, PhrasePlan, PhraseRole, PhraseSyllablePlan,
+    PosClass, SENTENCE_SYLLABLE_SAMPLES, TRAILING_SILENCE_SAMPLES, UtteranceMood, exp,
+    pitch_center_hz, plan_phrase_prosody, sin,
     synth::{
         BASE_SYLLABLE_SAMPLES, SyllableConnection, SyllableFinalGlide, SyllablePerformance,
         SyllableRenderState, render_syllable_with_final_glide,
@@ -30,6 +30,14 @@ pub const EMPTY_CHIRP_CONTOUR: f64 = 1.0;
 
 /// Gives the fixed empty-chirp warble-depth knob.
 pub const EMPTY_CHIRP_WARBLE_DEPTH: f64 = 0.85;
+
+/// Gives the per-syllable duration scale for compound content words
+/// (`VOICE_V12`, T-117).
+///
+/// A word that expands to a `stem → resolution` pair shortens each syllable so
+/// the two-syllable word reads as one heavier gesture (~1.24× a single blip),
+/// not two full blips — protecting the `VOICE_V11` breathing pace.
+pub const COMPOUND_SYLLABLE_DURATION_SCALE: f64 = 0.62;
 
 /// Gives the minimum `VOICE_V7` role-gated turn pause in samples (~600 ms).
 pub const ROLE_LONG_PAUSE_MIN_SAMPLES: u32 = 26_460;
@@ -237,6 +245,8 @@ pub struct SyllableEvent {
     timing: SyllableTiming,
     role: PhraseRole,
     curves: PerformanceCurves,
+    pos_class: PosClass,
+    duration_scale: f64,
 }
 
 /// Gives one prosodic punctuation marker.
@@ -330,6 +340,8 @@ impl SyllableEvent {
             timing: SyllableTiming::default(),
             role: PhraseRole::default(),
             curves: PerformanceCurves::neutral(),
+            pos_class: PosClass::default(),
+            duration_scale: 1.0,
         }
     }
 
@@ -348,6 +360,54 @@ impl SyllableEvent {
         self.curves = curves;
 
         self
+    }
+
+    /// Returns a copy of this syllable carrying a word-level POS class
+    /// (`VOICE_V12`).
+    #[must_use]
+    pub fn with_pos_class(mut self, pos_class: PosClass) -> Self {
+        self.pos_class = pos_class;
+
+        self
+    }
+
+    /// Returns the word-level POS class this syllable carries (`VOICE_V12`).
+    pub fn pos_class(&self) -> PosClass {
+        self.pos_class
+    }
+
+    /// Returns a copy of this syllable carrying a duration scale
+    /// (`VOICE_V12`).
+    ///
+    /// Non-finite or non-positive scales fall back to `1.0`; the default is
+    /// exactly `1.0`, which renders byte-identically to an unscaled syllable.
+    #[must_use]
+    pub fn with_duration_scale(mut self, duration_scale: f64) -> Self {
+        self.duration_scale = if duration_scale.is_finite() && duration_scale > 0.0 {
+            duration_scale
+        } else {
+            1.0
+        };
+
+        self
+    }
+
+    /// Returns the per-syllable duration scale (`VOICE_V12`).
+    pub fn duration_scale(&self) -> f64 {
+        self.duration_scale
+    }
+
+    /// Returns the class whose onset marker this syllable fires (`VOICE_V12`).
+    ///
+    /// Only the word-initial syllable of a content word is marked; a
+    /// continuation inherits its word's class for downstream shaping but never
+    /// re-fires the marker.
+    pub(crate) fn onset_class(&self) -> PosClass {
+        if self.continuation {
+            PosClass::Other
+        } else {
+            self.pos_class
+        }
     }
 
     /// Returns the discourse role assigned to this syllable.
@@ -465,6 +525,7 @@ pub fn estimate_utterance_sample_count(events: &[SequenceEvent]) -> u64 {
             total,
             mood,
             complexity,
+            plan.event.duration_scale(),
         ));
         sample_count += u64::from(effective_pause_samples(
             plan.event.timing(),
@@ -499,9 +560,17 @@ pub fn estimate_syllable_sample_counts(events: &[SequenceEvent]) -> Vec<u32> {
         .syllables()
         .iter()
         .take(total)
+        .zip(&plans)
         .enumerate()
-        .map(|(index, phrase_syllable)| {
-            phrase_syllable_samples(*phrase_syllable, index, total, mood, complexity)
+        .map(|(index, (phrase_syllable, plan))| {
+            phrase_syllable_samples(
+                *phrase_syllable,
+                index,
+                total,
+                mood,
+                complexity,
+                plan.event.duration_scale(),
+            )
         })
         .collect()
 }
@@ -545,38 +614,39 @@ pub fn sequence_utterance(events: &[SequenceEvent]) -> SequencedUtterance {
             Some(previous_pitch_hz) => previous_pitch_hz,
             None => target_pitch_hz,
         };
-        let start_connection = phrase_plan
-            .syllables()
-            .get(index.saturating_sub(1))
-            .copied()
-            .filter(|_| index > 0)
-            .map_or(SyllableConnection::Detached, start_connection_from_previous);
-        let end_connection = if index + 1 < plans.len() {
-            end_connection_from_boundary(phrase_syllable)
-        } else {
-            SyllableConnection::Detached
-        };
+        let (start_connection, end_connection) =
+            syllable_connections(&phrase_plan, phrase_syllable, index, plans.len());
+
+        let performance = SyllablePerformance::new(
+            phrase_syllable_samples(
+                phrase_syllable,
+                index,
+                plans.len(),
+                mood,
+                complexity,
+                syllable.duration_scale(),
+            ),
+            pitch_offset_semitones,
+            phrase_syllable.final_lowering_semitones(),
+            phrase_syllable.is_emphasized(),
+        )
+        .with_connections(start_connection, end_connection)
+        .with_expression(
+            mood.valence(),
+            mood.arousal(),
+            complexity.scalar(),
+            plan.archetype,
+        )
+        .with_curves(syllable.role(), syllable.curves())
+        .with_tail_shape(syllable.timing().tail_shape())
+        .with_onset_class(syllable.onset_class());
 
         render_syllable_with_performance_into(
             syllable.knobs(),
             start_pitch_hz,
             plan.final_glide,
             warble_phase_offset_for_syllable(index),
-            SyllablePerformance::new(
-                phrase_syllable_samples(phrase_syllable, index, plans.len(), mood, complexity),
-                pitch_offset_semitones,
-                phrase_syllable.final_lowering_semitones(),
-                phrase_syllable.is_emphasized(),
-            )
-            .with_connections(start_connection, end_connection)
-            .with_expression(
-                mood.valence(),
-                mood.arousal(),
-                complexity.scalar(),
-                plan.archetype,
-            )
-            .with_curves(syllable.role(), syllable.curves())
-            .with_tail_shape(syllable.timing().tail_shape()),
+            performance,
             &mut synth_state,
             &mut samples,
         );
@@ -630,6 +700,7 @@ fn phrase_syllable_samples(
     total: usize,
     mood: SequencerMood,
     complexity: SequencerComplexity,
+    event_duration_scale: f64,
 ) -> u32 {
     let base_samples = match phrase_syllable.boundary_strength() {
         PhraseBoundaryStrength::None | PhraseBoundaryStrength::Word => BASE_SYLLABLE_SAMPLES,
@@ -657,7 +728,15 @@ fn phrase_syllable_samples(
         1.0
     };
 
-    round_f64_to_u32(f64::from(base_samples) * duration_scale * complexity_scale * rubato_scale)
+    // The per-event compound scale (`VOICE_V12`) defaults to exactly 1.0, so
+    // unscaled syllables stay byte-identical.
+    round_f64_to_u32(
+        f64::from(base_samples)
+            * duration_scale
+            * complexity_scale
+            * rubato_scale
+            * event_duration_scale,
+    )
 }
 
 /// Gives the lilt depth — the peak ± fraction a plain syllable's pace varies as
@@ -750,6 +829,28 @@ fn pitch_with_offset(knobs: KnobSet, offset_semitones: f64) -> f64 {
 
 fn start_connection_from_previous(phrase_syllable: PhraseSyllablePlan) -> SyllableConnection {
     end_connection_from_boundary(phrase_syllable)
+}
+
+/// Gives one syllable's start and end connections from its phrase context.
+fn syllable_connections(
+    phrase_plan: &PhrasePlan,
+    phrase_syllable: PhraseSyllablePlan,
+    index: usize,
+    total: usize,
+) -> (SyllableConnection, SyllableConnection) {
+    let start_connection = phrase_plan
+        .syllables()
+        .get(index.saturating_sub(1))
+        .copied()
+        .filter(|_| index > 0)
+        .map_or(SyllableConnection::Detached, start_connection_from_previous);
+    let end_connection = if index + 1 < total {
+        end_connection_from_boundary(phrase_syllable)
+    } else {
+        SyllableConnection::Detached
+    };
+
+    (start_connection, end_connection)
 }
 
 fn end_connection_from_boundary(phrase_syllable: PhraseSyllablePlan) -> SyllableConnection {

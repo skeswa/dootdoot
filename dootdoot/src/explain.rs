@@ -11,8 +11,8 @@
 use std::fmt::Write as _;
 
 use dootdoot_core::{
-    EngineError, ExplainRow, GestureArchetype, HesitationMarker, PhraseRole, ProsodicPunctuation,
-    SYNTH_SAMPLE_RATE_HZ, explain_rows_for_text,
+    EngineError, ExplainRow, ExplainTokenRow, GestureArchetype, HesitationMarker, PhraseRole,
+    PosClass, ProsodicPunctuation, SYNTH_SAMPLE_RATE_HZ, explain_rows_for_text,
 };
 
 /// Formats an empty-input explain table.
@@ -37,6 +37,7 @@ fn format_explain_rows(rows: &[ExplainRow]) -> String {
     write_summary(&mut table, rows);
     write_main_table(&mut table, rows, token_width);
     write_curves_table(&mut table, rows, token_width);
+    write_class_table(&mut table, rows, token_width);
 
     table
 }
@@ -163,6 +164,84 @@ fn write_curves_table(table: &mut String, rows: &[ExplainRow], token_width: usiz
             )
             .expect("writing to a String cannot fail");
         }
+    }
+}
+
+/// Writes the `VOICE_V12` class table (FR-120): the word class, the layered
+/// co-onset marker, and the compound syllable silhouette — the learnability
+/// training aid. Printed only when at least one token carries a content
+/// class, so unclassified utterances keep the pre-`VOICE_V12` layout.
+fn write_class_table(table: &mut String, rows: &[ExplainRow], token_width: usize) {
+    let has_classes = rows.iter().any(|row| {
+        matches!(
+            row,
+            ExplainRow::Token(token) if token.pos_class().is_content()
+        )
+    });
+
+    if !has_classes {
+        return;
+    }
+
+    table.push('\n');
+    writeln!(
+        table,
+        "{:<token_width$} │ {:<4} │ {:<6} │ silhouette",
+        "class", "pos", "marker",
+    )
+    .expect("writing to a String cannot fail");
+
+    for row in rows {
+        if let ExplainRow::Token(token) = row {
+            writeln!(
+                table,
+                "{:<token_width$} │ {:<4} │ {:<6} │ {}",
+                token.token(),
+                class_name(token.pos_class()),
+                marker_name(token.onset_class()),
+                silhouette_label(token),
+            )
+            .expect("writing to a String cannot fail");
+        }
+    }
+}
+
+fn class_name(pos_class: PosClass) -> &'static str {
+    match pos_class {
+        PosClass::Noun => "noun",
+        PosClass::Verb => "verb",
+        PosClass::Other => "-",
+    }
+}
+
+fn marker_name(onset_class: PosClass) -> &'static str {
+    match onset_class {
+        PosClass::Noun => "click",
+        PosClass::Verb => "chirp",
+        PosClass::Other => "-",
+    }
+}
+
+fn silhouette_label(token: &ExplainTokenRow) -> String {
+    let resolution = match token.resolution_class() {
+        PosClass::Noun => Some("settle"),
+        PosClass::Verb => Some("push"),
+        PosClass::Other => None,
+    };
+
+    match (resolution, token.pos_class().is_content()) {
+        (Some(resolution), _) if token.syllable_count() > 1 => {
+            format!("stem→{resolution} ×{}", token.syllable_count())
+        }
+        (Some(resolution), _) => format!("→{resolution}"),
+        (None, true) => {
+            if token.is_continuation() {
+                "glide…".to_owned()
+            } else {
+                "stem…".to_owned()
+            }
+        }
+        (None, false) => "blip".to_owned(),
     }
 }
 

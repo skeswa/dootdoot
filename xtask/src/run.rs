@@ -6,8 +6,9 @@ use std::{
 };
 
 use crate::{
-    Result, SourceFiles, SourceManifest, SourceManifestError, bb8_metrics, compute_pca_projection,
-    compute_squash_stats, load_source_model, serialize_doot_asset,
+    PosPolicyConfig, PosSourceManifest, Result, SourceFiles, SourceManifest, SourceManifestError,
+    bb8_metrics, compute_pca_projection, compute_squash_stats, derive_pos_class_table,
+    load_source_model, parse_tagged_counts, serialize_doot_asset, serialize_pos_table,
 };
 
 /// Runs the selected xtask command from process arguments.
@@ -44,10 +45,77 @@ where
 
     match command.as_str() {
         "bb8-metrics" => bb8_metrics::run(&args),
+        "pos-table" => generate_pos_table(),
         unknown => Err(SourceManifestError::new(format!(
             "unknown xtask command: {unknown}",
         ))),
     }
+}
+
+/// Bakes the `VOICE_V12` sidecar class-table asset (T-121).
+///
+/// Validates the committed tagged-counts snapshot against its `[pos]`
+/// manifest pin (FR-114's validate-before-work), derives the class table
+/// under the locked policy, serializes the sidecar payload, self-checks it
+/// through the core parser, and writes `target/generated/dootdoot_pos_v1.doot`
+/// for manual copy into `assets/`.
+fn generate_pos_table() -> Result<String> {
+    let workspace = workspace_root()?;
+    let manifest_path = workspace.join("assets/source_manifest.toml");
+    let manifest_text = fs::read_to_string(&manifest_path).map_err(|error| {
+        SourceManifestError::new(format!(
+            "failed to read {}: {error}",
+            manifest_path.display(),
+        ))
+    })?;
+    let manifest = PosSourceManifest::parse(&manifest_text)?;
+    let snapshot_path = workspace.join("assets/pos/tagged_counts.tsv");
+    let snapshot_bytes = fs::read(&snapshot_path).map_err(|error| {
+        SourceManifestError::new(format!(
+            "failed to read {}: {error}",
+            snapshot_path.display(),
+        ))
+    })?;
+
+    manifest.validate_tagged_counts(&snapshot_bytes)?;
+
+    let snapshot_text = String::from_utf8(snapshot_bytes).map_err(|error| {
+        SourceManifestError::new(format!("tagged_counts.tsv is not utf-8: {error}"))
+    })?;
+    let snapshot = parse_tagged_counts(&snapshot_text)?;
+    let entries = derive_pos_class_table(&snapshot, &PosPolicyConfig::default());
+    let payload = serialize_pos_table(&entries, &manifest)?;
+
+    dootdoot_core::PosTable::parse(&payload).map_err(|error| {
+        SourceManifestError::new(format!(
+            "generated pos table failed its own parse check: {error}",
+        ))
+    })?;
+
+    let generated_dir = workspace.join("target/generated");
+
+    fs::create_dir_all(&generated_dir).map_err(|error| {
+        SourceManifestError::new(format!(
+            "failed to create {}: {error}",
+            generated_dir.display(),
+        ))
+    })?;
+
+    let generated_path = generated_dir.join(dootdoot_core::POS_TABLE_FILE_V1);
+
+    fs::write(&generated_path, &payload).map_err(|error| {
+        SourceManifestError::new(format!(
+            "failed to write {}: {error}",
+            generated_path.display(),
+        ))
+    })?;
+
+    Ok(format!(
+        "wrote {} ({} entries, {} bytes)",
+        generated_path.display(),
+        entries.len(),
+        payload.len(),
+    ))
 }
 
 fn generate_doot_asset() -> Result<()> {

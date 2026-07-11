@@ -44,6 +44,22 @@ Evidence and proposals that informed the sound design.
   word-boundary onset analysis that informed `VOICE_V5`.
 - [`research/bb8-repeated-phrase-tremolo-forensics.md`](research/bb8-repeated-phrase-tremolo-forensics.md)
   — repeated-phrase modulation analysis that informed `VOICE_V6`.
+- [`research/bb8-inquisitive-chatty-gap-analysis.md`](research/bb8-inquisitive-chatty-gap-analysis.md)
+  — contextual-performance gaps that informed `VOICE_V7`.
+- [`research/bb8-corpus-timbre-texture-analysis.md`](research/bb8-corpus-timbre-texture-analysis.md)
+  — corpus timbre/texture comparison that informed `VOICE_V8`.
+- [`research/punctuation-prosody-audibility.md`](research/punctuation-prosody-audibility.md)
+  — audible-punctuation analysis that informed `VOICE_V9`.
+- [`research/bb8-sound-vocabulary-taxonomy.md`](research/bb8-sound-vocabulary-taxonomy.md)
+  — gesture-level sound-type taxonomy that informed `VOICE_V10`.
+- [`research/droid-synth-prior-art.md`](research/droid-synth-prior-art.md) — prior-art
+  survey of droid-voice synthesis techniques.
+- [`research/noun-verb-recognizability.md`](research/noun-verb-recognizability.md) —
+  auditory-cognition research and plan behind the `VOICE_V12` noun/verb class
+  signature.
+- [`research/voice-v12-spike-evaluation.md`](research/voice-v12-spike-evaluation.md)
+  — the `VOICE_V12` spike A/B worksheet: by-ear rounds, locked recipe, and the
+  ambiguity-policy decision.
 
 ## Validation
 
@@ -61,6 +77,18 @@ Short acceptance notes for decisions that were finalized during voice freezes.
   — final `VOICE_V5` word-attack smoothing acceptance.
 - [`validation/voice-v6-repeated-phrase-smoothing.md`](validation/voice-v6-repeated-phrase-smoothing.md)
   — final `VOICE_V6` repeated-phrase smoothing acceptance.
+- [`validation/voice-v7-contextual-performance.md`](validation/voice-v7-contextual-performance.md)
+  — final `VOICE_V7` contextual-performance acceptance.
+- [`validation/voice-v8-semantic-engagement.md`](validation/voice-v8-semantic-engagement.md)
+  — final `VOICE_V8` semantic-engagement acceptance.
+- [`validation/voice-v9-audible-punctuation.md`](validation/voice-v9-audible-punctuation.md)
+  — final `VOICE_V9` audible-punctuation acceptance.
+- [`validation/voice-v10-bidirectional-whistle.md`](validation/voice-v10-bidirectional-whistle.md)
+  — final `VOICE_V10` gesture-vocabulary acceptance.
+- [`validation/voice-v11-natural-voice.md`](validation/voice-v11-natural-voice.md) —
+  final `VOICE_V11` natural-voice acceptance.
+- [`validation/voice-v12-noun-verb.md`](validation/voice-v12-noun-verb.md) — final
+  `VOICE_V12` noun/verb recognizability acceptance (the active voice).
 - [`validation/learnability-spread.md`](validation/learnability-spread.md) — final
   semantic cluster spread check.
 - [`validation/squash.md`](validation/squash.md) — finalized tanh z-score squash choice.

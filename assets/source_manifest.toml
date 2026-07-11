@@ -7,3 +7,17 @@ hidden_dim = 256
 normalize = true
 dtype = "F32"
 acquisition = "download-to-build-cache"
+
+# VOICE_V12 noun/verb class-table pipeline (FR-114). The ranking corpus is a
+# public commit-message dataset (CommitChronicle, ASE 2023; commits collected
+# from permissively-licensed repositories); only derived per-word statistics
+# are committed (assets/pos/tagged_counts.tsv), never message text.
+[pos]
+corpus_hf_repo = "JetBrains-Research/commit-chronicle"
+corpus_revision = "5fd076e67b812a9f3d1999e5e40f71715f84bb51"
+corpus_file = "data/test-00000-of-00012-2085aa4b49c438e4.parquet"
+corpus_sha256 = "b05b4ab34973c358d18475173e301ba0534cb0f23a15f91ba07b3af3fbf0d988"
+tagger = "spacy/en_core_web_sm"
+tagger_version = "3.7.1"
+tagged_counts_sha256 = "1f10d12c15d59b057690f2124f1af99101aafc6a68bf6fd604a89c705f3396c9"
+derivation = "uv run scripts/derive_pos_table.py"

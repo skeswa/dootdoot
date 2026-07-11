@@ -3,8 +3,8 @@
 use core::f64::consts::{LN_2, PI};
 
 use crate::{
-    ArchetypeSelection, GestureArchetype, PerformanceCurves, PhraseRole, TailShape, cos, exp, sin,
-    tanh,
+    ArchetypeSelection, GestureArchetype, PerformanceCurves, PhraseRole, PosClass, TailShape, cos,
+    exp, sin, tanh,
 };
 
 /// Gives the maximum `VOICE_V7` curve-driven pitch-center bias in semitones.
@@ -248,6 +248,62 @@ pub const ATTACK_TRANSIENT_SECONDS: f64 = 0.030;
 /// without the percussive pluck on every word.
 pub const ATTACK_TRANSIENT_MIX: f64 = 0.04;
 
+/// Gives the noun class-marker window in seconds (`VOICE_V12`, T-116).
+///
+/// A broadband click/pop splash — *impact = a thing*. The T-118 round-1
+/// listen widened this (was 20 ms) so the splash's decay overlaps the tonal
+/// body's 15 ms attack bloom and the two fuse into one onset.
+pub const NOUN_MARKER_SECONDS: f64 = 0.030;
+
+/// Gives the noun class-marker attack ramp in seconds (`VOICE_V12`, T-116).
+///
+/// T-118 round 1 heard the instant-attack marker as a separate pre-beat: its
+/// energy peaked before the tonal body (15 ms quadratic ease-in) was audible.
+/// A short quadratic rise makes the splash bloom *with* the body (common-onset
+/// binding) while staying fast enough to read as an impact.
+pub const NOUN_MARKER_ATTACK_SECONDS: f64 = 0.008;
+
+/// Gives the noun class-marker wet mix (`VOICE_V12`, T-116).
+///
+/// Louder than the `VOICE_V11` softened transient — the marker is a lexical
+/// cue, not articulation — but it fires only on scarce word-initial content
+/// tokens, so the pluck-on-everything problem the softening fixed does not
+/// recur. T-118 round 1 heard 0.16 as severe/percussive; dialed back.
+pub const NOUN_MARKER_MIX: f64 = 0.10;
+
+/// Gives the verb class-marker window in seconds (`VOICE_V12`, T-116).
+///
+/// An up-swept chirp, slightly longer and gliding — *motion = an action*.
+pub const VERB_MARKER_SECONDS: f64 = 0.050;
+
+/// Gives the verb class-marker wet mix (`VOICE_V12`, T-116).
+///
+/// T-118 round 1 heard 0.14 as severe; dialed back.
+pub const VERB_MARKER_MIX: f64 = 0.09;
+
+/// Gives the noun marker's inharmonic click partials in hertz.
+///
+/// Densely spread across the bright band so the splash reads broadband
+/// (crossing categories with both the tonal body and the verb chirp, P6).
+const NOUN_MARKER_PARTIALS_HZ: [f64; 7] = [
+    1_670.0, 2_390.0, 3_110.0, 3_970.0, 4_830.0, 5_660.0, 6_420.0,
+];
+
+/// Gives the noun marker's low thud frequency in hertz (impact + mass).
+const NOUN_MARKER_THUD_HZ: f64 = 620.0;
+
+/// Gives the verb chirp's two sweep start frequencies in hertz.
+const VERB_MARKER_SWEEP_START_HZ: [f64; 2] = [1_400.0, 2_050.0];
+
+/// Gives the verb chirp's two sweep end frequencies in hertz.
+const VERB_MARKER_SWEEP_END_HZ: [f64; 2] = [3_600.0, 5_150.0];
+
+/// Gives the fraction of the verb chirp window spent on its attack ramp.
+///
+/// T-118 round 1: lengthened (was 0.12) so the chirp swells in with the tonal
+/// body instead of leading it as a pre-beat.
+const VERB_MARKER_ATTACK_FRACTION: f64 = 0.25;
+
 /// Gives the fixed low-body layer wet mix.
 pub const BODY_LAYER_MIX: f64 = 0.18;
 
@@ -306,6 +362,7 @@ pub(crate) struct SyllablePerformance {
     role: PhraseRole,
     curves: PerformanceCurves,
     tail_shape: TailShape,
+    onset_class: PosClass,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -830,6 +887,89 @@ pub fn attack_transient_sample(elapsed_seconds: f64, contour: f64) -> f64 {
     transient.clamp(-ATTACK_TRANSIENT_MIX, ATTACK_TRANSIENT_MIX)
 }
 
+/// Computes the deterministic layered co-onset class-marker sample
+/// (`VOICE_V12`, T-116).
+///
+/// The marker is a class-conditioned generalization of
+/// [`attack_transient_sample`]: it is mixed into the syllable's first
+/// milliseconds, starting *together* with the tonal body (common-onset
+/// binding), so it fuses into the word's attack timbre rather than reading as
+/// a separate pre-beat, and adds zero duration. Noun = broadband click/pop
+/// splash with a low thud; verb = up-swept dual-sine chirp; `Other` is exactly
+/// silent so the unclassified path is byte-identical.
+pub fn class_onset_marker_sample(elapsed_seconds: f64, pos_class: PosClass) -> f64 {
+    match pos_class {
+        PosClass::Noun => noun_marker_sample(elapsed_seconds),
+        PosClass::Verb => verb_marker_sample(elapsed_seconds),
+        PosClass::Other => 0.0,
+    }
+}
+
+/// Computes the noun click/pop splash: dense inharmonic partials plus a low
+/// thud, decaying fast from a near-instant attack.
+fn noun_marker_sample(elapsed_seconds: f64) -> f64 {
+    if !elapsed_seconds.is_finite()
+        || elapsed_seconds <= 0.0
+        || elapsed_seconds >= NOUN_MARKER_SECONDS
+    {
+        return 0.0;
+    }
+
+    let progress = (elapsed_seconds / NOUN_MARKER_SECONDS).clamp(0.0, 1.0);
+    let remaining = 1.0 - progress;
+    // The quadratic rise synchronizes the splash with the tonal body's attack
+    // bloom so the marker fuses into the word's onset (T-118 round 1).
+    let attack = (elapsed_seconds / NOUN_MARKER_ATTACK_SECONDS).clamp(0.0, 1.0);
+    let attack = attack * attack;
+    let splash_envelope = attack * remaining * remaining;
+    let thud_envelope = attack * remaining;
+    let partial_count = f64::from(u32::try_from(NOUN_MARKER_PARTIALS_HZ.len()).unwrap_or(u32::MAX));
+    let mut splash = 0.0;
+
+    for frequency_hz in NOUN_MARKER_PARTIALS_HZ {
+        splash += sin(2.0 * PI * frequency_hz * elapsed_seconds);
+    }
+
+    let splash = (splash / partial_count) * splash_envelope;
+    let thud = 0.35 * sin(2.0 * PI * NOUN_MARKER_THUD_HZ * elapsed_seconds) * thud_envelope;
+    let marker = (splash + thud) * NOUN_MARKER_MIX;
+
+    marker.clamp(-NOUN_MARKER_MIX, NOUN_MARKER_MIX)
+}
+
+/// Computes the verb up-swept chirp: two sine sweeps gliding into the bright
+/// band across the marker window.
+fn verb_marker_sample(elapsed_seconds: f64) -> f64 {
+    if !elapsed_seconds.is_finite()
+        || elapsed_seconds <= 0.0
+        || elapsed_seconds >= VERB_MARKER_SECONDS
+    {
+        return 0.0;
+    }
+
+    let progress = (elapsed_seconds / VERB_MARKER_SECONDS).clamp(0.0, 1.0);
+    let attack = (progress / VERB_MARKER_ATTACK_FRACTION).clamp(0.0, 1.0);
+    let envelope = attack * attack * (1.0 - progress);
+    let mut chirp = 0.0;
+
+    for (start_hz, end_hz) in VERB_MARKER_SWEEP_START_HZ
+        .iter()
+        .zip(VERB_MARKER_SWEEP_END_HZ)
+    {
+        // The phase of a linear sweep is the integral of its instantaneous
+        // frequency: start*t + (end - start) * t^2 / (2 * window).
+        let phase = (start_hz * elapsed_seconds)
+            + ((end_hz - start_hz) * elapsed_seconds * elapsed_seconds
+                / (2.0 * VERB_MARKER_SECONDS));
+
+        chirp += sin(2.0 * PI * phase);
+    }
+
+    let marker = (chirp / 2.0) * envelope * VERB_MARKER_MIX;
+
+    marker.clamp(-VERB_MARKER_MIX, VERB_MARKER_MIX)
+}
+
 /// Computes the low-body layer frequency in hertz.
 pub fn body_layer_frequency_hz(pitch_hz: f64) -> f64 {
     if !pitch_hz.is_finite() || pitch_hz <= 0.0 {
@@ -1207,6 +1347,7 @@ impl SyllablePerformance {
             role: PhraseRole::ChattyReply,
             curves: PerformanceCurves::neutral(),
             tail_shape: TailShape::Sustained,
+            onset_class: PosClass::Other,
         }
     }
 
@@ -1225,6 +1366,7 @@ impl SyllablePerformance {
             role: PhraseRole::ChattyReply,
             curves: PerformanceCurves::neutral(),
             tail_shape: TailShape::Sustained,
+            onset_class: PosClass::Other,
         }
     }
 
@@ -1272,6 +1414,15 @@ impl SyllablePerformance {
 
     pub(crate) fn with_tail_shape(mut self, tail_shape: TailShape) -> Self {
         self.tail_shape = tail_shape;
+
+        self
+    }
+
+    /// Selects the layered co-onset class marker for this syllable
+    /// (`VOICE_V12`). Only word-initial content syllables carry a non-`Other`
+    /// class here, so continuations and function words stay unmarked.
+    pub(crate) fn with_onset_class(mut self, onset_class: PosClass) -> Self {
+        self.onset_class = onset_class;
 
         self
     }
@@ -1507,6 +1658,10 @@ fn render_performance_sample(
     } else {
         attack_transient_sample(elapsed_seconds, parameters.contour)
     };
+    // The class marker is not gated by the connection: it anchors the word
+    // boundary even when the onset arrives over a tonal bridge, layered over
+    // the (possibly suppressed) breathy transient rather than replacing it.
+    let class_marker = class_onset_marker_sample(elapsed_seconds, controls.performance.onset_class);
     let word_onset_texture_gain = word_onset_texture_gain(
         elapsed_seconds,
         controls.duration_seconds,
@@ -1515,6 +1670,7 @@ fn render_performance_sample(
     let layered = voiced
         + body_layer_sample(state.body_phase, parameters.vowel_position)
         + attack_transient
+        + class_marker
         + (controls.brightness_gain
             * word_onset_texture_gain
             * sparkle_event_gain(

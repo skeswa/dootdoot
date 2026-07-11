@@ -10,13 +10,15 @@
 
 <!-- Add these once the project ships: CI status, crates.io version, downloads. -->
 
-> **Status: VOICE_V11 natural-voice tuning is active.** `VOICE_V11` softens syllable
-> attacks, adds deterministic intra-phrase rubato, localizes dash hesitation breath, and
-> integrates aspiration so breath reads as part of the voice instead of a separate hiss.
-> Earlier `VOICE_V*` contracts remain historical lock points, and any sample-affecting
-> change still requires a new voice identifier plus regenerated golden WAV fixtures. macOS
-> release automation is committed; the first tagged release will publish Homebrew and
-> prebuilt installer artifacts. See
+> **Status: VOICE_V12 noun/verb recognizability is active.** `VOICE_V12` gives content
+> words a learnable grammatical signature: nouns open with a broadband click/pop and
+> settle, verbs open with an up-swept chirp and push, both as a compound
+> `stem → resolution` silhouette driven by a baked, pinned word-class table (no runtime
+> tagger, no tensor runtime). Unclassified words render exactly as `VOICE_V11`'s natural
+> voice. Earlier `VOICE_V*` contracts remain historical lock points, and any
+> sample-affecting change still requires a new voice identifier plus regenerated golden
+> WAV fixtures. macOS release automation is committed; the first tagged release will
+> publish Homebrew and prebuilt installer artifacts. See
 > [the roadmap](docs/plan.md) and
 > [packaging notes](docs/reference/packaging.md).
 
@@ -117,14 +119,17 @@ and `control:` rows are not voiced tokens; they shape neighboring syllables and 
 
 Text is tokenized, each token is mapped through the embedded `.doot` asset to a semantic
 vector, those vectors are reduced to four perceptual knobs (pitch, vowel, glide, warble),
-and a deterministic performance planner adds phrase roles, local affect/archetypes,
-pauses, rests, and motion curves. A fixed formant-synthesis voice then renders the plan
-to one canonical 44.1 kHz / 16-bit / mono buffer for both playback and WAV output.
+each word is looked up in an embedded noun/verb class table (`VOICE_V12`) that adds class
+onset markers and a compound `stem → resolution` silhouette to content words, and a
+deterministic performance planner adds phrase roles, local affect/archetypes, pauses,
+rests, and motion curves. A fixed formant-synthesis voice then renders the plan to one
+canonical 44.1 kHz / 16-bit / mono buffer for both playback and WAV output.
 
-The runtime does not load `model2vec`, `candle`, or any tensor framework. `xtask`
-generates `assets/dootdoot_asset_v1.doot` ahead of time; the shipped CLI embeds that
-asset and uses pinned math, so identical input yields identical output on the
-CI-verified platforms.
+The runtime does not load `model2vec`, `candle`, or any tensor framework — and no POS
+tagger. `xtask` generates `assets/dootdoot_asset_v1.doot` (semantics + tokenizer) and
+`assets/dootdoot_pos_v1.doot` (the word-class table) ahead of time; the shipped CLI
+embeds both assets and uses pinned math, so identical input yields identical output on
+the CI-verified platforms.
 
 Full rationale lives in [`docs/design.md`](docs/design.md); the requirements are in
 [`docs/spec.md`](docs/spec.md). The full documentation map is

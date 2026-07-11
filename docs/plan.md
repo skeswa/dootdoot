@@ -773,6 +773,151 @@ emphasized)` — a deterministic per-syllable duration multiplier: a sinusoidal 
 
 ---
 
+## Phase 22 — VOICE_V12 noun/verb recognizability
+
+> Derived from
+> [`noun-verb-recognizability.md`](./research/noun-verb-recognizability.md). Recurring
+> content words are hard to recognize by ear because their identity rides on absolute
+> pitch in a continuous, arbitrary mapping (research §1). `VOICE_V12` gives nouns and
+> verbs a systematic two-pillar signature: a **layered co-onset class marker** (noun =
+> broadband click/pop, verb = up-swept chirp — a class-conditioned generalization of
+> `attack_transient_sample`, zero added duration) and a **compound
+> `stem → class-resolution` silhouette** (noun settles, verb pushes; function words stay
+> single light blips). The POS class is a **word-level** property: word-initial tokens
+> establish it, continuation tokens inherit it. Ordering is
+> **spike-before-contract-before-ship**: validate the acoustics by ear behind a local
+> gate (T-115…T-118), then pin the POS data pipeline (T-119…T-121), then ship and freeze
+> (T-122…T-127). The task IDs here supersede the proposal numbering in the research
+> doc's §7. Constraints throughout: owned math only, deterministic, no runtime tensors
+> (the class table is baked like the semantic asset); the semantic baseline stays pooled
+> over original tokenizer tokens; the no-class/neutral path stays byte-identical until
+> the freeze so only text-path goldens move. An empirical check on a ~552k-token
+> commit-message corpus (research §5.1) found the primary register — narrating coding
+> work — is **noun-heavy** (40.7% nouns vs conversation's ~12–15%) and that a
+> general-English top-2,000 frequency table covers only ~44% of its noun/verb tokens
+> vs ~95% for a domain-built table, so the lexicon/table tasks below are
+> **coding-domain-weighted** and the ambiguity policy is A/B'd by ear before it is
+> locked. The `VOICE_V13` follow-ons (verb reduplication/aspect, noun size iconicity,
+> learnability regression) are out of scope for this phase.
+
+- [x] **T-115 — Spike POS lexicon + word-class plumbing.** Behind a local, default-off,
+      compile-time spike gate (not a user-facing alternate voice), hard-code a
+      ~50–100-word noun/verb lexicon (research §5 Option B) drawn from
+      **coding-domain frequency** (top commit-message/dev-text lemmas — research §5.1: a
+      general-English 50+50 list covers only ~5% of coding noun tokens vs ~35%
+      domain-picked), roughly balanced nouns/verbs since the register is noun-heavy.
+      Thread a word-level `PosClass {Noun, Verb, Other}` through the token metadata flow —
+      `TokenizedToken` (`tokenizer.rs:29`) → `VoicedToken` (`engine.rs:41`) →
+      `SyllableEvent`/planner `Segment`/`PerformanceSyllable` (`performance.rs:79-92`) —
+      with word-initial tokens establishing the class and continuation tokens inheriting
+      it. No audio change; all paths byte-identical with the gate off.
+      Deps: T-111 · Reqs: NFR-16 · Est: 3h
+- [x] **T-116 — Spike the two layered co-onset class markers.** Behind the gate,
+      generalize `attack_transient_sample` (`synth.rs:815`) into class-conditioned
+      variants mixed at the existing onset point (`synth.rs:1508`): noun = broadband
+      click/pop splash (~15–25 ms, near-instant attack), verb = up-swept dual-sine chirp
+      (~40–60 ms) — starting together with the tonal body (co-onset, zero added
+      duration), louder than the `VOICE_V11` softened transient but only on word-initial
+      content tokens. Render A/B minimal pairs (_dog_ vs _run_) and confirm by ear the
+      mark fuses into the word's attack rather than reading as a separate pre-beat.
+      Deps: T-115, T-109 · Reqs: NFR-3, NFR-4, NFR-16 · Est: 3h
+- [x] **T-117 — Spike the compound `stem → resolution` silhouette.** Behind the gate,
+      expand single-token content words to 2 syllables via a frozen per-class transform
+      of the stem's own knobs — noun **settle** (vowel rounds toward `oo`, pitch steps
+      down, contour flattens, sustained tail) vs verb **push** (brighter, rising/gliding
+      continuation) — never random padding. Shorten the per-syllable base duration for
+      compound words so a 2-syllable word is not 2× a single blip. Render minimal pairs
+      (_the cat sits_) and check pace against `VOICE_V11` by ear.
+      Deps: T-115, T-110 · Reqs: NFR-16 · Est: 4h
+- [x] **T-118 — Evaluate the spike & lock the recipe (go/no-go).** By ear plus
+      `scripts/acoustics` and `scripts/sound_taxonomy.py`: confirm the marker lands as a
+      distinct gesture and the two classes separate on onset category, contour, and
+      timbre/attack — not just pitch. **A/B the ambiguity policy by ear** (research
+      §9.6): render high-frequency noun/verb-ambiguous lemmas (_build, fix, run, update,
+      sync_) both dominant-class-marked and unmarked-`Other`, and judge which is more
+      learnable — the conservative fallback would unmark much of the coding-domain core
+      (research §5.1). Decide go/no-go; resolve the remaining research §9 open decisions
+      (POS source/storage, marker aggressiveness, foley boldness, syllable
+      count/pacing); record the target constants the ship tasks will implement.
+      Deps: T-116, T-117 · Reqs: NFR-14, NFR-15, NFR-16 · Est: 2.5h
+- [x] **T-119 — Decide VOICE_V12 contract scope + add spec FRs.** Update `spec.md` with
+      the new `FR-114…FR-121` these tasks cite: pinned build-time POS source + baked
+      class table as a committed voice asset; word-level class semantics (word-initial
+      establishes, continuation inherits) with the closed-class/function-word override
+      and the ambiguity policy the T-118 A/B locked (dominant-class-marked vs
+      fall-back-to-`Other` — research §5.1/§9.6); the two layered class markers;
+      derived resolution syllables (target `max(subword_count, class_minimum)`, cap 3);
+      semantic baseline unchanged (pooled over original tokenizer tokens); compound
+      pacing bounds; `--explain` class rows; freeze/acceptance. In `design.md`,
+      explicitly supersede §6.4's "one token = one syllable" for marked content words.
+      Deps: T-118 · Reqs: FR-33, FR-38, FR-39, NFR-16 · Est: 3h
+- [x] **T-120 — Choose + pin the build-time POS source; derive classes in `xtask`.**
+      Pick a permissively-licensed POS source (frequency-tagged wordlist, WordNet
+      lexnames, or a one-time tagged-corpus pass) **and rank the table's entries by
+      coding-domain frequency** (a pinned snapshot of a commit-message/dev-text corpus),
+      not general English — a general top-2,000 table covers only ~44% of coding
+      noun/verb tokens vs ~95% for a domain-built top-2,000-each table (research §5.1).
+      Pin both the POS source and the ranking-corpus snapshot by repo/commit/SHA-256 in
+      `assets/source_manifest.toml` the same way the model is pinned, with `xtask`
+      validating before work. Derive a dominant `{Noun, Verb, Other}` class per
+      whole-word token / word-initial stem, applying the closed-class override and the
+      T-119 ambiguity policy (e.g. `can`, `will` → `Other`; `build`/`fix`/`run` per the
+      locked rule). Unit-test the policy cases and regeneration reproducibility.
+      Deps: T-119 · Reqs: FR-114, FR-42, FR-43, NFR-8 · Est: 4h
+- [x] **T-121 — Bake, commit, and load the class table.** Emit the class table as a
+      sidecar embedded asset (per the §9.1 recommendation — leaves the semantic `.doot`
+      spec at v1) with its own spec version and source hashes; `include_bytes!` and
+      parse it in `dootdoot-core`; replace the spike lexicon with the baked lookup;
+      commit the asset with a regeneration note; extend the asset layout/embedded-asset
+      contract tests (`tests/asset_spec_layout.rs`, `tests/embedded_asset.rs`).
+      Deps: T-120 · Reqs: FR-114, NFR-7, NFR-8 · Est: 4h
+- [x] **T-122 — Ship the class onset markers.** Promote the T-116 spike variants to the
+      real `VOICE_V12` path: the class flag rides `SyllablePerformance` (`synth.rs:295`)
+      so `SyllableRenderControls` selects the noun/verb/neutral variant; add the
+      marker-gain constant near `ATTACK_TRANSIENT_MIX` (`synth.rs:249`) as its own
+      tuning slice layered over the `VOICE_V11` softened onset; gate strictly to
+      word-initial content tokens. Tests: determinism, bounded/finite output,
+      marker-fires-only-on-content-word-initial, and the no-class path byte-identical.
+      Deps: T-118, T-121 · Reqs: FR-116, NFR-3, NFR-4, NFR-16 · Est: 3h
+- [x] **T-123 — Resolution-syllable knob transform.** Implement the frozen per-class
+      transform as a pure `KnobSet → KnobSet` function (noun settle / verb push, per the
+      T-118 locked recipe), clamped to knob bounds. Value tests pin the transform
+      endpoints, clamping, and determinism; no sequencing changes yet.
+      Deps: T-118, T-119 · Reqs: FR-117, NFR-16 · Est: 2h
+- [x] **T-124 — Expand single-token content words in the sequencer.** Emit the derived
+      resolution syllable after the stem for single-token nouns/verbs; keep the
+      semantic baseline pooled over the original tokenizer tokens (FR-118). Update event
+      counts, planner index mapping (`performance.rs:202
+plan_discourse_performance` and the class field on
+      `Segment`/`PerformanceSyllable`), and exact output-length estimation plus the
+      input-limit tests.
+      Deps: T-121, T-123 · Reqs: FR-117, FR-118, FR-36, FR-37, NFR-16 · Est: 4h
+- [x] **T-125 — Multi-token resolution shaping + compound pacing.** Shape the **last**
+      subword of multi-token content words as the class resolution; enforce the
+      syllable target `max(subword_count, class_minimum)` capped at 3; apply the
+      shortened compound base duration and integrate with `syllable_rubato_scale`
+      (`sequence.rs`) so content words read rhythmically heavy while the `VOICE_V11`
+      pace survives; function words stay single light blips. Update duration estimation
+      and add a directional pacing check.
+      Deps: T-124 · Reqs: FR-117, FR-119, FR-36, FR-37, NFR-16 · Est: 3h
+- [x] **T-126 — Extend `--explain` with class, marker, and silhouette.** Show each
+      token's POS class, onset marker, and syllable silhouette (training aid, research
+      P9); `insta` snapshots for a mixed noun/verb/function sentence and a multi-subword
+      content word.
+      Deps: T-124 · Reqs: FR-120, FR-31, FR-32, NFR-20 · Est: 2h
+- [x] **T-127 — Freeze VOICE_V12 + acceptance doc.** Final by-ear tuning of the marker
+      gain and resolution shapes; bump `ACTIVE_VOICE` (`asset.rs:50`) and surface the
+      version string; regenerate the golden WAV fixtures; write
+      `docs/validation/voice-v12-noun-verb.md` (asserted by
+      `tests/voice_tuning_acceptance.rs`) with `scripts/acoustics` +
+      `scripts/sound_taxonomy.py` directional checks on the minimal pairs; sync
+      `spec.md` (FR-114…FR-121) and `design.md` (§6.4 supersession, a `VOICE_V12`
+      decision subsection under §8, traceability) with what was built.
+      Deps: T-122, T-125, T-126 · Reqs: FR-121, FR-33, FR-39, NFR-16, NFR-17, NFR-18 ·
+      Est: 3h
+
+---
+
 ## Critical paths
 
 ```mermaid
@@ -872,4 +1017,31 @@ flowchart LR
     T110 --> T111
     T112 --> T111
     T113 --> T111
+```
+
+`VOICE_V12` runs **spike-before-contract-before-ship**: the acoustics are validated by
+ear behind a local gate (T-115–T-118) before the POS data pipeline is pinned
+(T-119–T-121), and both pillars (markers + compound silhouette) converge on one freeze
+so nouns/verbs ship as coherent words:
+
+```mermaid
+flowchart LR
+    T111[T-111 VOICE_V11 freeze] --> T115[T-115 spike POS lexicon]
+    T115 --> T116[T-116 spike class markers]
+    T115 --> T117[T-117 spike compound silhouette]
+    T116 --> T118[T-118 evaluate + go/no-go]
+    T117 --> T118
+    T118 --> T119[T-119 V12 contract scope]
+    T119 --> T120[T-120 pin POS source]
+    T120 --> T121[T-121 bake class table]
+    T121 --> T122[T-122 ship onset markers]
+    T118 --> T122
+    T119 --> T123[T-123 resolution transform]
+    T121 --> T124[T-124 single-token expansion]
+    T123 --> T124
+    T124 --> T125[T-125 multi-token + pacing]
+    T124 --> T126[T-126 explain rows]
+    T122 --> T127[T-127 VOICE_V12 freeze]
+    T125 --> T127
+    T126 --> T127
 ```

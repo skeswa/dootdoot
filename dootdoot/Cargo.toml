@@ -17,5 +17,8 @@ clap = { version = "4.5.0", features = ["derive"] }
 dootdoot-core = { path = "../dootdoot-core" }
 rodio = { version = "0.22.2", default-features = false, features = ["playback"] }
 
+[dev-dependencies]
+insta = { version = "1.48.0", default-features = false }
+
 [lints]
 workspace = true

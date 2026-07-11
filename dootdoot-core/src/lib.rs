@@ -9,6 +9,8 @@ mod mapping;
 mod mathx;
 mod performance;
 mod phrase;
+mod pos_class;
+mod pos_table;
 mod sequence;
 mod synth;
 mod tokenizer;
@@ -25,7 +27,7 @@ pub use asset::{
     DOOT_ASSET_TOKEN_RECORD_BYTES, DootAsset, DootAssetError, DootAssetHashes, DootAssetParts,
     DootAssetScales, DootAssetSpec, DootAssetSquashAxisStats, DootAssetSquashFunction, VOICE_V1,
     VOICE_V2, VOICE_V3, VOICE_V4, VOICE_V5, VOICE_V6, VOICE_V7, VOICE_V8, VOICE_V9, VOICE_V10,
-    VOICE_V11, embedded_doot_asset,
+    VOICE_V11, VOICE_V12, embedded_doot_asset,
 };
 pub use complexity::{ComplexityAnalysis, analyze_complexity_for_text};
 pub use engine::{
@@ -47,10 +49,16 @@ pub use performance::{
     PerformanceCurves, PerformancePlan, PerformanceSyllable, PhraseRole, plan_discourse_performance,
 };
 pub use phrase::{PhraseBoundaryStrength, PhrasePlan, PhraseSyllablePlan, plan_phrase_prosody};
+pub use pos_class::{PosClass, class_resolution_knobs};
+pub use pos_table::{
+    POS_TABLE_FILE_V1, POS_TABLE_HASH_BYTES, POS_TABLE_MAGIC, POS_TABLE_SPEC_VERSION, PosTable,
+    PosTableError, embedded_pos_table,
+};
 pub use sequence::{
-    DASH_HESITATION_PAUSE_SAMPLES, ELLIPSIS_HESITATION_PAUSE_SAMPLES, EMPTY_CHIRP_CONTOUR,
-    EMPTY_CHIRP_PITCH_CENTER, EMPTY_CHIRP_START_PITCH_CENTER, EMPTY_CHIRP_VOWEL_POSITION,
-    EMPTY_CHIRP_WARBLE_DEPTH, HesitationMarker, ProsodicPunctuation, ROLE_LONG_PAUSE_MAX_SAMPLES,
+    COMPOUND_SYLLABLE_DURATION_SCALE, DASH_HESITATION_PAUSE_SAMPLES,
+    ELLIPSIS_HESITATION_PAUSE_SAMPLES, EMPTY_CHIRP_CONTOUR, EMPTY_CHIRP_PITCH_CENTER,
+    EMPTY_CHIRP_START_PITCH_CENTER, EMPTY_CHIRP_VOWEL_POSITION, EMPTY_CHIRP_WARBLE_DEPTH,
+    HesitationMarker, ProsodicPunctuation, ROLE_LONG_PAUSE_MAX_SAMPLES,
     ROLE_LONG_PAUSE_MIN_SAMPLES, STAGED_REPLY_REST_MAX_SAMPLES, STAGED_REPLY_REST_MIN_SAMPLES,
     SequenceEvent, SequencedUtterance, SyllableEvent, SyllableTiming, TailShape,
     estimate_syllable_sample_counts, estimate_utterance_sample_count, render_empty_chirp,
@@ -66,26 +74,27 @@ pub use synth::{
     INTERNAL_PITCH_SWEEP_CENTS, LEADING_SILENCE_SAMPLES, LEADING_SILENCE_SECONDS,
     LONG_PUNCTUATION_PAUSE_SAMPLES, LONG_PUNCTUATION_PAUSE_SECONDS,
     MEDIUM_PUNCTUATION_PAUSE_SAMPLES, MEDIUM_PUNCTUATION_PAUSE_SECONDS, MOUTH_RESONANCE_COUNT,
-    MOUTH_STAGE_MAX_MIX, MouthDrive, MouthStage, NOISE_BREATH_MAX_MIX, PHRASE_EMPHASIS_GAIN,
-    PHRASE_EMPHASIS_PITCH_SEMITONES, PITCH_REGISTER_BIAS_HZ, PITCH_SEMITONE_SPAN,
-    PORTAMENTO_SECONDS, PUNCTUATION_GLIDE_SEMITONES, QUESTION_RISE_SEMITONES,
-    RING_MOD_FREQUENCY_HZ, RING_MOD_MIX, SENTENCE_SYLLABLE_SAMPLES, SOURCE_MAX_HARMONICS,
-    SOURCE_PULSE_MIX, SOURCE_PULSE_WIDTH, SOURCE_SAW_MIX, SYNTH_SAMPLE_RATE_HZ, Synth,
-    TRAILING_SILENCE_SAMPLES, TRAILING_SILENCE_SECONDS, UPPER_MID_SPARKLE_MIX, VOWEL_LOCUS_COUNT,
+    MOUTH_STAGE_MAX_MIX, MouthDrive, MouthStage, NOISE_BREATH_MAX_MIX, NOUN_MARKER_MIX,
+    NOUN_MARKER_SECONDS, PHRASE_EMPHASIS_GAIN, PHRASE_EMPHASIS_PITCH_SEMITONES,
+    PITCH_REGISTER_BIAS_HZ, PITCH_SEMITONE_SPAN, PORTAMENTO_SECONDS, PUNCTUATION_GLIDE_SEMITONES,
+    QUESTION_RISE_SEMITONES, RING_MOD_FREQUENCY_HZ, RING_MOD_MIX, SENTENCE_SYLLABLE_SAMPLES,
+    SOURCE_MAX_HARMONICS, SOURCE_PULSE_MIX, SOURCE_PULSE_WIDTH, SOURCE_SAW_MIX,
+    SYNTH_SAMPLE_RATE_HZ, Synth, TRAILING_SILENCE_SAMPLES, TRAILING_SILENCE_SECONDS,
+    UPPER_MID_SPARKLE_MIX, VERB_MARKER_MIX, VERB_MARKER_SECONDS, VOWEL_LOCUS_COUNT,
     VOWEL_TRAJECTORY_BLOOM, VOWEL_TRAJECTORY_SWEEP, WARBLE_DEPTH_CENTS, WARBLE_DRIFT_RATE_HZ,
     WARBLE_FLUTTER_RATE_HZ, WARBLE_RATE_HZ, WHISTLE_FLOOR_HZ, WHISTLE_PITCH_CEILING_HZ,
     WHISTLE_TARGET_HZ, WIDE_GESTURE_PITCH_SPAN_SEMITONES, WORD_PAUSE_SAMPLES, WORD_PAUSE_SECONDS,
     amplitude_envelope, apply_amplitude_envelope, apply_internal_pitch_swoop_hz, apply_warble_hz,
     apply_warble_hz_with_phase, apply_whistle_sweep_hz, attack_transient_sample,
     blend_noise_excitation, body_layer_frequency_hz, body_layer_sample, breath_closure_modulation,
-    compound_warble_offset_cents, formant_frequencies, gesture_pitch_span_semitones,
-    imperfection_detune_cents, internal_pitch_offset_cents, mouth_open_envelope,
-    mouth_resonance_hz, noise_breath_sample, pitch_center_hz, pitch_center_hz_with_span,
-    portamento_pitch_hz, portamento_progress, render_syllable, ring_modulate,
-    source_harmonic_count, source_oscillator_sample, sparkle_event_gain, syllable_roughness_amount,
-    upper_mid_sparkle_frequency_hz, upper_mid_sparkle_sample, vowel_trajectory_position,
-    warble_depth_cents, warble_offset_cents, warble_phase_offset_for_syllable,
-    whistle_sweep_amount, whistle_sweep_pitch_hz,
+    class_onset_marker_sample, compound_warble_offset_cents, formant_frequencies,
+    gesture_pitch_span_semitones, imperfection_detune_cents, internal_pitch_offset_cents,
+    mouth_open_envelope, mouth_resonance_hz, noise_breath_sample, pitch_center_hz,
+    pitch_center_hz_with_span, portamento_pitch_hz, portamento_progress, render_syllable,
+    ring_modulate, source_harmonic_count, source_oscillator_sample, sparkle_event_gain,
+    syllable_roughness_amount, upper_mid_sparkle_frequency_hz, upper_mid_sparkle_sample,
+    vowel_trajectory_position, warble_depth_cents, warble_offset_cents,
+    warble_phase_offset_for_syllable, whistle_sweep_amount, whistle_sweep_pitch_hz,
 };
 pub use tokenizer::{
     TokenizedInput, TokenizedToken, Tokenizer, TokenizerError, embedded_tokenizer,

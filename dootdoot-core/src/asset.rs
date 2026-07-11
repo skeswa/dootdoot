@@ -46,8 +46,19 @@ pub const VOICE_V10: &str = "VOICE_V10";
 /// into the voice instead of reading as a separate hiss.
 pub const VOICE_V11: &str = "VOICE_V11";
 
+/// Identifies the noun/verb-recognizability output contract: content words
+/// carry a systematic two-pillar class signature — a layered co-onset marker
+/// (noun = broadband click/pop splash, verb = up-swept dual-sine chirp, both
+/// blooming with the tonal body) and a compound `stem → class-resolution`
+/// silhouette (noun settles, verb pushes; single-token words gain a derived
+/// resolution syllable, multi-token words shape their last subword) at a
+/// shortened compound pace. Classes come from a baked, pinned, per-surface
+/// class table under the conservative ambiguity policy; unclassified words
+/// render exactly as `VOICE_V11`.
+pub const VOICE_V12: &str = "VOICE_V12";
+
 /// Identifies the active sample-affecting output contract.
-pub const ACTIVE_VOICE: &str = VOICE_V11;
+pub const ACTIVE_VOICE: &str = VOICE_V12;
 
 /// Identifies the first committed dootdoot asset spec file.
 pub const DOOT_ASSET_FILE_V1: &str = "dootdoot_asset_v1.doot";

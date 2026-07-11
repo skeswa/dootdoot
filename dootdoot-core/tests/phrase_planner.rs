@@ -31,7 +31,7 @@ fn phrase_planner_sets_boundary_metadata_from_real_text() {
 
 #[test]
 fn phrase_planner_resets_declination_after_sentence_boundary() {
-    let events = sequence_events_for_text("hello. there friend").expect("text should analyze");
+    let events = sequence_events_for_text("hello. there beta").expect("text should analyze");
     let plan = plan_phrase_prosody(&events);
     let syllables = plan.syllables();
 
@@ -79,7 +79,7 @@ fn sentence_final_lowering(text: &str) -> f64 {
 fn clause_boundary_drops_its_lowering_for_a_continuation_rise() {
     // VOICE_V9 (R4): a clause mark carries an open continuation rise, so it must
     // not also impose a final lowering that would erase that rise at the tail.
-    let events = sequence_events_for_text("alpha beta, gamma").expect("text should analyze");
+    let events = sequence_events_for_text("beta hello, there").expect("text should analyze");
     let plan = plan_phrase_prosody(&events);
     let syllables = plan.syllables();
 
@@ -92,7 +92,7 @@ fn clause_boundary_drops_its_lowering_for_a_continuation_rise() {
 
 #[test]
 fn phrase_planner_snapshot_is_stable_for_mixed_boundaries() {
-    let events = sequence_events_for_text("alpha beta, gamma delta!").expect("text should analyze");
+    let events = sequence_events_for_text("beta hello, there beta!").expect("text should analyze");
     let plan = plan_phrase_prosody(&events);
 
     insta::assert_debug_snapshot!(plan, @r###"
