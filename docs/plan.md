@@ -916,6 +916,15 @@ plan_discourse_performance` and the class field on
       Deps: T-122, T-125, T-126 · Reqs: FR-121, FR-33, FR-39, NFR-16, NFR-17, NFR-18 ·
       Est: 3h
 
+## Phase 23 — Documentation web experience
+
+- [x] **T-128 — Ship the VitePress documentation and listening experience.** Build a
+      cinematic, responsive landing page over the existing documentation; expose a sampler
+      that plays committed `VOICE_V12` golden WAVs; extend the default VitePress reader with
+      local search, outlines, edit links, and generated navigation for reference, research,
+      and validation collections; add site behavior tests and a production-build command.
+      Deps: T-127 · Reqs: NFR-21, NFR-23 · Est: 6h
+
 ---
 
 ## Critical paths

@@ -1,5 +1,16 @@
 # Documentation Map
 
+This directory is also the source for the project website. The site renders these Markdown
+files directly, so the readable source and published documentation cannot drift. Collection
+navigation for `reference/`, `research/`, and `validation/` is generated automatically.
+
+```sh
+npm install
+npm run docs:dev       # local site with hot reload
+npm run test:docs      # site behavior checks
+npm run docs:build     # production build
+```
+
 Start with the four source-of-truth documents. These stay at the top level because they
 define the architecture, requirements, work plan, and enforced development rules:
 

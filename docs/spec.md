@@ -653,6 +653,11 @@
 - **NFR-21** Documented behaviors SHALL include: uncased tokenization
   (`Hello`==`hello`), English-oriented handling of non-Latin/emoji input, the empty-
   input "?" chirp, and the input warning/cap thresholds.
+- **NFR-23** The project documentation SHALL build as a static VitePress site from the
+  authoritative Markdown files, generate collection navigation from the docs tree, provide
+  local full-text search, and expose a browser-playable sampler backed by committed golden
+  WAV fixtures. Adding or renaming a supporting document SHALL NOT require a manual sidebar
+  edit.
 
 ### 2.7 Distribution
 

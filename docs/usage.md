@@ -101,7 +101,7 @@ punctuation and word boundaries affect timing.
 `dootdoot --version` surfaces the active voice identifier. The current binary reports
 `dootdoot VOICE_V12`, the noun/verb recognizability contract. Every earlier `VOICE_V*`
 identifier (`VOICE_V1` through `VOICE_V11`) is a locked historical contract point — see
-the acceptance notes under [`docs/validation/`](validation/) for what each froze. Any
+the acceptance notes in the [validation archive](README#validation) for what each froze. Any
 further rendered-sample change requires a new voice identifier and regenerated golden
 WAV fixtures.
 
