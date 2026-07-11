@@ -1,24 +1,23 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-type SidebarItem = { text: string; link: string };
-
 const docsRoot = resolve(import.meta.dirname, "..");
-const title = (name: string) =>
-  name
-    .replace(/\.md$/, "")
-    .replaceAll("-", " ")
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-const directory = (name: string): SidebarItem[] =>
-  readdirSync(resolve(docsRoot, name), { withFileTypes: true })
+function heading(path) {
+  const title = readFileSync(path, "utf8").match(/^#\s+(.+)$/m)?.[1];
+  if (!title) throw new Error(`documentation page has no level-one heading: ${path}`);
+  return title.replaceAll("`", "");
+}
+
+function directory(name) {
+  return readdirSync(resolve(docsRoot, name), { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-    .sort((left, right) => left.name.localeCompare(right.name))
     .map((entry) => ({
-      text: title(entry.name),
+      text: heading(resolve(docsRoot, name, entry.name)),
       link: `/${name}/${entry.name.replace(/\.md$/, "")}`,
-    }));
+    }))
+    .sort((left, right) => left.text.localeCompare(right.text, "en", { numeric: true }));
+}
 
 export const sidebar = [
   {

@@ -929,6 +929,12 @@ plan_discourse_performance` and the class field on
       Pages project with SHA-pinned actions, least-privilege job permissions, serialized
       deployments, and the `/dootdoot/` project base path.
       Deps: T-128 · Reqs: NFR-23 · Est: 1h
+- [x] **T-130 — Harden the documentation site's maintainability.** Make the golden corpus
+      canonical for playground labels, replace source-regex checks with built-artifact and
+      parsed-workflow contracts, derive naturally ordered navigation labels from Markdown
+      headings, self-host pinned fonts, split theme/landing/playground styles by ownership,
+      and remove broad dead-link suppression.
+      Deps: T-129 · Reqs: NFR-23 · Est: 2h
 
 ---
 

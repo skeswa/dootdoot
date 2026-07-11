@@ -1,5 +1,5 @@
 import { defineConfig } from "vitepress";
-import { sidebar } from "./navigation.mts";
+import { sidebar } from "./navigation.mjs";
 
 export default defineConfig({
   title: "dootdoot",
@@ -7,7 +7,6 @@ export default defineConfig({
   base: "/dootdoot/",
   cleanUrls: true,
   lastUpdated: true,
-  ignoreDeadLinks: [/source_manifest\.toml$/, /LICENSE$/],
   vite: {
     publicDir: "../dootdoot-core/tests/fixtures/golden",
   },

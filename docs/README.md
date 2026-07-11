@@ -7,7 +7,7 @@ navigation for `reference/`, `research/`, and `validation/` is generated automat
 ```sh
 npm install
 npm run docs:dev       # local site with hot reload
-npm run test:docs      # site behavior checks
+npm run test:docs      # production build + site behavior checks
 npm run docs:build     # production build
 ```
 
