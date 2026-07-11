@@ -11,6 +11,10 @@ npm run test:docs      # site behavior checks
 npm run docs:build     # production build
 ```
 
+Pushes to `main` that touch the site, its golden audio samples, or its toolchain deploy
+automatically to `https://skeswa.github.io/dootdoot/` through the pinned
+`.github/workflows/docs.yml` GitHub Pages workflow.
+
 Start with the four source-of-truth documents. These stay at the top level because they
 define the architecture, requirements, work plan, and enforced development rules:
 

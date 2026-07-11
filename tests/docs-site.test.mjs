@@ -33,3 +33,18 @@ test("all committed sample paths used by the playground are real voice fixtures"
     );
   }
 });
+
+test("the site deploys to the repository GitHub Pages project", () => {
+  const workflow = read(".github/workflows/docs.yml");
+  const config = read("docs/.vitepress/config.mts");
+
+  assert.match(config, /base: "\/dootdoot\/"/);
+  assert.match(workflow, /npm ci/);
+  assert.match(workflow, /npm run test:docs/);
+  assert.match(workflow, /npm run docs:build/);
+  assert.match(workflow, /actions\/upload-pages-artifact@[a-f0-9]{40}/);
+  assert.match(workflow, /actions\/deploy-pages@[a-f0-9]{40}/);
+  assert.match(workflow, /pages: write/);
+  assert.match(workflow, /id-token: write/);
+  assert.doesNotMatch(workflow, /uses: [^\n]+@v\d/);
+});

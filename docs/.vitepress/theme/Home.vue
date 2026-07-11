@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { withBase } from "vitepress";
 import DroidPlayground from "./DroidPlayground.vue";
 </script>
 
@@ -19,7 +20,9 @@ import DroidPlayground from "./DroidPlayground.vue";
         </p>
         <div class="hero-actions">
           <a href="#signal-console" class="primary-action">Open signal console <span>↘</span></a>
-          <a href="/design" class="text-action">Read the field manual <span>→</span></a>
+          <a :href="withBase('/design')" class="text-action"
+            >Read the field manual <span>→</span></a
+          >
         </div>
       </div>
       <div class="hero-index" aria-hidden="true">
@@ -73,7 +76,7 @@ import DroidPlayground from "./DroidPlayground.vue";
         <i>→</i>
         <div><small>05</small><b>Wave</b><span>44.1 kHz mono</span></div>
       </div>
-      <a href="/design#the-core-idea-and-how-the-decisions-hang-together"
+      <a :href="withBase('/design#the-core-idea-and-how-the-decisions-hang-together')"
         >Trace the complete architecture <span>↗</span></a
       >
     </section>
@@ -82,10 +85,12 @@ import DroidPlayground from "./DroidPlayground.vue";
       <p class="eyebrow">Technical archive / 30+ living documents</p>
       <h2>Go beneath<br />the casing.</h2>
       <div class="portal-links">
-        <a href="/usage"><span>01 / Operate</span><b>CLI usage</b><i>↗</i></a>
-        <a href="/design"><span>02 / Understand</span><b>Design rationale</b><i>↗</i></a>
-        <a href="/spec"><span>03 / Verify</span><b>Requirements</b><i>↗</i></a>
-        <a href="/README"><span>04 / Explore</span><b>All documentation</b><i>↗</i></a>
+        <a :href="withBase('/usage')"><span>01 / Operate</span><b>CLI usage</b><i>↗</i></a>
+        <a :href="withBase('/design')"
+          ><span>02 / Understand</span><b>Design rationale</b><i>↗</i></a
+        >
+        <a :href="withBase('/spec')"><span>03 / Verify</span><b>Requirements</b><i>↗</i></a>
+        <a :href="withBase('/README')"><span>04 / Explore</span><b>All documentation</b><i>↗</i></a>
       </div>
     </section>
   </main>

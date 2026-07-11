@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from "vue";
+import { withBase } from "vitepress";
 
 const samples = [
   { phrase: "hello there", audio: "/hello_there.wav", note: "A warm, two-word greeting" },
@@ -14,7 +15,7 @@ const sample = computed(() => samples[selected.value]);
 
 function play() {
   audio?.pause();
-  audio = new Audio(sample.value.audio);
+  audio = new Audio(withBase(sample.value.audio));
   playing.value = true;
   audio.addEventListener("ended", () => (playing.value = false), { once: true });
   audio.play().catch(() => (playing.value = false));
@@ -69,7 +70,7 @@ onBeforeUnmount(() => audio?.pause());
       </div>
       <p class="console-note">
         To translate anything, install the CLI: <code>dootdoot "your words"</code>
-        <a href="/usage">Get started →</a>
+        <a :href="withBase('/usage')">Get started →</a>
       </p>
     </div>
   </section>

@@ -924,6 +924,11 @@ plan_discourse_performance` and the class field on
       local search, outlines, edit links, and generated navigation for reference, research,
       and validation collections; add site behavior tests and a production-build command.
       Deps: T-127 · Reqs: NFR-21, NFR-23 · Est: 6h
+- [x] **T-129 — Deploy documentation through GitHub Pages.** Build and test the site on
+      relevant pushes to `main`, upload the static output, and deploy it to the repository
+      Pages project with SHA-pinned actions, least-privilege job permissions, serialized
+      deployments, and the `/dootdoot/` project base path.
+      Deps: T-128 · Reqs: NFR-23 · Est: 1h
 
 ---
 

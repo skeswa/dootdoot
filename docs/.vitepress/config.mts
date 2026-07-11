@@ -4,6 +4,7 @@ import { sidebar } from "./navigation.mts";
 export default defineConfig({
   title: "dootdoot",
   description: "A deterministic, learnable sound-language for your terminal.",
+  base: "/dootdoot/",
   cleanUrls: true,
   lastUpdated: true,
   ignoreDeadLinks: [/source_manifest\.toml$/, /LICENSE$/],
