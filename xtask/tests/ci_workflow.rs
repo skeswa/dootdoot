@@ -34,8 +34,8 @@ fn ci_is_hardened_for_the_self_hosted_runner() {
         // Only ever run in the canonical repo, so fork code can't reach the Mac.
         "github.repository == 'skeswa/dootdoot'",
         // Actions pinned to commit SHAs, not movable tags (supply chain).
-        "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
-        "actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830",
+        "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+        "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
         // Denial-of-service guards on the shared runner.
         "timeout-minutes:",
         "concurrency:",
@@ -59,8 +59,8 @@ fn ci_is_hardened_for_the_self_hosted_runner() {
         !CI_WORKFLOW.contains("macos-latest"),
         "the macOS leg should run on the self-hosted runner, not macos-latest",
     );
-    // No bare, movable action tags.
-    for floating_tag in ["actions/checkout@v4", "actions/cache@v4"] {
+    // No bare, movable action tags (any `@v<N>` ref, regardless of version).
+    for floating_tag in ["actions/checkout@v", "actions/cache@v"] {
         assert!(
             !CI_WORKFLOW.contains(floating_tag),
             "actions must be pinned to a commit SHA, not the floating {floating_tag}",
