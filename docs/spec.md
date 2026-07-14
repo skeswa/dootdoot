@@ -669,6 +669,11 @@
   byte-for-byte and SHALL return byte-identical WAV bytes for repeated arbitrary text. The
   WebAssembly package SHALL be generated during the site build rather than maintained as
   hand-edited JavaScript or a committed binary.
+- **NFR-25** The landing page and documentation reader SHALL share the KotoR-inspired
+  aural-protocol visual system: self-hosted pinned display/mono typography, near-black teal
+  surfaces, cyan telemetry, restrained amber controls, and industrial panel geometry. The
+  experience SHALL remain responsive, keyboard-accessible, semantically labelled, readable
+  without decorative effects, and respectful of `prefers-reduced-motion`.
 
 ### 2.7 Distribution
 

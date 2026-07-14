@@ -3,127 +3,146 @@ import { withBase } from "vitepress";
 import DroidPlayground from "./DroidPlayground.vue";
 import "./home.css";
 
-const HYPER_HUES = ["#cdd6ff", "#b9a8ff", "#e8ecff", "#9fb4ff", "#d9c9ff"];
-
-const CRAWL_PARAS = [
-  `It is a period of silent terminals. Builds finish, tests pass, pipes burst, and the
-   shell says nothing at all.`,
-  `From a hidden repository, engineers have taught the command line to speak droid. Every
-   word you type becomes a run of chirps, whistles, and warbles, identical to the last bit
-   every single time.`,
-  `Words that mean similar things sound alike. Listen for a week and you will know a
-   passing test from a burning one with your eyes closed.`,
-  `Armed with one small Rust binary and no cloud at all, the little voice now rides with
-   every terminal that will have it. May your builds be green and your doots be many….`,
+const HERO_BARS = [
+  18, 34, 48, 26, 39, 53, 31, 12, 43, 27, 50, 20, 36, 16, 45, 29, 54, 38, 22, 47, 33, 57, 42, 25,
+  51, 46, 30, 17, 40, 55, 35, 24, 49, 32, 44, 21, 37, 52, 28, 41,
 ];
 
-function hyperStyle(n: number) {
-  return {
-    "--a": `${(n * 137.508) % 360}deg`,
-    "--o": `${0.25 + ((n * 29) % 50) / 100}`,
-    animationDuration: `${1.7 + (n % 7) * 0.33}s`,
-    animationDelay: `${-((n * 0.37) % 3.2)}s`,
-    color: HYPER_HUES[n % HYPER_HUES.length],
-  };
-}
+const LAWS = [
+  {
+    number: "01",
+    title: "DETERMINISTIC",
+    copy: "The same text always produces the same audio, bit-for-bit, across every verified platform. No clocks. No drift.",
+  },
+  {
+    number: "02",
+    title: "SEMANTIC",
+    copy: "Text with similar meaning sounds similar. Paraphrases rhyme; distant ideas diverge. The dialect can be learned by ear.",
+  },
+  {
+    number: "03",
+    title: "DROID BY DESIGN",
+    copy: "However you phrase the input, the output is unmistakably the same character. One bounded voice, never recorded.",
+  },
+];
 </script>
 
 <template>
-  <main class="home-shell">
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="stars" aria-hidden="true" />
-      <div class="hyperspace" aria-hidden="true">
-        <span v-for="n in 70" :key="n" :style="hyperStyle(n)" />
-      </div>
-      <div class="hero-copy">
-        <p class="crawl-line">A long time ago, in a terminal far, far away….</p>
-        <p class="eyebrow"><span>Voice contract 12</span><i />Semantic audio system</p>
-        <h1 id="hero-title">Text,<br /><em>translated</em><br />into droid.</h1>
-        <p class="hero-deck">
-          Type anything and your terminal answers in droid: chirps, whistles, and warbles that come
-          back bit-for-bit identical every time. Words with similar meanings sound alike, so you can
-          learn the dialect by ear.
-        </p>
-        <div class="hero-actions">
-          <a href="#signal-console" class="primary-action">Open signal console <span>↘</span></a>
-          <a :href="withBase('/design')" class="text-action"
-            >Read the field manual <span>→</span></a
-          >
+  <main class="protocol-home">
+    <section class="protocol-hero" aria-labelledby="hero-title">
+      <div class="scanlines" aria-hidden="true" />
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="protocol-kicker"><span>▸</span> SIGNAL ACQUIRED — SEMANTIC AUDIO PROTOCOL</p>
+          <h1 id="hero-title">EVERY WORD<br />LEAVES AN<br /><em>ECHO.</em></h1>
+          <p class="hero-deck">
+            dootdoot reads text and answers in droid—short bursts of warm, warbly chatter.
+            Deterministic to the last bit on verified platforms. Meanings that sit close together
+            sound close together, so the dialect can be learned by ear.
+          </p>
+          <div class="hero-actions">
+            <a href="#signal-console" class="primary-action"><span>▶</span> OPEN CONSOLE</a>
+            <a :href="withBase('/design')" class="text-action">READ THE MANUAL <span>→</span></a>
+          </div>
         </div>
-      </div>
-      <div class="crawl-stage" aria-hidden="true">
-        <div class="crawl-track">
-          <div v-for="copy in 2" :key="copy" class="crawl-copy">
-            <p class="crawl-ep">Episode XII</p>
-            <p class="crawl-title">A new doot</p>
-            <p v-for="(para, index) in CRAWL_PARAS" :key="index">{{ para }}</p>
+
+        <div class="terminal-wrap" aria-label="Example dootdoot terminal session">
+          <div class="terminal-panel">
+            <div class="terminal-bar">
+              <span>~/signals — zsh</span><b><i /> LIVE</b>
+            </div>
+            <div class="terminal-body">
+              <p><span>$</span> brew install <b>skeswa/tap/dootdoot</b></p>
+              <p class="terminal-muted">◈ dootdoot / VOICE_V12 armed</p>
+              <p class="terminal-gap"><span>$</span> dootdoot <em>"hello, little one"</em></p>
+              <div class="terminal-wave" aria-hidden="true">
+                <i
+                  v-for="(height, index) in HERO_BARS"
+                  :key="index"
+                  :style="{ height: `${height}px` }"
+                />
+              </div>
+              <p class="terminal-muted"><em>doot</em> · local semantic synthesis · bit-exact</p>
+              <p class="terminal-gap">
+                <span>$</span> dootdoot <em>"hello, little one"</em> <span>-o</span> echo.wav
+              </p>
+              <p class="terminal-muted">wrote echo.wav · 44.1 kHz mono ✓</p>
+              <p class="terminal-cursor"><span>$</span> <i /></p>
+            </div>
           </div>
         </div>
       </div>
-      <div class="film" aria-hidden="true" />
     </section>
 
     <DroidPlayground />
 
-    <section class="principles" aria-labelledby="principles-title">
-      <header>
-        <p class="eyebrow">Droid physics</p>
-        <h2 id="principles-title">A language you can <em>learn by ear.</em></h2>
-      </header>
-      <article>
-        <span>01</span>
-        <h3>Same words.<br />Same waveform.</h3>
-        <p>
-          Every sample is pinned by a versioned voice contract. Type it tomorrow, or on another
-          verified platform, and it comes back bit-for-bit.
-        </p>
-      </article>
-      <article>
-        <span>02</span>
-        <h3>Meaning leaves<br />a sonic trace.</h3>
-        <p>
-          Words land on four audible axes: pitch, vowel, contour, and warble. Neighbors in meaning
-          become neighbors in sound.
-        </p>
-      </article>
-      <article>
-        <span>03</span>
-        <h3>One small<br />instrument.</h3>
-        <p>
-          No cloud, no tensor runtime. The tokenizer and the projected semantic map ship inside one
-          small Rust binary.
-        </p>
-      </article>
-    </section>
-
-    <section class="pipeline" aria-label="Signal pipeline">
-      <p class="eyebrow">Signal path / deterministic end to end</p>
-      <div class="pipeline-track">
-        <div><small>01</small><b>Text</b><span>WordPiece units</span></div>
-        <i>→</i>
-        <div><small>02</small><b>Meaning</b><span>4 semantic axes</span></div>
-        <i>→</i>
-        <div><small>03</small><b>Performance</b><span>Phrase + affect</span></div>
-        <i>→</i>
-        <div><small>04</small><b>Voice</b><span>Formant synthesis</span></div>
-        <i>→</i>
-        <div><small>05</small><b>Wave</b><span>44.1 kHz mono</span></div>
+    <section id="dialect" class="laws" aria-labelledby="laws-title">
+      <div class="section-heading">
+        <p class="protocol-kicker"><span>▸</span> THE DIALECT</p>
+        <h2 id="laws-title">THREE LAWS OF THE VOICE</h2>
       </div>
-      <a :href="withBase('/design#the-core-idea-and-how-the-decisions-hang-together')"
-        >Trace the complete architecture <span>↗</span></a
-      >
+      <div class="law-grid">
+        <article v-for="law in LAWS" :key="law.number">
+          <b>{{ law.number }}</b>
+          <h3>{{ law.title }}</h3>
+          <p>{{ law.copy }}</p>
+        </article>
+      </div>
     </section>
 
-    <section class="docs-portal">
-      <p class="eyebrow">The archives / 30+ schematics and field manuals</p>
-      <h2>Go beneath<br />the casing.</h2>
-      <div class="portal-links">
-        <a :href="withBase('/usage')"><span>01 / Operate</span><b>CLI usage</b><i>↗</i></a>
-        <a :href="withBase('/design')"
-          ><span>02 / Understand</span><b>Design rationale</b><i>↗</i></a
-        >
-        <a :href="withBase('/spec')"><span>03 / Verify</span><b>Requirements</b><i>↗</i></a>
-        <a :href="withBase('/README')"><span>04 / Explore</span><b>All documentation</b><i>↗</i></a>
+    <section class="signal-path" aria-labelledby="path-title">
+      <div class="section-heading">
+        <p class="protocol-kicker"><span>▸</span> SIGNAL PATH</p>
+        <h2 id="path-title">MEANING, ROUTED TO SOUND</h2>
+      </div>
+      <div class="path-grid">
+        <div><span>01 / INPUT</span><b>TEXT</b><small>WordPiece units</small></div>
+        <i>→</i>
+        <div><span>02 / VECTOR</span><b>MEANING</b><small>Four audible axes</small></div>
+        <i>→</i>
+        <div><span>03 / PLAN</span><b>GESTURE</b><small>Phrase + affect</small></div>
+        <i>→</i>
+        <div><span>04 / OUTPUT</span><b>VOICE</b><small>Formant synthesis</small></div>
+      </div>
+      <a :href="withBase('/design#the-core-idea-and-how-the-decisions-hang-together')">
+        TRACE THE COMPLETE ARCHITECTURE <span>↗</span>
+      </a>
+    </section>
+
+    <section id="manual" class="manual" aria-labelledby="manual-title">
+      <div class="manual-heading">
+        <div class="section-heading">
+          <p class="protocol-kicker"><span>▸</span> ARCHIVE ACCESS</p>
+          <h2 id="manual-title">THE FIELD MANUAL</h2>
+        </div>
+        <p>AUTHORITATIVE DOCS — BUILT DIRECTLY FROM THE REPOSITORY</p>
+      </div>
+
+      <div class="manual-frame">
+        <div class="frame-bar"><i /><i /><i /><span>docs.dootdoot.dev / protocol</span></div>
+        <div class="manual-grid">
+          <aside>
+            <p>PROTOCOL INDEX</p>
+            <a :href="withBase('/usage')">01 / OPERATE <span>↗</span></a>
+            <a :href="withBase('/design')">02 / UNDERSTAND <span>↗</span></a>
+            <a :href="withBase('/spec')">03 / VERIFY <span>↗</span></a>
+            <a :href="withBase('/README')">04 / EXPLORE <span>↗</span></a>
+          </aside>
+          <div class="manual-copy">
+            <p class="protocol-kicker">PROTOCOL / THE SOUND LANGUAGE</p>
+            <h3>Every phrase maps into a small semantic space.</h3>
+            <p>
+              Every point in that space renders as a run of chirps, whistles, and warbles. Two
+              phrases that mean nearly the same thing land near one another—and sound like it.
+            </p>
+            <pre><span>$</span> dootdoot "hello, little one" <i>-o</i> echo.wav
+<b>doot</b> · rendered locally · VOICE_V12 ✓</pre>
+            <div class="field-note">
+              <span>◆ FIELD NOTE</span> The browser console and the CLI run the same Rust renderer.
+              There is no imitation voice.
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>

@@ -10,9 +10,8 @@
     "test:docs": "npm run docs:build && node --test tests/docs-site.test.mjs"
   },
   "devDependencies": {
-    "@fontsource/anonymous-pro": "5.2.8",
-    "@fontsource/chivo-mono": "5.2.8",
-    "@fontsource/syne": "5.2.7",
+    "@fontsource/chakra-petch": "5.2.7",
+    "@fontsource/ibm-plex-mono": "5.2.7",
     "vitepress": "2.0.0-alpha.18",
     "vue": "3.5.39",
     "yaml": "2.9.0"

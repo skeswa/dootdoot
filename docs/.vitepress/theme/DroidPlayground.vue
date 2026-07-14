@@ -115,59 +115,69 @@ onBeforeUnmount(releaseAudio);
 
 <template>
   <section id="signal-console" class="console" aria-labelledby="console-title">
-    <div class="console-heading">
-      <p class="eyebrow">Live semantic synthesis / VOICE_V12</p>
-      <h2 id="console-title">Hear what<br /><em>meaning</em> sounds like.</h2>
-      <p>
-        Type any transmission. Rendered locally by VOICE_V12 WebAssembly—the same Rust engine,
-        tokenizer, semantic map, and voice that power the CLI.
-      </p>
-    </div>
-    <div class="console-panel">
-      <div class="scope" :class="{ active: playing }" aria-hidden="true">
-        <span
-          v-for="(peak, index) in bars"
-          :key="index"
-          :class="{ lit: playing && index / bars.length <= progress }"
-          :style="{ '--bar': `${Math.round(peak * 100)}%` }"
-        />
-        <i>VOICE<br />V12</i>
-        <div v-if="playing" class="doot-notes"><b>♪</b><b>doot</b><b>♫</b><b>doot</b><b>♪</b></div>
+    <div class="console-inner">
+      <header class="console-heading">
+        <div>
+          <p class="protocol-kicker"><span>▸</span> LIVE VOICE MODULE</p>
+          <h2 id="console-title">TRANSMISSION CONSOLE</h2>
+        </div>
+        <p>RENDERED LOCALLY BY VOICE_V12 WEBASSEMBLY — SAME PHRASE, SAME CHATTER</p>
+      </header>
+
+      <div class="console-panel">
+        <div class="transmission-compose">
+          <form class="readout" @submit.prevent="play">
+            <label for="transmission">INPUT PHRASE</label>
+            <input
+              id="transmission"
+              v-model="phrase"
+              type="text"
+              placeholder="Type a transmission"
+              autocomplete="off"
+              spellcheck="false"
+              @input="selected = -1"
+            />
+            <small>{{ note }} · press enter or transmit below</small>
+          </form>
+
+          <div class="console-action-row">
+            <button class="play" type="button" :disabled="!ready" @click="play">
+              <span>{{ playing ? "■" : "▶" }}</span
+              >{{ playing ? "TRANSMITTING" : ready ? "PLAY TRANSMISSION" : "LOADING VOICE" }}
+            </button>
+            <div class="scope" :class="{ active: playing }" aria-hidden="true">
+              <span
+                v-for="(peak, index) in bars"
+                :key="index"
+                :class="{ lit: playing && index / bars.length <= progress }"
+                :style="{ '--bar': `${Math.round(peak * 100)}%` }"
+              />
+              <i>V12</i>
+            </div>
+          </div>
+          <p class="console-status" aria-live="polite"><i />{{ status }}</p>
+        </div>
+
+        <aside class="transmission-presets">
+          <p>STORED PHRASES</p>
+          <div class="presets" aria-label="Sample transmissions">
+            <button
+              v-for="(item, index) in samples"
+              :key="item.phrase"
+              type="button"
+              :class="{ selected: index === selected }"
+              @click="choose(index)"
+            >
+              <span>0{{ index + 1 }}</span
+              >{{ item.phrase }}
+            </button>
+          </div>
+          <p class="console-note">
+            GET THE CLI: <code>brew install skeswa/tap/dootdoot</code> — OR
+            <a :href="withBase('/usage')">BUILD FROM SOURCE ↗</a>
+          </p>
+        </aside>
       </div>
-      <form class="readout" @submit.prevent="play">
-        <label for="transmission">Input phrase</label>
-        <input
-          id="transmission"
-          v-model="phrase"
-          type="text"
-          placeholder="Type a transmission"
-          autocomplete="off"
-          spellcheck="false"
-          @input="selected = -1"
-        />
-        <small>{{ note }}</small>
-      </form>
-      <button class="play" type="button" :disabled="!ready" @click="play">
-        <span>{{ playing ? "■" : "▶" }}</span
-        >{{ playing ? "Transmitting" : ready ? "Play transmission" : "Loading voice" }}
-      </button>
-      <p class="console-status" aria-live="polite"><i />{{ status }}</p>
-      <div class="presets" aria-label="Sample transmissions">
-        <button
-          v-for="(item, index) in samples"
-          :key="item.phrase"
-          type="button"
-          :class="{ selected: index === selected }"
-          @click="choose(index)"
-        >
-          <span>0{{ index + 1 }}</span
-          >{{ item.phrase }}
-        </button>
-      </div>
-      <p class="console-note">
-        Want the terminal version? <code>brew install skeswa/tap/dootdoot</code>
-        <a :href="withBase('/usage')">Get started →</a>
-      </p>
     </div>
   </section>
 </template>

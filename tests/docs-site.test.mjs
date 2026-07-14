@@ -11,13 +11,24 @@ test("the production site exposes its reader and playground", () => {
   const home = read("docs/.vitepress/dist/index.html");
 
   assert.match(home, /id="signal-console"/);
-  assert.match(home, /Hear what/);
+  assert.match(home, /TRANSMISSION CONSOLE/);
   assert.match(home, /placeholder="Type a transmission"/);
-  assert.match(home, /Rendered locally by VOICE_V12 WebAssembly/);
+  assert.match(home, /RENDERED LOCALLY BY VOICE_V12 WEBASSEMBLY/);
   assert.equal(existsSync(new URL("../docs/.vitepress/dist/design.html", import.meta.url)), true);
-  for (const { audio } of samples) {
-    assert.equal(existsSync(new URL(`../docs/.vitepress/dist${audio}`, import.meta.url)), true);
-  }
+  const assets = readdirSync(new URL("../docs/.vitepress/dist/assets/", import.meta.url));
+  assert.ok(assets.some((file) => file.endsWith(".wasm")));
+});
+
+test("the landing page speaks the KotoR aural-protocol visual language", () => {
+  const home = read("docs/.vitepress/dist/index.html");
+
+  assert.match(home, /EVERY WORD/);
+  assert.match(home, /LEAVES AN/);
+  assert.match(home, /ECHO\./);
+  assert.match(home, /TRANSMISSION CONSOLE/);
+  assert.match(home, /THREE LAWS OF THE VOICE/);
+  assert.match(home, /THE FIELD MANUAL/);
+  assert.doesNotMatch(home, /A long time ago|Episode XII|class="hyperspace"/);
 });
 
 test("the browser engine renders arbitrary text through VOICE_V12 WebAssembly", async () => {
@@ -86,7 +97,11 @@ test("the production site is independent of remote font services", () => {
     .join("\n");
 
   assert.doesNotMatch(styles, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
-  assert.ok(readdirSync(assets).some((file) => file.endsWith(".woff2")));
+  assert.match(styles, /font-family:Chakra Petch/);
+  assert.match(styles, /font-family:IBM Plex Mono/);
+  const fonts = readdirSync(assets).filter((file) => file.endsWith(".woff2"));
+  assert.ok(fonts.some((file) => file.startsWith("chakra-petch-latin-")));
+  assert.ok(fonts.some((file) => file.startsWith("ibm-plex-mono-latin-")));
 });
 
 test("the site deploys to the repository GitHub Pages project", () => {

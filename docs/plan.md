@@ -941,6 +941,12 @@ plan_discourse_performance` and the class field on
       the Wasm package during site builds, and verify a native golden render byte-for-byte
       plus repeated arbitrary renders.
       Deps: T-130 · Reqs: FR-122, NFR-23, NFR-24 · Est: 4h
+- [x] **T-132 — Adopt the KotoR aural-protocol site system.** Rebuild the landing page as
+      a signal-acquisition hero, live transmission panel, voice-law grid, routed pipeline,
+      and field-manual portal; carry the same industrial palette, typography, telemetry,
+      panel geometry, responsive behavior, accessibility, and reduced-motion treatment into
+      the full VitePress reader; pin and self-host the selected fonts.
+      Deps: T-131 · Reqs: NFR-23, NFR-25 · Est: 5h
 
 ---
 

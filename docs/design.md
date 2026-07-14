@@ -1432,6 +1432,22 @@ module directly and compare a native golden fixture byte-for-byte, in addition t
 repeat renders of arbitrary text. This extends the canonical-buffer principle (§7.1) to the
 web surface without changing the `VOICE_V12` sample contract.
 
+### 9.6 Decision: the project site is an aural-protocol console
+
+The site uses a KotoR-inspired retro-industrial interface rather than a generic documentation
+skin: near-black teal surfaces, thin cyan telemetry lines, restrained amber operator controls,
+clipped panel corners, scanline/grid atmosphere, and a display/mono pairing of Chakra Petch and
+IBM Plex Mono. The landing page is organized as one instrument panel — signal-acquisition hero,
+live transmission console, three voice laws, deterministic signal path, and field-manual portal —
+while the Markdown reader carries the same type, color, border, table, code, sidebar, and search
+system. Fonts are pinned and self-hosted so the visual contract does not depend on a remote font
+service.
+
+The atmosphere is progressive enhancement. Content, navigation, form labels, and live status
+remain semantic and keyboard-accessible; layouts collapse at tablet and phone widths; motion is
+disabled under `prefers-reduced-motion`. Decorative grids, scanlines, glows, cursor blinks, and
+waveform animations never carry information by themselves.
+
 ---
 
 ## 10. Input handling & edge cases

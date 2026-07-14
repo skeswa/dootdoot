@@ -1,13 +1,11 @@
 import DefaultTheme from "vitepress/theme";
-import "@fontsource/anonymous-pro/400.css";
-import "@fontsource/anonymous-pro/400-italic.css";
-import "@fontsource/anonymous-pro/700.css";
-import "@fontsource/chivo-mono/400.css";
-import "@fontsource/chivo-mono/500.css";
-import "@fontsource/chivo-mono/600.css";
-import "@fontsource/syne/500.css";
-import "@fontsource/syne/600.css";
-import "@fontsource/syne/700.css";
+import "@fontsource/chakra-petch/latin-400.css";
+import "@fontsource/chakra-petch/latin-500.css";
+import "@fontsource/chakra-petch/latin-600.css";
+import "@fontsource/chakra-petch/latin-700.css";
+import "@fontsource/ibm-plex-mono/latin-400.css";
+import "@fontsource/ibm-plex-mono/latin-500.css";
+import "@fontsource/ibm-plex-mono/latin-600.css";
 import Home from "./Home.vue";
 import "./theme.css";
 
