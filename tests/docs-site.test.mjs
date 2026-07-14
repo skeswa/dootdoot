@@ -161,6 +161,7 @@ test("the site deploys to the repository GitHub Pages project", () => {
       "npm ci",
       "cargo install wasm-pack --version 0.15.0 --locked",
       "npm run test:docs",
+      "command -v gtar || brew install gnu-tar",
       "git clean -ffdx --exclude=target --exclude=node_modules || true",
     ],
   );

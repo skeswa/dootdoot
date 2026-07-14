@@ -62,6 +62,13 @@ jobs:
       - name: Test documentation
         run: npm run test:docs
 
+      - name: Ensure GNU tar
+        # upload-pages-artifact archives with `gtar`, which GitHub-hosted macOS
+        # images provide but a stock Mac does not (BSD tar lacks the
+        # --hard-dereference flag the action passes). A no-op after the first
+        # run on the persistent runner.
+        run: command -v gtar || brew install gnu-tar
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
         with:
