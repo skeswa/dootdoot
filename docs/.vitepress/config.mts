@@ -7,8 +7,16 @@ export default defineConfig({
   base: "/dootdoot/",
   cleanUrls: true,
   lastUpdated: true,
+  appearance: "force-dark",
   head: [
     ["meta", { name: "theme-color", content: "#05090a" }],
+    [
+      "link",
+      {
+        rel: "icon",
+        href: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%238fe8ee' d='M16 3 29 16 16 29 3 16Z'/%3E%3C/svg%3E",
+      },
+    ],
     ["meta", { property: "og:title", content: "dootdoot — text, translated into droid" }],
     [
       "meta",
@@ -23,7 +31,7 @@ export default defineConfig({
       { text: "Console", link: "/#signal-console" },
       { text: "Dialect", link: "/#dialect" },
       { text: "Manual", link: "/README" },
-      { text: "GitHub ↗", link: "https://github.com/skeswa/dootdoot" },
+      { text: "GitHub ↗", link: "https://github.com/skeswa/dootdoot", noIcon: true },
     ],
     sidebar,
     outline: { level: [2, 3], label: "On this page" },

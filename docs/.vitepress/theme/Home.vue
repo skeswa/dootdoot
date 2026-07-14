@@ -4,8 +4,8 @@ import DroidPlayground from "./DroidPlayground.vue";
 import "./home.css";
 
 const HERO_BARS = [
-  18, 34, 48, 26, 39, 53, 31, 12, 43, 27, 50, 20, 36, 16, 45, 29, 54, 38, 22, 47, 33, 57, 42, 25,
-  51, 46, 30, 17, 40, 55, 35, 24, 49, 32, 44, 21, 37, 52, 28, 41,
+  7, 43, 21, 20, 43, 35, 38, 33, 38, 11, 34, 5, 26, 24, 27, 5, 24, 41, 15, 22, 12, 35, 9, 26, 32,
+  41, 21, 36, 28, 28, 14, 10, 25, 13, 17, 21, 34, 32, 15, 22,
 ];
 
 const LAWS = [
@@ -53,7 +53,7 @@ const LAWS = [
             </div>
             <div class="terminal-body">
               <p><span>$</span> brew install <b>skeswa/tap/dootdoot</b></p>
-              <p class="terminal-muted">◈ dootdoot / VOICE_V12 armed</p>
+              <p class="terminal-muted">🍺 dootdoot v0.4.2 poured</p>
               <p class="terminal-gap"><span>$</span> dootdoot <em>"hello, little one"</em></p>
               <div class="terminal-wave" aria-hidden="true">
                 <i
@@ -62,11 +62,13 @@ const LAWS = [
                   :style="{ height: `${height}px` }"
                 />
               </div>
-              <p class="terminal-muted"><em>doot</em> · local semantic synthesis · bit-exact</p>
+              <p class="terminal-muted">
+                <em>doot</em> · 0.9s of chatter · deterministic, bit-for-bit
+              </p>
               <p class="terminal-gap">
                 <span>$</span> dootdoot <em>"hello, little one"</em> <span>-o</span> echo.wav
               </p>
-              <p class="terminal-muted">wrote echo.wav · 44.1 kHz mono ✓</p>
+              <p class="terminal-muted">wrote echo.wav · sha256 matches golden ✓</p>
               <p class="terminal-cursor"><span>$</span> <i /></p>
             </div>
           </div>

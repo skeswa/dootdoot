@@ -31,6 +31,46 @@ test("the landing page speaks the KotoR aural-protocol visual language", () => {
   assert.doesNotMatch(home, /A long time ago|Episode XII|class="hyperspace"/);
 });
 
+test("the landing page stays pinned to the KotoR reference geometry", () => {
+  const home = read("docs/.vitepress/dist/index.html");
+  const homeStyles = read("docs/.vitepress/theme/home.css");
+  const playgroundStyles = read("docs/.vitepress/theme/playground.css");
+  const themeStyles = read("docs/.vitepress/theme/theme.css");
+  const config = read("docs/.vitepress/config.mts");
+
+  assert.match(homeStyles, /--protocol-content-width: 1320px/);
+  assert.match(homeStyles, /--protocol-page-gutter: 48px/);
+  assert.match(homeStyles, /grid-template-columns: 1\.25fr 1fr/);
+  assert.match(homeStyles, /gap: 64px/);
+  assert.match(homeStyles, /font:\s*700 84px \/ 0\.98 "Chakra Petch"/);
+  assert.match(homeStyles, /padding: 12px 22px/);
+  assert.match(homeStyles, /padding: 24px 24px 26px/);
+  assert.match(homeStyles, /font-size: 12\.5px/);
+  assert.match(homeStyles, /line-height: 2\.05/);
+  assert.match(homeStyles, /\.terminal-wrap[^{]*\{[^}]*top: -7px/s);
+  assert.match(playgroundStyles, /\.console[^{]*\{[^}]*padding: 72px var\(--protocol-gutter\)/s);
+  assert.match(playgroundStyles, /\.console-heading[^{]*\{[^}]*margin-bottom: 28px/s);
+  assert.match(playgroundStyles, /padding: 34px 36px/);
+  assert.match(playgroundStyles, /\.presets[^{]*\{[^}]*gap: 10px/s);
+  assert.match(playgroundStyles, /\.presets button[^{]*\{[^}]*padding: 12px 14px/s);
+  assert.match(themeStyles, /--vp-nav-height: 54px/);
+  assert.match(themeStyles, /\.doot-home \.VPNavBar \.wrapper[^{]*\{[^}]*padding-inline: 48px/s);
+  assert.match(themeStyles, /\.doot-home \.VPNavBar \.container[^{]*\{[^}]*max-width: none/s);
+  assert.match(themeStyles, /\.VPNavBarMenu[^{]*\{[^}]*gap: 26px/s);
+  assert.match(themeStyles, /\.VPNavBarMenuLink[^{]*\{[^}]*padding: 0 !important/s);
+  assert.match(
+    homeStyles,
+    /\.doot-home \.VPContent[^{]*\{[^}]*padding:\s*var\(--vp-nav-height\) 0 0 !important/s,
+  );
+  assert.match(
+    themeStyles,
+    /body:has\(\.protocol-home\) \.VPNavBarSearch[^{]*\{[^}]*display: none/s,
+  );
+  assert.doesNotMatch(home, /LIVE VOICE MODULE/);
+  assert.match(home, /rel="icon"/);
+  assert.match(config, /text: "GitHub ↗"[^}]*noIcon: true/);
+});
+
 test("the browser engine renders arbitrary text through VOICE_V12 WebAssembly", async () => {
   const moduleUrl = new URL("../docs/.vitepress/wasm/dootdoot_core.js", import.meta.url);
   const binaryUrl = new URL("../docs/.vitepress/wasm/dootdoot_core_bg.wasm", import.meta.url);

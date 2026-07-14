@@ -20,6 +20,7 @@
   --vp-code-bg: #04191b;
   --vp-font-family-base: "IBM Plex Mono", monospace;
   --vp-font-family-mono: "IBM Plex Mono", monospace;
+  --vp-nav-height: 54px;
   color-scheme: dark;
 }
 
@@ -55,17 +56,29 @@ body {
   backdrop-filter: blur(14px);
 }
 
+.doot-home .VPNavBar .container {
+  max-width: none;
+}
+
+.doot-home .VPNavBar .wrapper {
+  padding-inline: 48px;
+}
+
+body:has(.protocol-home) .VPNavBarSearch {
+  display: none !important;
+}
+
 .VPNavBarTitle .title {
   font:
-    700 18px/1 "Chakra Petch",
+    700 19px/1 "Chakra Petch",
     sans-serif;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
 }
 
 .VPNavBarTitle .title::before {
   content: "";
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   margin-right: 10px;
   background: var(--vp-c-brand-1);
   clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
@@ -73,23 +86,51 @@ body {
 }
 
 .VPNavBarTitle .title::after {
-  content: "v0.2 // AURAL PROTOCOL";
-  margin-left: 14px;
+  content: "v0.4 // AURAL PROTOCOL";
+  margin-left: 16px;
   color: #4e7c80;
   font:
-    600 8px "IBM Plex Mono",
+    600 10px "IBM Plex Mono",
     monospace;
   letter-spacing: 0.17em;
+}
+
+/* Sidebar pages box the title to the sidebar width: the tagline would overflow
+   into the search box, and the boxed title draws its own second border. */
+.VPNavBarTitle.has-sidebar .title::after {
+  display: none;
+}
+
+.VPNavBarTitle.has-sidebar .title {
+  border-bottom: none !important;
 }
 
 .VPNavBarMenuLink,
 .VPNavBarMenuGroup {
   color: #87aeb0 !important;
   font:
-    600 9px/1 "IBM Plex Mono",
-    monospace;
+    400 11.5px/1 "IBM Plex Mono",
+    monospace !important;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.doot-home .VPNavBarMenu {
+  gap: 26px;
+}
+
+.doot-home .VPNavBarMenuLink {
+  padding: 0 !important;
+}
+
+.VPNavBarMenuLink:last-child {
+  height: 24px;
+  margin-left: 0;
+  padding: 5px 12px !important;
+  align-self: center;
+  border: 1px solid rgba(143, 232, 238, 0.35);
+  color: var(--vp-c-brand-1) !important;
+  line-height: 12px !important;
 }
 
 .VPNavBarMenuLink:hover,
@@ -242,6 +283,10 @@ body {
 }
 
 @media (max-width: 700px) {
+  .doot-home .VPNavBar .wrapper {
+    padding-inline: 22px 8px;
+  }
+
   .VPNavBarTitle .title::after {
     display: none;
   }

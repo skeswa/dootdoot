@@ -1,5 +1,5 @@
 .console {
-  padding: 72px max(32px, calc(50% - 660px)) 78px;
+  padding: 72px var(--protocol-gutter);
   border-bottom: 1px solid var(--protocol-line);
   background: #040809;
   color: var(--protocol-text);
@@ -14,19 +14,18 @@
   align-items: end;
   justify-content: space-between;
   gap: 36px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .console-heading h2 {
-  margin-top: 10px;
   color: var(--protocol-text);
   font:
-    600 clamp(28px, 3vw, 35px) / 1 "Chakra Petch",
+    600 28px / normal "Chakra Petch",
     sans-serif;
-  letter-spacing: -0.015em;
+  letter-spacing: 0.02em;
 }
 
-.console-heading > p {
+.protocol-home .console-heading > p {
   padding-bottom: 3px;
   color: var(--protocol-cyan-dim);
   font-size: 9px;
@@ -36,7 +35,7 @@
 
 .console-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.95fr);
+  grid-template-columns: 1.4fr 1fr;
   gap: 1px;
   overflow: hidden;
   border: 1px solid var(--protocol-line-strong);
@@ -50,7 +49,8 @@
 }
 
 .transmission-compose {
-  padding: 31px 34px 26px;
+  position: relative;
+  padding: 34px 36px;
 }
 
 .readout {
@@ -63,9 +63,9 @@
 .transmission-presets > p:first-child {
   color: var(--protocol-cyan-dim);
   font:
-    600 9px "IBM Plex Mono",
+    600 10px "IBM Plex Mono",
     monospace;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.22em;
 }
 
 .readout input {
@@ -78,7 +78,7 @@
   background: transparent;
   color: var(--protocol-text);
   font:
-    500 clamp(25px, 3vw, 32px) "Chakra Petch",
+    500 32px "Chakra Petch",
     sans-serif;
   letter-spacing: -0.025em;
   transition:
@@ -96,7 +96,7 @@
 }
 
 .readout small {
-  font-size: 8px;
+  font-size: 10.5px;
   letter-spacing: 0.06em;
   text-transform: lowercase;
 }
@@ -105,20 +105,21 @@
   display: flex;
   gap: 18px;
   align-items: center;
-  margin-top: 22px;
+  margin-top: 26px;
 }
 
 .play {
   flex: 0 0 auto;
-  min-width: 200px;
-  padding: 13px 22px;
+  width: 228px;
+  padding: 14px 0;
+  text-align: center;
   clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
   border: 0;
   cursor: pointer;
   background: var(--protocol-amber);
   color: #1b1005;
   font:
-    700 10px "IBM Plex Mono",
+    600 12px "IBM Plex Mono",
     monospace;
   letter-spacing: 0.14em;
   transition:
@@ -145,10 +146,10 @@
 .scope {
   position: relative;
   display: flex;
-  width: min(260px, 42%);
-  height: 42px;
+  width: min(230px, 42%);
+  height: 40px;
   align-items: end;
-  gap: 2px;
+  gap: 3px;
   overflow: hidden;
 }
 
@@ -192,13 +193,14 @@
   animation: console-flicker 1.7s steps(2) infinite;
 }
 
-.console-status {
+.protocol-home .console-status {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 13px !important;
   color: var(--protocol-cyan-dim);
   font-size: 8px;
+  line-height: 1;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -213,24 +215,24 @@
 }
 
 .transmission-presets {
-  padding: 31px 30px 26px;
+  padding: 34px 36px;
 }
 
 .presets {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 14px;
+  gap: 10px;
+  margin-top: 18px;
 }
 
 .presets button {
-  padding: 10px 11px;
+  padding: 12px 14px;
   border: 1px solid rgba(143, 232, 238, 0.23);
   cursor: pointer;
   background: transparent;
   color: #b7cbcc;
   font:
-    500 9px "IBM Plex Mono",
+    500 12px "IBM Plex Mono",
     monospace;
   text-align: left;
   transition:
@@ -251,10 +253,10 @@
   color: var(--protocol-cyan-dim);
 }
 
-.console-note {
-  margin-top: 18px !important;
+.protocol-home .console-note {
+  margin-top: 20px !important;
   color: var(--protocol-cyan-dim);
-  font-size: 8px;
+  font-size: 11px;
   line-height: 1.7;
 }
 

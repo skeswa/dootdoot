@@ -117,10 +117,7 @@ onBeforeUnmount(releaseAudio);
   <section id="signal-console" class="console" aria-labelledby="console-title">
     <div class="console-inner">
       <header class="console-heading">
-        <div>
-          <p class="protocol-kicker"><span>▸</span> LIVE VOICE MODULE</p>
-          <h2 id="console-title">TRANSMISSION CONSOLE</h2>
-        </div>
+        <h2 id="console-title">TRANSMISSION CONSOLE</h2>
         <p>RENDERED LOCALLY BY VOICE_V12 WEBASSEMBLY — SAME PHRASE, SAME CHATTER</p>
       </header>
 
