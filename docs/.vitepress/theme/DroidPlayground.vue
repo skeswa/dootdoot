@@ -12,12 +12,31 @@ const selected = ref(0);
 const playing = ref(false);
 const progress = ref(0);
 const bars = ref(PLACEHOLDER);
-const ready = ref(false);
-const status = ref("Loading VOICE_V12 module…");
+const status = ref("VOICE_V12 on standby");
 let audio: HTMLAudioElement | undefined;
 let objectUrl: string | undefined;
 let renderWav: ((text: string) => Uint8Array) | undefined;
+let voiceLoad: Promise<void> | undefined;
 let sweep = 0;
+
+// The module weighs megabytes, so it must never compete with the initial page
+// load: it fetches after the window load event at idle priority, or sooner if
+// the visitor reaches for the console first.
+function loadVoice() {
+  voiceLoad ??= (async () => {
+    status.value = "Loading VOICE_V12 module…";
+    try {
+      const module = await import("../wasm/dootdoot_core.js");
+      await module.default();
+      renderWav = module.render_wav;
+      status.value = "VOICE_V12 ready";
+    } catch {
+      voiceLoad = undefined;
+      status.value = "Voice module unavailable — reload to retry";
+    }
+  })();
+  return voiceLoad;
+}
 
 const note = computed(
   () => samples.find((item) => item.phrase === phrase.value)?.note ?? "A live browser render",
@@ -60,7 +79,10 @@ function trackProgress() {
 }
 
 async function play() {
-  if (!renderWav) return;
+  if (!renderWav) {
+    await loadVoice();
+    if (!renderWav) return;
+  }
   releaseAudio();
   playing.value = false;
   progress.value = 0;
@@ -98,15 +120,18 @@ async function choose(index: number) {
   await play();
 }
 
-onMounted(async () => {
-  try {
-    const module = await import("../wasm/dootdoot_core.js");
-    await module.default();
-    renderWav = module.render_wav;
-    ready.value = true;
-    status.value = "VOICE_V12 ready";
-  } catch {
-    status.value = "Voice module unavailable — reload to retry";
+onMounted(() => {
+  const whenIdle = () => {
+    if ("requestIdleCallback" in window) {
+      requestIdleCallback(() => void loadVoice(), { timeout: 4000 });
+    } else {
+      setTimeout(() => void loadVoice(), 1200);
+    }
+  };
+  if (document.readyState === "complete") {
+    whenIdle();
+  } else {
+    window.addEventListener("load", whenIdle, { once: true });
   }
 });
 
@@ -138,9 +163,9 @@ onBeforeUnmount(releaseAudio);
           </form>
 
           <div class="console-action-row">
-            <button class="play" type="button" :disabled="!ready" @click="play">
+            <button class="play" type="button" @click="play">
               <span>{{ playing ? "■" : "▶" }}</span
-              >{{ playing ? "TRANSMITTING" : ready ? "PLAY TRANSMISSION" : "LOADING VOICE" }}
+              >{{ playing ? "TRANSMITTING" : "PLAY TRANSMISSION" }}
             </button>
             <div class="scope" :class="{ active: playing }" aria-hidden="true">
               <span
