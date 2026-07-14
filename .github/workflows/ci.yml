@@ -44,6 +44,16 @@ jobs:
           # self-hosted disk once the job finishes.
           persist-credentials: false
 
+      - name: Free disk space
+        # The restored cargo cache plus a debug build of the full workspace
+        # (tokenizers/ndarray/nalgebra behind xtask) overflows the ~14 GB free
+        # on the stock Ubuntu image: rust-lld dies with SIGBUS ("No space left
+        # on device") while linking test binaries. Drop the preinstalled
+        # toolchains this project never touches (~25 GB) before restoring the
+        # cache, which needs the space too.
+        if: runner.environment == 'github-hosted' && runner.os == 'Linux'
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+
       - name: Cache Cargo artifacts
         # GitHub-hosted runners are ephemeral and need the network cache. The
         # self-hosted Mac already persists ~/.cargo and target/ on local disk,
