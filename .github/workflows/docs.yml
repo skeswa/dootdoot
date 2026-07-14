@@ -27,8 +27,11 @@ concurrency:
 jobs:
   build:
     name: Build documentation
+    # Same defense in depth as CI: canonical repository only, and the trigger
+    # set has no `pull_request`, so untrusted fork code can never execute on
+    # the self-hosted runner.
     if: github.repository == 'skeswa/dootdoot'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 10
     permissions:
       contents: read
@@ -37,18 +40,23 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          # Don't leave the GITHUB_TOKEN behind in .git/config on the
+          # persistent self-hosted disk once the job finishes.
           persist-credentials: false
 
       - name: Install Node.js
+        # No `cache: npm` here: the self-hosted Mac persists ~/.npm on local
+        # disk, so the network cache would only waste upload bandwidth.
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 22
-          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
       - name: Install WebAssembly packager
+        # A no-op after the first run: cargo skips packages already installed
+        # at the requested version.
         run: cargo install wasm-pack --version 0.15.0 --locked
 
       - name: Test documentation
@@ -58,6 +66,14 @@ jobs:
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
         with:
           path: docs/.vitepress/dist
+
+      - name: Clean self-hosted workspace
+        # Persistent runners keep the working tree between jobs. Scrub
+        # untracked output (rendered site, wasm artifacts) so it can't leak
+        # into the next run; keep target/ and node_modules/ as local build
+        # caches. Never fail the job on this.
+        if: ${{ always() && runner.environment == 'self-hosted' }}
+        run: git clean -ffdx --exclude=target --exclude=node_modules || true
 
   deploy:
     name: Deploy documentation

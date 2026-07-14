@@ -154,9 +154,15 @@ test("the site deploys to the repository GitHub Pages project", () => {
 
   assert.ok(workflow.on.push.paths.includes("dootdoot-core/tests/fixtures/golden_corpus.tsv"));
 
+  assert.deepEqual(build["runs-on"], ["self-hosted", "macOS", "ARM64"]);
   assert.deepEqual(
     build.steps.filter((step) => step.run).map((step) => step.run),
-    ["npm ci", "cargo install wasm-pack --version 0.15.0 --locked", "npm run test:docs"],
+    [
+      "npm ci",
+      "cargo install wasm-pack --version 0.15.0 --locked",
+      "npm run test:docs",
+      "git clean -ffdx --exclude=target --exclude=node_modules || true",
+    ],
   );
   assert.equal(build.permissions.contents, "read");
   assert.equal(deploy.permissions.pages, "write");
