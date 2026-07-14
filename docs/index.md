@@ -1,7 +1,7 @@
 ---
 layout: home
-title: dootdoot — text, translated into droid
-description: A deterministic, semantically-aware sound language for your terminal.
+title: Turn text into droid chatter
+description: Turn text into deterministic droid chatter, with similar meanings getting similar sounds.
 sidebar: false
 aside: false
 pageClass: doot-home

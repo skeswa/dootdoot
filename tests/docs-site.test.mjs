@@ -11,9 +11,9 @@ test("the production site exposes its reader and playground", () => {
   const home = read("docs/.vitepress/dist/index.html");
 
   assert.match(home, /id="signal-console"/);
-  assert.match(home, /TRANSMISSION CONSOLE/);
-  assert.match(home, /placeholder="Type a transmission"/);
-  assert.match(home, /RENDERED LOCALLY BY VOICE_V12 WEBASSEMBLY/);
+  assert.match(home, /MAKE IT DOOT/);
+  assert.match(home, /placeholder="Type something\. Anything\."/);
+  assert.match(home, /THE SAME RUST VOICE RUNS HERE AND IN THE CLI/);
   assert.equal(existsSync(new URL("../docs/.vitepress/dist/design.html", import.meta.url)), true);
   const assets = readdirSync(new URL("../docs/.vitepress/dist/assets/", import.meta.url));
   assert.ok(assets.some((file) => file.endsWith(".wasm")));
@@ -21,13 +21,25 @@ test("the production site exposes its reader and playground", () => {
 
 test("the landing page speaks the KotoR aural-protocol visual language", () => {
   const home = read("docs/.vitepress/dist/index.html");
+  const homeCopy = [
+    read("docs/.vitepress/theme/Home.vue"),
+    read("docs/.vitepress/theme/DroidPlayground.vue"),
+    read("docs/index.md"),
+  ].join("\n");
 
-  assert.match(home, /EVERY WORD/);
-  assert.match(home, /LEAVES AN/);
-  assert.match(home, /ECHO\./);
-  assert.match(home, /TRANSMISSION CONSOLE/);
-  assert.match(home, /THREE LAWS OF THE VOICE/);
+  assert.match(home, /WORDS GO IN\./);
+  assert.match(home, /<em>DOOTS COME<br>OUT\.<\/em>/);
+  assert.match(home, /MAKE IT DOOT/);
+  assert.match(home, /HOW THE DOOTS BEHAVE/);
   assert.match(home, /THE FIELD MANUAL/);
+  assert.match(home, /same bytes as last time/);
+  assert.match(home, /dootdoot v0\.2\.0 poured/);
+  assert.match(home, /After a week, you may even start to think you understand it\./);
+  assert.doesNotMatch(
+    home,
+    /EVERY WORD|SAME PHRASE, SAME CHATTER|sha256 matches golden|No clocks|No drift|minor concern/,
+  );
+  assert.doesNotMatch(homeCopy, /—|\bNo [^.!?]+[.!?]\s+No\b/i);
   assert.doesNotMatch(home, /A long time ago|Episode XII|class="hyperspace"/);
 });
 
@@ -67,6 +79,8 @@ test("the landing page stays pinned to the KotoR reference geometry", () => {
     /body:has\(\.protocol-home\) \.VPNavBarSearch[^{]*\{[^}]*display: none/s,
   );
   assert.doesNotMatch(home, /LIVE VOICE MODULE/);
+  assert.match(themeStyles, /content: "TEXT IN \/\/ DOOTS OUT"/);
+  assert.doesNotMatch(themeStyles, /AURAL PROTOCOL|v0\.4/);
   assert.match(home, /rel="icon"/);
   assert.match(config, /text: "GitHub ↗"[^}]*noIcon: true/);
 });
