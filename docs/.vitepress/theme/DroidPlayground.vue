@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { withBase } from "vitepress";
 import { samples } from "./samples.mjs";
 import "./playground.css";
@@ -7,40 +7,49 @@ import "./playground.css";
 const BAR_COUNT = 48;
 const PLACEHOLDER = Array.from({ length: BAR_COUNT }, () => 0.08);
 
+const phrase = ref(samples[0].phrase);
 const selected = ref(0);
 const playing = ref(false);
 const progress = ref(0);
-const peaksByAudio = ref<Record<string, number[]>>({});
+const bars = ref(PLACEHOLDER);
+const ready = ref(false);
+const status = ref("Loading VOICE_V12 module…");
 let audio: HTMLAudioElement | undefined;
+let objectUrl: string | undefined;
+let renderWav: ((text: string) => Uint8Array) | undefined;
 let sweep = 0;
 
-const sample = computed(() => samples[selected.value]);
-const bars = computed(() => peaksByAudio.value[sample.value.audio] ?? PLACEHOLDER);
+const note = computed(
+  () => samples.find((item) => item.phrase === phrase.value)?.note ?? "A live browser render",
+);
 
-async function loadPeaks(url: string) {
-  if (peaksByAudio.value[url]) return;
+async function decodePeaks(wav: Uint8Array) {
   try {
-    const response = await fetch(withBase(url));
-    const encoded = await response.arrayBuffer();
+    const encoded = wav.buffer.slice(wav.byteOffset, wav.byteOffset + wav.byteLength);
     const decoded = await new OfflineAudioContext(1, 1, 44100).decodeAudioData(encoded);
     const data = decoded.getChannelData(0);
     const chunk = Math.max(1, Math.floor(data.length / BAR_COUNT));
     const peaks: number[] = [];
     for (let bar = 0; bar < BAR_COUNT; bar += 1) {
       let peak = 0;
-      for (let i = bar * chunk; i < (bar + 1) * chunk && i < data.length; i += 8) {
-        peak = Math.max(peak, Math.abs(data[i]));
+      for (let index = bar * chunk; index < (bar + 1) * chunk && index < data.length; index += 8) {
+        peak = Math.max(peak, Math.abs(data[index]));
       }
       peaks.push(peak);
     }
     const loudest = Math.max(...peaks, 0.001);
-    peaksByAudio.value = {
-      ...peaksByAudio.value,
-      [url]: peaks.map((peak) => Math.max(0.05, peak / loudest)),
-    };
+    bars.value = peaks.map((peak) => Math.max(0.05, peak / loudest));
   } catch {
-    // Decoding is progressive enhancement; the placeholder bars stay.
+    bars.value = PLACEHOLDER;
   }
+}
+
+function releaseAudio() {
+  audio?.pause();
+  audio = undefined;
+  cancelAnimationFrame(sweep);
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+  objectUrl = undefined;
 }
 
 function trackProgress() {
@@ -50,49 +59,68 @@ function trackProgress() {
   }
 }
 
-function play() {
-  audio?.pause();
-  cancelAnimationFrame(sweep);
-  audio = new Audio(withBase(sample.value.audio));
-  playing.value = true;
+async function play() {
+  if (!renderWav) return;
+  releaseAudio();
+  playing.value = false;
   progress.value = 0;
-  audio.addEventListener(
-    "ended",
-    () => {
-      playing.value = false;
-      progress.value = 0;
-    },
-    { once: true },
-  );
-  audio
-    .play()
-    .then(trackProgress)
-    .catch(() => (playing.value = false));
+  status.value = "Synthesizing locally…";
+  await nextTick();
+
+  try {
+    const wav = renderWav(phrase.value);
+    void decodePeaks(wav);
+    objectUrl = URL.createObjectURL(new Blob([wav], { type: "audio/wav" }));
+    audio = new Audio(objectUrl);
+    playing.value = true;
+    status.value = "Transmission active";
+    audio.addEventListener(
+      "ended",
+      () => {
+        playing.value = false;
+        progress.value = 0;
+        status.value = "VOICE_V12 ready";
+      },
+      { once: true },
+    );
+    await audio.play();
+    trackProgress();
+  } catch (error) {
+    releaseAudio();
+    playing.value = false;
+    status.value = error instanceof Error ? error.message : "Unable to render transmission";
+  }
 }
 
-function choose(index: number) {
+async function choose(index: number) {
   selected.value = index;
-  play();
+  phrase.value = samples[index].phrase;
+  await play();
 }
 
-onMounted(() => {
-  for (const item of samples) loadPeaks(item.audio);
+onMounted(async () => {
+  try {
+    const module = await import("../wasm/dootdoot_core.js");
+    await module.default();
+    renderWav = module.render_wav;
+    ready.value = true;
+    status.value = "VOICE_V12 ready";
+  } catch {
+    status.value = "Voice module unavailable — reload to retry";
+  }
 });
 
-onBeforeUnmount(() => {
-  audio?.pause();
-  cancelAnimationFrame(sweep);
-});
+onBeforeUnmount(releaseAudio);
 </script>
 
 <template>
   <section id="signal-console" class="console" aria-labelledby="console-title">
     <div class="console-heading">
-      <p class="eyebrow">Incoming transmissions / VOICE_V12 golden renders</p>
+      <p class="eyebrow">Live semantic synthesis / VOICE_V12</p>
       <h2 id="console-title">Hear what<br /><em>meaning</em> sounds like.</h2>
       <p>
-        Pick a transmission. Every clip is a golden test fixture rendered by the Rust engine itself,
-        not a browser imitation.
+        Type any transmission. Rendered locally by VOICE_V12 WebAssembly—the same Rust engine,
+        tokenizer, semantic map, and voice that power the CLI.
       </p>
     </div>
     <div class="console-panel">
@@ -106,14 +134,24 @@ onBeforeUnmount(() => {
         <i>VOICE<br />V12</i>
         <div v-if="playing" class="doot-notes"><b>♪</b><b>doot</b><b>♫</b><b>doot</b><b>♪</b></div>
       </div>
-      <div class="readout">
-        <span>Input phrase</span><strong>“{{ sample.phrase }}”</strong
-        ><small>{{ sample.note }}</small>
-      </div>
-      <button class="play" type="button" @click="play">
+      <form class="readout" @submit.prevent="play">
+        <label for="transmission">Input phrase</label>
+        <input
+          id="transmission"
+          v-model="phrase"
+          type="text"
+          placeholder="Type a transmission"
+          autocomplete="off"
+          spellcheck="false"
+          @input="selected = -1"
+        />
+        <small>{{ note }}</small>
+      </form>
+      <button class="play" type="button" :disabled="!ready" @click="play">
         <span>{{ playing ? "■" : "▶" }}</span
-        >{{ playing ? "Transmitting" : "Play transmission" }}
+        >{{ playing ? "Transmitting" : ready ? "Play transmission" : "Loading voice" }}
       </button>
+      <p class="console-status" aria-live="polite"><i />{{ status }}</p>
       <div class="presets" aria-label="Sample transmissions">
         <button
           v-for="(item, index) in samples"
@@ -127,7 +165,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
       <p class="console-note">
-        Want it to say something else? That's the CLI's job: <code>dootdoot "your words"</code>
+        Want the terminal version? <code>brew install skeswa/tap/dootdoot</code>
         <a :href="withBase('/usage')">Get started →</a>
       </p>
     </div>

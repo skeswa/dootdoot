@@ -12,14 +12,24 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 hound = "3.5.1"
 prost = { version = "0.14.1", default-features = false, features = ["derive", "std"] }
 thiserror = { version = "2.0.17", default-features = false }
 tokenizers = { version = "0.23.1", default-features = false, features = ["fancy-regex"] }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.3.4", default-features = false, features = ["wasm_js"] }
+wasm-bindgen = { version = "=0.2.126", default-features = false, features = ["std"] }
+
 [dev-dependencies]
 insta = { version = "1.48.0", default-features = false }
 
 [lints]
 workspace = true
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

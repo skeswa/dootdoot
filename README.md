@@ -29,6 +29,9 @@ learnable sound language with three defining properties:
 - **Semantic.** Text with similar _meaning_ sounds similar, so you can learn to "hear" words.
 - **Droid by design.** However you phrase the input, the output is unmistakably the same character.
 
+[Try the real `VOICE_V12` renderer in your browser](https://skeswa.github.io/dootdoot/),
+powered by the same Rust core compiled to WebAssembly.
+
 ## Installation
 
 **Homebrew** (recommended on macOS, available after the first tagged release):

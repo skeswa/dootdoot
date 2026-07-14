@@ -1359,7 +1359,9 @@ to build time. The resulting split:
   the **owned math** module, WAV
   serialization **to bytes / an `impl Write`**, and the `VOICE_V*` constants. No
   filesystem or audio-device I/O (it hands back buffers/bytes; the binary performs the
-  actual writes). Fully unit-testable and reusable.
+  actual writes). Fully unit-testable and reusable. For the documentation site, the same
+  crate also builds as a `wasm32-unknown-unknown` `cdylib`; a target-gated `wasm-bindgen`
+  adapter exposes only complete in-memory WAV bytes and introduces no alternate renderer.
 - **`dootdoot`** (binary): thin CLI shell — `clap` parsing, stdin handling, `rodio`
   playback, `--explain` printing, error/exit-code mapping. Calls into core.
 - **`xtask`** (build-time tool, not shipped): the offline generator — loads
@@ -1413,6 +1415,22 @@ This packaging layer is deliberately downstream of the normal release build:
 
 Packaging does not alter samples and is not part of the `VOICE_V*` contract; it is an
 install/update surface for the already-frozen binary.
+
+### 9.5 Decision: the browser console runs the same core through WebAssembly
+
+The documentation site's transmission console accepts arbitrary text, not only a fixed
+sample list. Its build compiles `dootdoot-core` for `wasm32-unknown-unknown` and uses a thin
+`wasm-bindgen` adapter to call the normal `render_text_canonical_buffer` → `wav_bytes` path.
+The generated JavaScript/Wasm package is a build artifact, while the tokenizer, semantic
+mapping, POS sidecar, owned math, planner, and synthesizer remain the same embedded Rust
+implementation used by the CLI. No JavaScript approximation or second voice exists.
+
+The browser is an imperative sink: it turns the returned WAV bytes into an object URL and
+hands that URL to the platform audio element. Synthesis stays synchronous and pure inside
+the core, and playback never feeds back into rendering. Site tests instantiate the generated
+module directly and compare a native golden fixture byte-for-byte, in addition to checking
+repeat renders of arbitrary text. This extends the canonical-buffer principle (§7.1) to the
+web surface without changing the `VOICE_V12` sample contract.
 
 ---
 

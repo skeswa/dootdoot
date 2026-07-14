@@ -12,10 +12,31 @@ test("the production site exposes its reader and playground", () => {
 
   assert.match(home, /id="signal-console"/);
   assert.match(home, /Hear what/);
+  assert.match(home, /placeholder="Type a transmission"/);
+  assert.match(home, /Rendered locally by VOICE_V12 WebAssembly/);
   assert.equal(existsSync(new URL("../docs/.vitepress/dist/design.html", import.meta.url)), true);
   for (const { audio } of samples) {
     assert.equal(existsSync(new URL(`../docs/.vitepress/dist${audio}`, import.meta.url)), true);
   }
+});
+
+test("the browser engine renders arbitrary text through VOICE_V12 WebAssembly", async () => {
+  const moduleUrl = new URL("../docs/.vitepress/wasm/dootdoot_core.js", import.meta.url);
+  const binaryUrl = new URL("../docs/.vitepress/wasm/dootdoot_core_bg.wasm", import.meta.url);
+  const { initSync, render_wav } = await import(moduleUrl);
+
+  initSync({ module: readFileSync(binaryUrl) });
+  const first = render_wav("hello, little one");
+  const second = render_wav("hello, little one");
+  const golden = readFileSync(
+    new URL("../dootdoot-core/tests/fixtures/golden/hello_there.wav", import.meta.url),
+  );
+
+  assert.ok(first instanceof Uint8Array);
+  assert.deepEqual(first.subarray(0, 4), new Uint8Array([82, 73, 70, 70]));
+  assert.deepEqual(first, second);
+  assert.ok(first.byteLength > 44);
+  assert.deepEqual(render_wav("hello there"), new Uint8Array(golden));
 });
 
 test("documentation navigation is generated from the source tree", () => {
@@ -80,7 +101,7 @@ test("the site deploys to the repository GitHub Pages project", () => {
 
   assert.deepEqual(
     build.steps.filter((step) => step.run).map((step) => step.run),
-    ["npm ci", "npm run test:docs"],
+    ["npm ci", "cargo install wasm-pack --version 0.15.0 --locked", "npm run test:docs"],
   );
   assert.equal(build.permissions.contents, "read");
   assert.equal(deploy.permissions.pages, "write");

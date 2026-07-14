@@ -935,6 +935,12 @@ plan_discourse_performance` and the class field on
       headings, self-host pinned fonts, split theme/landing/playground styles by ownership,
       and remove broad dead-link suppression.
       Deps: T-129 · Reqs: NFR-23 · Est: 2h
+- [x] **T-131 — Run the real voice in the browser through WebAssembly.** Compile
+      `dootdoot-core` as a target-gated `wasm-bindgen` module, expose the existing canonical
+      render-to-WAV path, replace the preset-only player with arbitrary text input, generate
+      the Wasm package during site builds, and verify a native golden render byte-for-byte
+      plus repeated arbitrary renders.
+      Deps: T-130 · Reqs: FR-122, NFR-23, NFR-24 · Est: 4h
 
 ---
 

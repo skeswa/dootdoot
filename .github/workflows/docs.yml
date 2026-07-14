@@ -7,8 +7,13 @@ on:
     paths:
       - ".github/workflows/docs.yml"
       - "docs/**"
+      - "assets/**"
+      - "dootdoot-core/src/**"
       - "dootdoot-core/tests/fixtures/golden/**"
       - "dootdoot-core/tests/fixtures/golden_corpus.tsv"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
       - "package.json"
       - "package-lock.json"
       - "tests/docs-site.test.mjs"
@@ -42,6 +47,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install WebAssembly packager
+        run: cargo install wasm-pack --version 0.15.0 --locked
 
       - name: Test documentation
         run: npm run test:docs
