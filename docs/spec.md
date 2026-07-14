@@ -674,6 +674,11 @@
   surfaces, cyan telemetry, restrained amber controls, and industrial panel geometry. The
   experience SHALL remain responsive, keyboard-accessible, semantically labelled, readable
   without decorative effects, and respectful of `prefers-reduced-motion`.
+- **NFR-26** Mermaid fences in the authoritative Markdown SHALL render as accessible SVG
+  diagrams with a title and description. The exact-pinned renderer SHALL load only on pages
+  containing diagrams, run with strict security, wait for site fonts before laying out labels,
+  and preserve readable source when rendering fails. Site tests SHALL parse and render every
+  committed diagram with the shipped renderer.
 
 ### 2.7 Distribution
 

@@ -6,6 +6,10 @@ import { sidebar } from "../docs/.vitepress/navigation.mjs";
 import { samples } from "../docs/.vitepress/theme/samples.mjs";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const mermaidDiagrams = () => {
+  const markdown = `${read("docs/design.md")}\n${read("docs/plan.md")}`;
+  return [...markdown.matchAll(/```mermaid\n([\s\S]*?)```/g)].map(([, diagram]) => diagram);
+};
 
 test("the production site exposes its reader and playground", () => {
   const home = read("docs/.vitepress/dist/index.html");
@@ -17,6 +21,73 @@ test("the production site exposes its reader and playground", () => {
   assert.equal(existsSync(new URL("../docs/.vitepress/dist/design.html", import.meta.url)), true);
   const assets = readdirSync(new URL("../docs/.vitepress/dist/assets/", import.meta.url));
   assert.ok(assets.some((file) => file.endsWith(".wasm")));
+});
+
+test("the production reader renders Mermaid diagrams", () => {
+  const design = read("docs/.vitepress/dist/design.html");
+  const plan = read("docs/.vitepress/dist/plan.html");
+
+  assert.equal(design.match(/<figure class="mermaid-diagram\b/g)?.length, 1);
+  assert.equal(plan.match(/<figure class="mermaid-diagram\b/g)?.length, 7);
+  assert.equal(plan.match(/mermaid-diagram--wide/g)?.length, 7);
+  assert.doesNotMatch(`${design}\n${plan}`, /language-mermaid/);
+});
+
+test("every Mermaid diagram describes itself to assistive technology", () => {
+  const diagrams = mermaidDiagrams();
+
+  assert.equal(diagrams.length, 8);
+  for (const diagram of diagrams) {
+    assert.match(diagram, /^\s*accTitle:\s+\S.+$/m);
+    assert.match(diagram, /^\s*accDescr:\s+\S.+$/m);
+    assert.doesNotMatch(diagram, /<(?:br|i)>/i);
+  }
+});
+
+test("the homepage does not preload the Mermaid renderer", () => {
+  const home = read("docs/.vitepress/dist/index.html");
+  const chunks = readdirSync(new URL("../docs/.vitepress/dist/assets/chunks/", import.meta.url));
+
+  assert.ok(chunks.some((file) => file.startsWith("mermaid.core.")));
+  assert.doesNotMatch(home, /mermaid\.core|flowchart-/);
+});
+
+test("the shipped Mermaid renderer produces accessible SVGs", async (context) => {
+  const { JSDOM } = await import("jsdom");
+  const dom = new JSDOM();
+  const browserGlobals = [
+    ["window", dom.window],
+    ["document", dom.window.document],
+    ...["Element", "HTMLElement", "SVGElement", "Node", "CSSStyleSheet"].map((name) => [
+      name,
+      dom.window[name],
+    ]),
+  ];
+  const previousGlobals = new Map(browserGlobals.map(([name]) => [name, globalThis[name]]));
+  for (const [name, value] of browserGlobals) globalThis[name] = value;
+  dom.window.SVGElement.prototype.getBBox = () => ({ x: 0, y: 0, width: 120, height: 24 });
+  dom.window.SVGElement.prototype.getComputedTextLength = () => 120;
+  context.after(() => {
+    dom.window.close();
+    for (const [name, value] of previousGlobals) {
+      if (value === undefined) delete globalThis[name];
+      else globalThis[name] = value;
+    }
+  });
+
+  const { default: mermaid } = await import("mermaid");
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: "strict",
+    flowchart: { htmlLabels: false },
+  });
+  for (const [index, diagram] of mermaidDiagrams().entries()) {
+    const { svg } = await mermaid.render(`mermaid-test-${index}`, diagram);
+    assert.match(svg, /role="graphics-document document"/);
+    assert.match(svg, /aria-roledescription="flowchart-v2"/);
+    assert.match(svg, /<title[^>]*>.+<\/title>/);
+    assert.match(svg, /<desc[^>]*>.+<\/desc>/);
+  }
 });
 
 test("the landing page speaks the KotoR aural-protocol visual language", () => {

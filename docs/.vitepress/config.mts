@@ -1,4 +1,5 @@
 import { defineConfig } from "vitepress";
+import { renderMermaidDiagrams } from "./mermaid-markdown.mjs";
 import { sidebar } from "./navigation.mjs";
 
 export default defineConfig({
@@ -9,6 +10,9 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
   appearance: "force-dark",
+  markdown: {
+    config: renderMermaidDiagrams,
+  },
   head: [
     ["meta", { name: "theme-color", content: "#05090a" }],
     [
