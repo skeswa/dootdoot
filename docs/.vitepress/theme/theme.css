@@ -86,7 +86,7 @@ body:has(.protocol-home) .VPNavBarSearch {
 }
 
 .VPNavBarTitle .title::after {
-  content: "v0.4 // AURAL PROTOCOL";
+  content: "TEXT IN // DOOTS OUT";
   margin-left: 16px;
   color: #4e7c80;
   font:

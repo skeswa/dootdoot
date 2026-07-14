@@ -7,6 +7,8 @@ import "@fontsource/ibm-plex-mono/latin-400.css";
 import "@fontsource/ibm-plex-mono/latin-500.css";
 import "@fontsource/ibm-plex-mono/latin-600.css";
 import Home from "./Home.vue";
+import MermaidDiagram from "./MermaidDiagram.vue";
+import "./mermaid.css";
 import "./theme.css";
 
 export default {
@@ -14,5 +16,6 @@ export default {
   Layout: DefaultTheme.Layout,
   enhanceApp({ app }) {
     app.component("DootHome", Home);
+    app.component("MermaidDiagram", MermaidDiagram);
   },
 };

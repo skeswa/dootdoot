@@ -947,6 +947,12 @@ plan_discourse_performance` and the class field on
       panel geometry, responsive behavior, accessibility, and reduced-motion treatment into
       the full VitePress reader; pin and self-host the selected fonts.
       Deps: T-131 · Reqs: NFR-23, NFR-25 · Est: 5h
+- [x] **T-133 — Render Mermaid diagrams in the documentation reader.** Transform Mermaid
+      fences through an owned VitePress adapter, render accessible SVGs in a strict,
+      font-aware, lazy-loaded Vue component, style wide graphs as scrollable protocol panels,
+      preserve readable source on failure, and parse/render every committed diagram in site
+      tests.
+      Deps: T-132 · Reqs: NFR-23, NFR-25, NFR-26 · Est: 2h
 
 ---
 
@@ -954,6 +960,8 @@ plan_discourse_performance` and the class field on
 
 ```mermaid
 flowchart LR
+    accTitle: VOICE_V1 critical build path
+    accDescr: The first voice moves from workspace setup through asset generation, semantic mapping, synthesis, tuning, and its frozen golden-file contract.
     T01[T-01] --> T04[T-04] --> T11[T-11] --> T12[T-12] --> T13[T-13]
     T13 --> T14[T-14] --> T15[T-15] --> T16[T-16] --> T17[T-17] --> T18[T-18]
     T18 --> T1920["T-19 / T-20"] --> T21[T-21] --> T22[T-22] --> T23[T-23] --> T24[T-24]
@@ -962,8 +970,10 @@ flowchart LR
     T51 --> T5253["T-52 / T-53"]
     T5253 --> T54[T-54] --> T55[T-55] --> T56[T-56] --> T57[T-57] --> T60[T-60] --> T63[T-63]
 
-    OM["T-06 … T-10<br/>owned math"] --> T33
-    SP["T-26 … T-32<br/>synth primitives"] --> T33
+    OM["`T-06 … T-10
+    owned math`"] --> T33
+    SP["`T-26 … T-32
+    synth primitives`"] --> T33
 ```
 
 Owned math (T-06–T-10) and the synth primitives (T-26–T-32) proceed in parallel and
@@ -975,6 +985,8 @@ The `VOICE_V2` expressiveness branch is intentionally separate from v1 packaging
 
 ```mermaid
 flowchart LR
+    accTitle: VOICE_V2 expressiveness task path
+    accDescr: Phrase modeling, affect, complexity, compound articulation, and archetype rendering converge on the second frozen voice.
     T64[T-64 contract scope] --> T65[T-65 phrase model] --> T66[T-66 phrase integration]
     T66 --> T67[T-67 safe affect assets] --> T68[T-68 mood pooling] --> T69[T-69 affect prosody]
     T69 --> T70[T-70 complexity scalar] --> T71[T-71 compound articulation]
@@ -989,6 +1001,8 @@ The `VOICE_V3` smoothing branch follows the frozen V2 expressiveness contract, a
 
 ```mermaid
 flowchart LR
+    accTitle: VOICE_V3 through VOICE_V6 task path
+    accDescr: Four successive voice revisions smooth phrase continuity, repeated onsets, word attacks, and repeated phrases.
     T74[T-74 VOICE_V2 freeze] --> T75[T-75 VOICE_V3 phrase continuity]
     T75 --> T76[T-76 VOICE_V4 repeated-onset smoothing]
     T76 --> T77[T-77 VOICE_V5 word-attack smoothing]
@@ -1001,6 +1015,8 @@ the synth can already produce (T-81–T-85).
 
 ```mermaid
 flowchart LR
+    accTitle: VOICE_V7 contextual performance task path
+    accDescr: Expanded synthesis primitives and a performance planner are built independently, deployed together, and then frozen as VOICE_V7.
     T78[T-78 VOICE_V6] --> T80[T-80 V7 contract scope]
     T80 --> T81[T-81 whistle/pitch span]
     T80 --> T82[T-82 noise/breath roughness]
@@ -1025,6 +1041,8 @@ engagement/excursion/texture tasks then ride on the planner accents before the f
 
 ```mermaid
 flowchart LR
+    accTitle: VOICE_V10 task path
+    accDescr: Whistle direction, flourish control, accent range, neutral pacing, and agitation texture converge on the VOICE_V10 freeze.
     T101[T-101 VOICE_V9] --> T102[T-102 signed whistle sweep]
     T102 --> T103[T-103 falling terminal flourish]
     T103 --> T104[T-104 engage whistle more/earlier]
@@ -1041,6 +1059,8 @@ breath, and integrated aspiration — that converge on the freeze:
 
 ```mermaid
 flowchart LR
+    accTitle: VOICE_V11 task path
+    accDescr: Softer attacks, organic timing, localized dash breath, and integrated aspiration converge on the VOICE_V11 freeze.
     T108[T-108 VOICE_V10 freeze] --> T109[T-109 soften attack]
     T108 --> T110[T-110 organic rubato]
     T108 --> T112[T-112 localize dash breath]
@@ -1058,6 +1078,8 @@ so nouns/verbs ship as coherent words:
 
 ```mermaid
 flowchart LR
+    accTitle: VOICE_V12 noun and verb task path
+    accDescr: Acoustic spikes validate the idea before the class-data pipeline, onset markers, compound silhouettes, and explanations converge on VOICE_V12.
     T111[T-111 VOICE_V11 freeze] --> T115[T-115 spike POS lexicon]
     T115 --> T116[T-116 spike class markers]
     T115 --> T117[T-117 spike compound silhouette]

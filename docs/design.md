@@ -50,17 +50,33 @@ three goals, and later stages depend on earlier ones. The dependency chain:
 
 ```mermaid
 flowchart TD
+    accTitle: Text-to-droid-audio pipeline
+    accDescr: Text moves through tokenization, semantic mapping, performance planning, synthesis, and one canonical audio buffer before being saved or played.
     text([text])
-    text --> tok["§3 · tokenize with model2vec's WordPiece vocab<br/><i>deterministic; gives word/subword units</i>"]
+    text --> tok["`§3 · tokenize with model2vec's WordPiece vocab
+    *deterministic; gives word/subword units*`"]
     tok --> ids["token IDs"]
-    ids --> lookup["§4 · look up each token's semantic vector<br/>via a precomputed, baked table<br/><i>gives MEANING — goal 2</i>"]
-    lookup --> pca["4-dim PCA vector per token<br/>(+ pooling weight)"]
-    pca --> squash["§5 · squash to 4 perceptual knobs<br/>per-token = local gesture<br/>weighted-mean of tokens = sequence baseline<br/><i>learnable, bounded — goal 2</i>"]
-    tok --> classes["§8.13 · word-class lookup via the baked<br/>sidecar noun/verb table<br/><i>VOICE_V12: class markers + silhouettes</i>"]
+    ids --> lookup["`§4 · look up each token's semantic vector
+    via a precomputed, baked table
+    *gives MEANING — goal 2*`"]
+    lookup --> pca["`4-dim PCA vector per token
+    (+ pooling weight)`"]
+    pca --> squash["`§5 · squash to 4 perceptual knobs
+    per-token = local gesture
+    weighted-mean of tokens = sequence baseline
+    *learnable, bounded — goal 2*`"]
+    tok --> classes["`§8.13 · word-class lookup via the baked
+    sidecar noun/verb table
+    *VOICE_V12: class markers + silhouettes*`"]
     classes --> plan
-    squash --> plan["§5.4/§6.4 · discourse-performance planner<br/>local phrase roles + bounded performance curves<br/><i>VOICE_V7: schedules gestures by role</i>"]
-    plan --> voice["§6 · formant-synthesis voice engine<br/>fixed DNA + 4 semantic knobs + V7 primitives<br/><i>DROID identity — goal 3</i>"]
-    voice --> buf["§7 · canonical Vec&lt;i16&gt; @ 44.1 kHz / 16-bit / mono<br/><i>single source of truth</i>"]
+    squash --> plan["`§5.4/§6.4 · discourse-performance planner
+    local phrase roles + bounded performance curves
+    *VOICE_V7: schedules gestures by role*`"]
+    plan --> voice["`§6 · formant-synthesis voice engine
+    fixed DNA + 4 semantic knobs + V7 primitives
+    *DROID identity — goal 3*`"]
+    voice --> buf["`§7 · canonical Vec&lt;i16&gt; @ 44.1 kHz / 16-bit / mono
+    *single source of truth*`"]
     buf --> wav["hound → WAV file (§7)"]
     buf --> play["rodio → live playback (§7)"]
 ```
@@ -1447,6 +1463,21 @@ The atmosphere is progressive enhancement. Content, navigation, form labels, and
 remain semantic and keyboard-accessible; layouts collapse at tablet and phone widths; motion is
 disabled under `prefers-reduced-motion`. Decorative grids, scanlines, glows, cursor blinks, and
 waveform animations never carry information by themselves.
+
+### 9.7 Decision: Mermaid diagrams use an owned, lazy VitePress adapter
+
+The authoritative design and plan documents keep their Mermaid fences as source. A narrow
+Markdown-It fence override turns only those fences into a globally registered Vue component;
+ordinary code fences continue through VitePress unchanged. The component dynamically imports
+the exact-pinned Mermaid renderer when a diagram mounts, so the landing page and documents
+without diagrams do not fetch the renderer.
+
+Rendering waits for the self-hosted fonts, uses the site's dark industrial palette, and runs
+with Mermaid's strict security level. Each source diagram carries `accTitle` and `accDescr`,
+which become the generated SVG's title, description, and ARIA relationships. Wide dependency
+graphs scroll within their panel, and a render failure exposes both a readable error and the
+original graph source instead of leaving a blank space. Site tests render every committed
+diagram with the shipped Mermaid version and verify the production fence transformation.
 
 ---
 

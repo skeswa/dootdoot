@@ -12,7 +12,7 @@ const selected = ref(0);
 const playing = ref(false);
 const progress = ref(0);
 const bars = ref(PLACEHOLDER);
-const status = ref("VOICE_V12 on standby");
+const status = ref("Droid on standby");
 let audio: HTMLAudioElement | undefined;
 let objectUrl: string | undefined;
 let renderWav: ((text: string) => Uint8Array) | undefined;
@@ -24,22 +24,22 @@ let sweep = 0;
 // the visitor reaches for the console first.
 function loadVoice() {
   voiceLoad ??= (async () => {
-    status.value = "Loading VOICE_V12 module…";
+    status.value = "Warming up VOICE_V12…";
     try {
       const module = await import("../wasm/dootdoot_core.js");
       await module.default();
       renderWav = module.render_wav;
-      status.value = "VOICE_V12 ready";
+      status.value = "Droid ready";
     } catch {
       voiceLoad = undefined;
-      status.value = "Voice module unavailable — reload to retry";
+      status.value = "Voice module unavailable. Reload to retry.";
     }
   })();
   return voiceLoad;
 }
 
 const note = computed(
-  () => samples.find((item) => item.phrase === phrase.value)?.note ?? "A live browser render",
+  () => samples.find((item) => item.phrase === phrase.value)?.note ?? "Fresh from your browser",
 );
 
 async function decodePeaks(wav: Uint8Array) {
@@ -95,13 +95,13 @@ async function play() {
     objectUrl = URL.createObjectURL(new Blob([wav], { type: "audio/wav" }));
     audio = new Audio(objectUrl);
     playing.value = true;
-    status.value = "Transmission active";
+    status.value = "Doot in progress";
     audio.addEventListener(
       "ended",
       () => {
         playing.value = false;
         progress.value = 0;
-        status.value = "VOICE_V12 ready";
+        status.value = "Droid ready";
       },
       { once: true },
     );
@@ -110,7 +110,7 @@ async function play() {
   } catch (error) {
     releaseAudio();
     playing.value = false;
-    status.value = error instanceof Error ? error.message : "Unable to render transmission";
+    status.value = error instanceof Error ? error.message : "The droid could not render that one.";
   }
 }
 
@@ -142,30 +142,30 @@ onBeforeUnmount(releaseAudio);
   <section id="signal-console" class="console" aria-labelledby="console-title">
     <div class="console-inner">
       <header class="console-heading">
-        <h2 id="console-title">TRANSMISSION CONSOLE</h2>
-        <p>RENDERED LOCALLY BY VOICE_V12 WEBASSEMBLY — SAME PHRASE, SAME CHATTER</p>
+        <h2 id="console-title">MAKE IT DOOT</h2>
+        <p>THE SAME RUST VOICE RUNS HERE AND IN THE CLI. YOUR BROWSER IS A DROID NOW.</p>
       </header>
 
       <div class="console-panel">
         <div class="transmission-compose">
           <form class="readout" @submit.prevent="play">
-            <label for="transmission">INPUT PHRASE</label>
+            <label for="transmission">GIVE THE DROID A SENTENCE</label>
             <input
               id="transmission"
               v-model="phrase"
               type="text"
-              placeholder="Type a transmission"
+              placeholder="Type something. Anything."
               autocomplete="off"
               spellcheck="false"
               @input="selected = -1"
             />
-            <small>{{ note }} · press enter or transmit below</small>
+            <small>{{ note }} · press enter or poke the button</small>
           </form>
 
           <div class="console-action-row">
             <button class="play" type="button" @click="play">
               <span>{{ playing ? "■" : "▶" }}</span
-              >{{ playing ? "TRANSMITTING" : "PLAY TRANSMISSION" }}
+              >{{ playing ? "DOOTING" : "MAKE IT DOOT" }}
             </button>
             <div class="scope" :class="{ active: playing }" aria-hidden="true">
               <span
@@ -181,7 +181,7 @@ onBeforeUnmount(releaseAudio);
         </div>
 
         <aside class="transmission-presets">
-          <p>STORED PHRASES</p>
+          <p>THINGS TO SAY</p>
           <div class="presets" aria-label="Sample transmissions">
             <button
               v-for="(item, index) in samples"
@@ -195,8 +195,8 @@ onBeforeUnmount(releaseAudio);
             </button>
           </div>
           <p class="console-note">
-            GET THE CLI: <code>brew install skeswa/tap/dootdoot</code> — OR
-            <a :href="withBase('/usage')">BUILD FROM SOURCE ↗</a>
+            CLI: <code>brew install skeswa/tap/dootdoot</code> /
+            <a :href="withBase('/usage')">BUILD IT YOURSELF ↗</a>
           </p>
         </aside>
       </div>
