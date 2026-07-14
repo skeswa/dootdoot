@@ -1,8 +1,9 @@
 # Packaging
 
 `dootdoot` supports source builds, local Cargo installs, and tag-driven macOS release
-artifacts. The project license is MIT, matching [`LICENSE`](../../LICENSE) and the Cargo
-package metadata.
+artifacts. The project license is MIT, matching the repository
+[`LICENSE`](https://github.com/skeswa/dootdoot/blob/main/LICENSE) and the Cargo package
+metadata.
 
 ## Recommended macOS Install Path
 

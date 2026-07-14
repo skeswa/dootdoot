@@ -1,5 +1,9 @@
 # Rust build artifacts
 /target/
+/node_modules/
+/docs/.vitepress/cache/
+/docs/.vitepress/dist/
+/docs/.vitepress/wasm/
 
 # Coverage output (cargo-llvm-cov)
 *.profraw

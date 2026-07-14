@@ -916,6 +916,38 @@ plan_discourse_performance` and the class field on
       Deps: T-122, T-125, T-126 · Reqs: FR-121, FR-33, FR-39, NFR-16, NFR-17, NFR-18 ·
       Est: 3h
 
+## Phase 23 — Documentation web experience
+
+- [x] **T-128 — Ship the VitePress documentation and listening experience.** Build a
+      cinematic, responsive landing page over the existing documentation; expose a sampler
+      that plays committed `VOICE_V12` golden WAVs; extend the default VitePress reader with
+      local search, outlines, edit links, and generated navigation for reference, research,
+      and validation collections; add site behavior tests and a production-build command.
+      Deps: T-127 · Reqs: NFR-21, NFR-23 · Est: 6h
+- [x] **T-129 — Deploy documentation through GitHub Pages.** Build and test the site on
+      relevant pushes to `main`, upload the static output, and deploy it to the repository
+      Pages project with SHA-pinned actions, least-privilege job permissions, serialized
+      deployments, and the `/dootdoot/` project base path.
+      Deps: T-128 · Reqs: NFR-23 · Est: 1h
+- [x] **T-130 — Harden the documentation site's maintainability.** Make the golden corpus
+      canonical for playground labels, replace source-regex checks with built-artifact and
+      parsed-workflow contracts, derive naturally ordered navigation labels from Markdown
+      headings, self-host pinned fonts, split theme/landing/playground styles by ownership,
+      and remove broad dead-link suppression.
+      Deps: T-129 · Reqs: NFR-23 · Est: 2h
+- [x] **T-131 — Run the real voice in the browser through WebAssembly.** Compile
+      `dootdoot-core` as a target-gated `wasm-bindgen` module, expose the existing canonical
+      render-to-WAV path, replace the preset-only player with arbitrary text input, generate
+      the Wasm package during site builds, and verify a native golden render byte-for-byte
+      plus repeated arbitrary renders.
+      Deps: T-130 · Reqs: FR-122, NFR-23, NFR-24 · Est: 4h
+- [x] **T-132 — Adopt the KotoR aural-protocol site system.** Rebuild the landing page as
+      a signal-acquisition hero, live transmission panel, voice-law grid, routed pipeline,
+      and field-manual portal; carry the same industrial palette, typography, telemetry,
+      panel geometry, responsive behavior, accessibility, and reduced-motion treatment into
+      the full VitePress reader; pin and self-host the selected fonts.
+      Deps: T-131 · Reqs: NFR-23, NFR-25 · Est: 5h
+
 ---
 
 ## Critical paths

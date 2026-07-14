@@ -28,3 +28,15 @@ updates:
         update-types:
           - minor
           - patch
+
+  # Keep the documentation toolchain current without hand-maintaining the lockfile.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      docs-minor-patch:
+        update-types:
+          - minor
+          - patch

@@ -567,6 +567,14 @@
   Until that freeze, the class-conditioned behavior SHALL stay behind the local
   default-off spike gate with the no-class path byte-identical.
 
+### 1.22 Browser renderer
+
+- **FR-122** The documentation site SHALL accept arbitrary text and render it locally by
+  compiling `dootdoot-core` to WebAssembly. The browser binding SHALL use the normal
+  `VOICE_V12` canonical-buffer and WAV-serialization path, and SHALL NOT implement a
+  JavaScript approximation or a second synthesis engine. Browser playback SHALL consume
+  only the WAV bytes returned by the core.
+
 ---
 
 ## 2. Non-functional requirements
@@ -653,6 +661,19 @@
 - **NFR-21** Documented behaviors SHALL include: uncased tokenization
   (`Hello`==`hello`), English-oriented handling of non-Latin/emoji input, the empty-
   input "?" chirp, and the input warning/cap thresholds.
+- **NFR-23** The project documentation SHALL build as a static VitePress site from the
+  authoritative Markdown files, generate collection navigation from the docs tree, provide
+  local full-text search, and expose an arbitrary-text browser renderer backed by the compiled
+  Rust core. Adding or renaming a supporting document SHALL NOT require a manual sidebar edit.
+- **NFR-24** The generated browser module SHALL render the covered native golden fixture
+  byte-for-byte and SHALL return byte-identical WAV bytes for repeated arbitrary text. The
+  WebAssembly package SHALL be generated during the site build rather than maintained as
+  hand-edited JavaScript or a committed binary.
+- **NFR-25** The landing page and documentation reader SHALL share the KotoR-inspired
+  aural-protocol visual system: self-hosted pinned display/mono typography, near-black teal
+  surfaces, cyan telemetry, restrained amber controls, and industrial panel geometry. The
+  experience SHALL remain responsive, keyboard-accessible, semantically labelled, readable
+  without decorative effects, and respectful of `prefers-reduced-motion`.
 
 ### 2.7 Distribution
 

@@ -6,7 +6,8 @@ changes.
 
 ## Inputs
 
-`xtask` reads the source files pinned by [`assets/source_manifest.toml`](../../assets/source_manifest.toml):
+`xtask` reads the source files pinned by
+[`assets/source_manifest.toml`](https://github.com/skeswa/dootdoot/blob/main/assets/source_manifest.toml):
 
 - Hugging Face repository and immutable revision.
 - SHA-256 hashes for `model.safetensors` and `tokenizer.json`.

@@ -1,0 +1,303 @@
+:root,
+.dark {
+  --vp-c-bg: #05090a;
+  --vp-c-bg-alt: #071012;
+  --vp-c-bg-elv: #0a1719;
+  --vp-c-bg-soft: #081517;
+  --vp-c-text-1: #eaf6f6;
+  --vp-c-text-2: #9dbcbe;
+  --vp-c-text-3: #5f8589;
+  --vp-c-brand-1: #8fe8ee;
+  --vp-c-brand-2: #b4f2f5;
+  --vp-c-brand-3: #5fb8bd;
+  --vp-c-divider: rgba(143, 232, 238, 0.17);
+  --vp-c-gutter: #05090a;
+  --vp-c-tip-1: #8fe8ee;
+  --vp-c-tip-2: rgba(143, 232, 238, 0.13);
+  --vp-c-warning-1: #e0a458;
+  --vp-c-warning-2: rgba(224, 164, 88, 0.12);
+  --vp-code-color: #e0a458;
+  --vp-code-bg: #04191b;
+  --vp-font-family-base: "IBM Plex Mono", monospace;
+  --vp-font-family-mono: "IBM Plex Mono", monospace;
+  --vp-nav-height: 54px;
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--vp-c-bg);
+}
+
+body {
+  overflow-x: hidden;
+  background:
+    repeating-linear-gradient(0deg, rgba(143, 232, 238, 0.012) 0 1px, transparent 1px 4px),
+    var(--vp-c-bg);
+  font-size: 14px;
+}
+
+.VPNavBarHamburger .container span {
+  background-color: #8fe8ee !important;
+}
+
+::selection {
+  background: rgba(143, 232, 238, 0.22);
+  color: #fff;
+}
+
+.VPNav {
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.VPNavBar,
+.VPNavBar:not(.has-sidebar):not(.home.top) {
+  background: rgba(5, 9, 10, 0.93) !important;
+  backdrop-filter: blur(14px);
+}
+
+.doot-home .VPNavBar .container {
+  max-width: none;
+}
+
+.doot-home .VPNavBar .wrapper {
+  padding-inline: 48px;
+}
+
+body:has(.protocol-home) .VPNavBarSearch {
+  display: none !important;
+}
+
+.VPNavBarTitle .title {
+  font:
+    700 19px/1 "Chakra Petch",
+    sans-serif;
+  letter-spacing: 0.06em;
+}
+
+.VPNavBarTitle .title::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  margin-right: 10px;
+  background: var(--vp-c-brand-1);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  box-shadow: 0 0 8px rgba(143, 232, 238, 0.65);
+}
+
+.VPNavBarTitle .title::after {
+  content: "v0.4 // AURAL PROTOCOL";
+  margin-left: 16px;
+  color: #4e7c80;
+  font:
+    600 10px "IBM Plex Mono",
+    monospace;
+  letter-spacing: 0.17em;
+}
+
+/* Sidebar pages box the title to the sidebar width: the tagline would overflow
+   into the search box, and the boxed title draws its own second border. */
+.VPNavBarTitle.has-sidebar .title::after {
+  display: none;
+}
+
+.VPNavBarTitle.has-sidebar .title {
+  border-bottom: none !important;
+}
+
+.VPNavBarMenuLink,
+.VPNavBarMenuGroup {
+  color: #87aeb0 !important;
+  font:
+    400 11.5px/1 "IBM Plex Mono",
+    monospace !important;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.doot-home .VPNavBarMenu {
+  gap: 26px;
+}
+
+.doot-home .VPNavBarMenuLink {
+  padding: 0 !important;
+}
+
+.VPNavBarMenuLink:last-child {
+  height: 24px;
+  margin-left: 0;
+  padding: 5px 12px !important;
+  align-self: center;
+  border: 1px solid rgba(143, 232, 238, 0.35);
+  color: var(--vp-c-brand-1) !important;
+  line-height: 12px !important;
+}
+
+.VPNavBarMenuLink:hover,
+.VPNavBarMenuLink.active {
+  color: var(--vp-c-brand-1) !important;
+}
+
+.VPNavBarSearchButton {
+  border: 1px solid var(--vp-c-divider) !important;
+  border-radius: 0 !important;
+  background: #071214 !important;
+}
+
+.VPNavBarAppearance {
+  display: none !important;
+}
+
+.VPSidebar {
+  border-right: 1px solid var(--vp-c-divider) !important;
+  background: #060c0d !important;
+}
+
+.VPSidebarItem .text {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+}
+
+.VPSidebarItem.level-0 > .item > .text {
+  color: #658f92;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.VPSidebarItem.is-active > .item .link > .text {
+  color: var(--vp-c-brand-1) !important;
+}
+
+.VPDoc:not(.doot-home) .content-container {
+  max-width: 820px !important;
+}
+
+.VPDoc h1,
+.VPDoc h2,
+.VPDoc h3,
+.VPDoc h4 {
+  font-family: "Chakra Petch", sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.VPDoc h1 {
+  max-width: 760px;
+  font-size: clamp(2.6rem, 6vw, 4.6rem);
+  line-height: 0.98;
+}
+
+.VPDoc h1::before {
+  content: "▸ FIELD MANUAL / ";
+  display: block;
+  margin-bottom: 17px;
+  color: #5f9ba0;
+  font:
+    600 9px "IBM Plex Mono",
+    monospace;
+  letter-spacing: 0.18em;
+}
+
+.VPDoc h2 {
+  padding-top: 26px;
+  border-top-color: var(--vp-c-divider);
+}
+
+.VPDoc h2 .header-anchor,
+.VPDoc h3 .header-anchor {
+  color: #e0a458;
+}
+
+.VPDoc p,
+.VPDoc li {
+  line-height: 1.78;
+}
+
+.VPDoc a {
+  color: var(--vp-c-brand-1);
+  text-decoration-color: rgba(143, 232, 238, 0.35);
+  text-underline-offset: 4px;
+}
+
+.VPDoc a:hover {
+  color: var(--vp-c-brand-2);
+}
+
+.vp-doc div[class*="language-"] {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 0;
+  background: #041113;
+}
+
+.vp-doc div[class*="language-"]::before {
+  color: #5f8589;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.vp-doc :not(pre) > code {
+  border-radius: 2px;
+  color: #e0a458;
+}
+
+.vp-doc table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vp-doc th {
+  color: var(--vp-c-brand-1);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vp-doc th,
+.vp-doc td {
+  border-color: var(--vp-c-divider);
+  background: rgba(8, 21, 23, 0.62);
+}
+
+.custom-block {
+  border-radius: 0;
+  border-width: 1px;
+  background: #071416;
+}
+
+.custom-block .custom-block-title {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+.VPDocFooter {
+  border-top-color: var(--vp-c-divider) !important;
+}
+
+.VPFooter {
+  border-top-color: var(--vp-c-divider) !important;
+  background: #040809 !important;
+  font-size: 10px;
+}
+
+@media (max-width: 700px) {
+  .doot-home .VPNavBar .wrapper {
+    padding-inline: 22px 8px;
+  }
+
+  .VPNavBarTitle .title::after {
+    display: none;
+  }
+
+  .VPDoc h1 {
+    font-size: clamp(2.4rem, 12vw, 3.8rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

@@ -1,0 +1,340 @@
+.console {
+  padding: 72px var(--protocol-gutter);
+  border-bottom: 1px solid var(--protocol-line);
+  background: #040809;
+  color: var(--protocol-text);
+}
+
+.console-inner {
+  width: 100%;
+}
+
+.console-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 36px;
+  margin-bottom: 28px;
+}
+
+.console-heading h2 {
+  color: var(--protocol-text);
+  font:
+    600 28px / normal "Chakra Petch",
+    sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.protocol-home .console-heading > p {
+  padding-bottom: 3px;
+  color: var(--protocol-cyan-dim);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-align: right;
+}
+
+.console-panel {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--protocol-line-strong);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+  background: var(--protocol-line);
+}
+
+.transmission-compose,
+.transmission-presets {
+  background: var(--protocol-panel);
+}
+
+.transmission-compose {
+  position: relative;
+  padding: 34px 36px;
+}
+
+.readout {
+  display: flex;
+  flex-direction: column;
+}
+
+.readout label,
+.readout small,
+.transmission-presets > p:first-child {
+  color: var(--protocol-cyan-dim);
+  font:
+    600 10px "IBM Plex Mono",
+    monospace;
+  letter-spacing: 0.22em;
+}
+
+.readout input {
+  width: 100%;
+  margin: 9px 0 7px;
+  padding: 0 0 6px;
+  border: 0;
+  border-bottom: 1px solid rgba(143, 232, 238, 0.25);
+  outline: 0;
+  background: transparent;
+  color: var(--protocol-text);
+  font:
+    500 32px "Chakra Petch",
+    sans-serif;
+  letter-spacing: -0.025em;
+  transition:
+    border-color 160ms ease,
+    text-shadow 160ms ease;
+}
+
+.readout input:focus {
+  border-color: var(--protocol-cyan);
+  text-shadow: 0 0 12px rgba(143, 232, 238, 0.18);
+}
+
+.readout input::placeholder {
+  color: #456669;
+}
+
+.readout small {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+}
+
+.console-action-row {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  margin-top: 26px;
+}
+
+.play {
+  flex: 0 0 auto;
+  width: 228px;
+  padding: 14px 0;
+  text-align: center;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  border: 0;
+  cursor: pointer;
+  background: var(--protocol-amber);
+  color: #1b1005;
+  font:
+    600 12px "IBM Plex Mono",
+    monospace;
+  letter-spacing: 0.14em;
+  transition:
+    background 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.play:hover:not(:disabled) {
+  background: var(--protocol-amber-hot);
+  box-shadow: 0 0 22px rgba(224, 164, 88, 0.16);
+  transform: translateY(-1px);
+}
+
+.play span {
+  margin-right: 8px;
+}
+
+.play:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.scope {
+  position: relative;
+  display: flex;
+  width: min(230px, 42%);
+  height: 40px;
+  align-items: end;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.scope::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0 4px, rgba(143, 232, 238, 0.04) 5px);
+}
+
+.scope span {
+  flex: 1;
+  min-width: 1px;
+  height: var(--bar);
+  background: var(--protocol-cyan);
+  box-shadow: 0 0 4px rgba(143, 232, 238, 0.3);
+  opacity: 0.45;
+  transition:
+    height 220ms ease,
+    opacity 100ms ease;
+}
+
+.scope span.lit {
+  opacity: 1;
+  box-shadow: 0 0 7px rgba(143, 232, 238, 0.7);
+}
+
+.scope > i {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  color: var(--protocol-cyan-dim);
+  font:
+    600 7px "IBM Plex Mono",
+    monospace;
+}
+
+.scope.active::after {
+  animation: console-flicker 1.7s steps(2) infinite;
+}
+
+.protocol-home .console-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 13px !important;
+  color: var(--protocol-cyan-dim);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.console-status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--protocol-cyan);
+  box-shadow: 0 0 7px var(--protocol-cyan);
+  animation: console-ready 2.2s ease-in-out infinite;
+}
+
+.transmission-presets {
+  padding: 34px 36px;
+}
+
+.presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.presets button {
+  padding: 12px 14px;
+  border: 1px solid rgba(143, 232, 238, 0.23);
+  cursor: pointer;
+  background: transparent;
+  color: #b7cbcc;
+  font:
+    500 12px "IBM Plex Mono",
+    monospace;
+  text-align: left;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    color 150ms ease;
+}
+
+.presets button:hover,
+.presets button.selected {
+  border-color: var(--protocol-cyan);
+  background: rgba(143, 232, 238, 0.045);
+  color: var(--protocol-cyan);
+}
+
+.presets button span {
+  margin-right: 7px;
+  color: var(--protocol-cyan-dim);
+}
+
+.protocol-home .console-note {
+  margin-top: 20px !important;
+  color: var(--protocol-cyan-dim);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.console-note code {
+  padding: 0;
+  background: transparent;
+  color: var(--protocol-amber) !important;
+  font-size: inherit;
+}
+
+.console-note a {
+  color: var(--protocol-cyan) !important;
+}
+
+@keyframes console-flicker {
+  0%,
+  90%,
+  100% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes console-ready {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 900px) {
+  .console {
+    padding: 66px 22px 72px;
+  }
+
+  .console-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .console-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .console-heading > p {
+    text-align: left;
+  }
+
+  .transmission-compose,
+  .transmission-presets {
+    padding: 26px 20px;
+  }
+
+  .console-action-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .play {
+    width: 100%;
+  }
+
+  .scope {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scope.active::after,
+  .console-status i {
+    animation: none !important;
+  }
+}

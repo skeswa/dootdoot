@@ -14,6 +14,8 @@ mod pos_table;
 mod sequence;
 mod synth;
 mod tokenizer;
+#[cfg(target_arch = "wasm32")]
+mod wasm;
 mod wav;
 
 pub use affect::{AffectAnalysis, AffectTokenScore, UtteranceMood, analyze_affect_for_text};

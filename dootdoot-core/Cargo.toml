@@ -12,14 +12,38 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 hound = "3.5.1"
 prost = { version = "0.14.1", default-features = false, features = ["derive", "std"] }
 thiserror = { version = "2.0.17", default-features = false }
 tokenizers = { version = "0.23.1", default-features = false, features = ["fancy-regex"] }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.3.4", default-features = false, features = ["wasm_js"] }
+wasm-bindgen = { version = "=0.2.126", default-features = false, features = ["std"] }
+
 [dev-dependencies]
 insta = { version = "1.48.0", default-features = false }
 
 [lints]
 workspace = true
+
+# Size-optimize the docs-site WebAssembly module; every byte here is paid on
+# first page approach. Passes are semantics-preserving, and the golden
+# byte-equality assertion in tests/docs-site.test.mjs pins that rendered audio
+# is unchanged. The --enable-* flags teach wasm-pack's bundled binaryen (v117)
+# about post-MVP features rustc emits by default; without them wasm-opt
+# refuses to validate the module at all.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = [
+  "-Oz",
+  "--enable-bulk-memory",
+  "--enable-nontrapping-float-to-int",
+  "--enable-sign-ext",
+  "--enable-mutable-globals",
+  "--enable-reference-types",
+  "--enable-multivalue",
+]

@@ -1,5 +1,25 @@
 # Documentation Map
 
+This directory is also the source for the project website. The site renders these Markdown
+files directly, so the readable source and published documentation cannot drift. Collection
+navigation for `reference/`, `research/`, and `validation/` is generated automatically.
+
+```sh
+cargo install wasm-pack --version 0.15.0 --locked
+npm install
+npm run docs:dev       # local site with hot reload
+npm run test:docs      # production build + site behavior checks
+npm run docs:build     # production build
+```
+
+The site commands compile `dootdoot-core` to WebAssembly before VitePress starts. The first
+build installs the `wasm32-unknown-unknown` Rust target automatically. The landing-page
+console then renders arbitrary text locally with the same `VOICE_V12` engine as the CLI.
+
+Pushes to `main` that touch the site, its golden audio samples, or its toolchain deploy
+automatically to `https://skeswa.github.io/dootdoot/` through the pinned
+`.github/workflows/docs.yml` GitHub Pages workflow.
+
 Start with the four source-of-truth documents. These stay at the top level because they
 define the architecture, requirements, work plan, and enforced development rules:
 
