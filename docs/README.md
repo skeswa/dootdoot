@@ -16,6 +16,20 @@ The site commands compile `dootdoot-core` to WebAssembly before VitePress starts
 build installs the `wasm32-unknown-unknown` Rust target automatically. The landing-page
 console then renders arbitrary text locally with the same `VOICE_V12` engine as the CLI.
 
+When `package.json` changes, regenerate the lockfile with the exact npm version the
+Documentation workflow pins (see the `Pin npm` step in `.github/workflows/docs.yml`):
+
+```sh
+npx npm@11.16.0 install --package-lock-only
+```
+
+npm minors disagree about which wasi optional-peer entries (`@emnapi/*` under
+`@napi-rs/wasm-runtime`) belong in `package-lock.json`, and `npm ci` hard-fails on any
+lockfile its own resolver wouldn't have written — a mismatched local npm silently
+produces a lockfile the workflow rejects. If the pinned version is ever bumped,
+regenerate the lockfile and update the expected step list in `tests/docs-site.test.mjs`
+in the same change.
+
 Pushes to `main` that touch the site, its golden audio samples, or its toolchain deploy
 automatically to `https://skeswa.github.io/dootdoot/` through the pinned
 `.github/workflows/docs.yml` GitHub Pages workflow.
