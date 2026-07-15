@@ -243,6 +243,7 @@ test("the site deploys to the repository GitHub Pages project", () => {
   assert.deepEqual(
     build.steps.filter((step) => step.run).map((step) => step.run),
     [
+      "npm install -g npm@11.16.0",
       "npm ci",
       "cargo install wasm-pack --version 0.15.0 --locked",
       "npm run test:docs",
