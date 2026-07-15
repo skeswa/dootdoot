@@ -119,6 +119,13 @@ uv run scripts/acoustic_metrics.py reference=ref.wav dootdoot=render.wav
 # Regenerate the committed golden WAV fixtures (tests/fixtures/golden/*.wav)
 # after an intentional, version-bumped voice change:
 DOOTDOOT_REGEN_GOLDEN=1 cargo test -p dootdoot-core --test golden_wav
+
+# Regenerate package-lock.json (ONLY when package.json changes) with the EXACT npm
+# version the Documentation workflow pins — npm minors disagree about wasi
+# optional-peer lockfile entries and `npm ci` hard-fails on the mismatch. If the pin
+# in .github/workflows/docs.yml is bumped, regenerate the lockfile and update the
+# expected step list in tests/docs-site.test.mjs in the same change. (docs/README.md)
+npx npm@11.16.0 install --package-lock-only
 ```
 
 ## Key conventions (full guide: `docs/style.md`)
